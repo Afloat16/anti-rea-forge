@@ -272,9 +272,18 @@ def gate(binary: Path | str, policy_path: Path | str,
         if candidate.suffix.lower() in policy["forbid_extensions"]:
             findings.append({"code": "forbidden_sidecar", "path": relative})
     # Metadata parsing is a separate read; catch ordinary concurrent changes.
+    # Windows stat/lstat and fstat can expose different st_ctime semantics.
+    # Keep the timestamp comparison handle-to-handle, preserving ChangeTime.
     final = path.lstat()
-    if _is_link(final) or (final.st_dev, final.st_ino, final.st_size,
-                          final.st_mtime_ns, final.st_ctime_ns) != identity:
+    if _is_link(final) or not stat.S_ISREG(final.st_mode):
+        raise GuardError("Artifact changed after scanning")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    with os.fdopen(descriptor, "rb") as handle:
+        checked = os.fstat(handle.fileno())
+    if (checked.st_dev, checked.st_ino, checked.st_size) != (
+        final.st_dev, final.st_ino, final.st_size
+    ) or (checked.st_dev, checked.st_ino, checked.st_size,
+          checked.st_mtime_ns, checked.st_ctime_ns) != identity:
         raise GuardError("Artifact changed after scanning")
     return {
         "ok": not bool(findings), "artifact": artifact, "findings": findings,

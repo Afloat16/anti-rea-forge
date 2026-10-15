@@ -9,6 +9,7 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from releaseguard import native
@@ -406,6 +407,61 @@ class NativeTests(unittest.TestCase):
         with patch.object(native, "read_limited_prefix", modified_prefix):
             with self.assertRaises((GuardError, ValueError)):
                 native.gate(self.binary, self.policy_path)
+
+    def test_gate_accepts_stable_handle_ctime_different_from_path_ctime(self) -> None:
+        real_fstat = os.fstat
+
+        def handle_timestamps(descriptor):
+            info = real_fstat(descriptor)
+            values = {name: getattr(info, name) for name in (
+                "st_dev", "st_ino", "st_size", "st_mode", "st_mtime_ns", "st_ctime_ns",
+            )}
+            # Model Windows: path metadata reports birth time while the
+            # handle reports a later metadata change time for the same file.
+            values["st_ctime_ns"] += 123_456_789
+            return SimpleNamespace(**values)
+
+        with patch.object(native.os, "fstat", handle_timestamps):
+            self.assertTrue(self.gate()["ok"])
+
+    def test_gate_rejects_handle_change_time_after_scan_without_path_change(self) -> None:
+        real_fstat = os.fstat
+        real_prefix = native.read_limited_prefix
+        changed = False
+
+        def handle_timestamps(descriptor):
+            info = real_fstat(descriptor)
+            values = {name: getattr(info, name) for name in (
+                "st_dev", "st_ino", "st_size", "st_mode", "st_mtime_ns", "st_ctime_ns",
+            )}
+            if changed:
+                values["st_ctime_ns"] += 2_000_000_000
+            return SimpleNamespace(**values)
+
+        def metadata_phase(path, length):
+            nonlocal changed
+            changed = True
+            return real_prefix(path, length)
+
+        with patch.object(native.os, "fstat", handle_timestamps), \
+                patch.object(native, "read_limited_prefix", metadata_phase):
+            with self.assertRaisesRegex(GuardError, "changed after scanning"):
+                self.gate()
+
+    def test_gate_rejects_same_size_replacement_with_preserved_mtime(self) -> None:
+        original_prefix = native.read_limited_prefix
+
+        def replaced_prefix(path, length):
+            before = path.stat()
+            replacement = path.with_name("replacement.exe")
+            replacement.write_bytes(path.read_bytes())
+            os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+            os.replace(replacement, path)
+            return original_prefix(path, length)
+
+        with patch.object(native, "read_limited_prefix", replaced_prefix):
+            with self.assertRaisesRegex(GuardError, "changed after scanning"):
+                self.gate()
 
 
 if __name__ == "__main__":
