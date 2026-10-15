@@ -61,6 +61,14 @@ jobs:
       - name: Build native examples and enforce release gate
         run: cmake --build build --config Release
 
+      - name: Inspect Windows example headers
+        if: always() && runner.os == 'Windows'
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\VC\Auxiliary\Build\vcvars64.bat"
+          if not exist build\Release\releaseguard-example.exe exit /b 0
+          dumpbin /headers build\Release\releaseguard-example.exe
+
       - name: Run example smoke test
         run: ctest --test-dir build -C Release --output-on-failure
 
@@ -72,9 +80,12 @@ jobs:
         run: python -m pip wheel . --no-deps --wheel-dir dist
 
       - name: Audit example PE
-        if: runner.os == 'Windows'
+        if: always() && runner.os == 'Windows'
         shell: pwsh
-        run: releaseguard audit build/Release/releaseguard-example.exe > pe-audit.json
+        run: |
+          if (Test-Path build/Release/releaseguard-example.exe) {
+            releaseguard audit build/Release/releaseguard-example.exe > pe-audit.json
+          }
 
       - name: Keep example audit report
         if: always() && runner.os == 'Windows'

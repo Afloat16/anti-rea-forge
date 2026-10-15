@@ -8,15 +8,15 @@
 
 **MIT · 0.2.0 / Alpha · C/C++ 构建接入 · Python 工具链 · PE / ELF**
 
-[加入共建](CONTRIBUTING.md) · [公开挑战与路线图](docs/ROADMAP.zh-CN.md) · [实际测试报告](docs/testing-2026-10-15.zh-CN.md) · [安全模型](SECURITY.md)
+[加入共建](CONTRIBUTING.md) · [共建招募 Issue](https://github.com/Afloat16/anti-rea-forge/issues/1) · [公开挑战与路线图](docs/ROADMAP.zh-CN.md) · [实际测试报告](docs/testing-2026-10-15.zh-CN.md) · [安全模型](SECURITY.md)
 
-底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口，避免品牌调整影响现有代码。目标面向 Windows EXE/DLL，当前完成的本机实测主要是 Linux ELF；Windows/MSVC 仍待验证。本项目独立开发，与 REA 官方无隶属或背书关系。
+底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口，避免品牌调整影响现有代码。目标面向 Windows EXE/DLL；Linux 与 Windows/MSVC 的构建验证结果见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
 
 ## 先看真实战况
 
 | 已经做了什么 | 当前结果 |
 | --- | --- |
-| 本地功能与真实 CMake 集成测试 | 2026-10-15，155 项通过，无跳过 |
+| 本地功能与真实 CMake 集成测试 | 2026-10-15，158 项通过，无跳过，含 3 项 Windows 时间信息兼容回归 |
 | 选中文字静态掩码、发布门禁、签名清单与离线授权工具 | 已实现，边界见下文 |
 | 独立 Ghidra 静态分析、独立运行时观察 | 均恢复了自有样本的测试口令，原程序接受恢复值；当前防破解目标未达到 |
 | REA 6.5.0 整合分析 | 被宿主环境限制阻塞，未完成，不能记作防护成功 |

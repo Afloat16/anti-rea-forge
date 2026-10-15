@@ -2,6 +2,8 @@
 
 日期：2026-10-15。环境：Linux x86_64、Python 3.12.14、cryptography 50.0.2、GCC/G++ 13.3.0、CMake 3.31.6。**功能测试通过，但实际静态及运行时恢复测试表明当前防破解目标未达到。** 详细证据和范围见 [实际测试报告](testing-2026-10-15.zh-CN.md)；下列结果不是独立安全审计或针对 REA 的破解概率数据。
 
+下表保留首次 GitHub 发布前的实验计数。发布时修复了 Windows `lstat`/`fstat` 时间语义差异造成的门禁误报，并新增 3 项回归；修复后的本地全量测试为 **158 项通过、无跳过，21.713 秒**。后续跨平台运行见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)。
+
 ## 已执行
 
 | 项目 | 结果 |
@@ -36,7 +38,7 @@
 ## 尚未验证
 
 - 本机没有 Windows/MSVC 环境，未执行 Windows EXE/DLL 构建、公共 DLL ABI 或 Windows 上的分析测试；Linux 共享库测试不替代这些测试。
-- GitHub 仓库尚未发布，工作流尚未在 GitHub 执行。
+- GitHub 仓库现已公开，工作流已实际触发；以 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions) 记录为准。本机验证记录与跨平台流水线分开记录。
 - REA 分析命令未能在当前环境完成；没有实际运行 IDA、Hopper 或 Frida，也没有按 [威胁模型](rea-threat-model.zh-CN.md) 的配对多样本协议测量成本与概率。
 - 没有真实业务接入、安全审计、破解成功率、反编译恢复率或有意义的业务性能统计。
 
