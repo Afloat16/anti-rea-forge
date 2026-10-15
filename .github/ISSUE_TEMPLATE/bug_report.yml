@@ -1,0 +1,52 @@
+name: 缺陷报告
+description: 报告可复现的功能、兼容性、构建或文档问题。
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢帮助改进 Anti-REA Forge / 反逆向共建计划。
+        安全漏洞请先阅读 [SECURITY.md](https://github.com/Afloat16/anti-rea-forge/blob/main/SECURITY.md)，不要在这里提交私钥、真实凭证、客户授权或敏感利用细节。
+        本模板用于功能问题；分析恢复结果请使用“可复现实验 / 公开挑战”模板。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与预期行为
+      description: 哪个具体操作出现了问题？你期望什么，实际发生了什么？
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境与版本
+      description: 请记录系统/架构、项目版本或提交、Python，以及相关的编译器、CMake、分析器版本；未使用的项可省略。
+      placeholder: |
+        系统/架构：
+        项目版本或提交：
+        Python：
+        编译器/CMake（如相关）：
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现步骤
+      description: 使用自有或获授权的最小样本，提供命令、配置和必要源码。请先删除真实秘密和私人路径。
+      placeholder: |
+        1. 安装/配置：
+        2. 执行命令：
+        3. 观察结果：
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 输出与补充证据
+      description: 可提供脱敏日志、退出码或截图。请区分实际运行结果与推测，并注明测试跳过或尚未运行的部分。
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 材料范围
+      options:
+        - label: 我有权测试并公开提供的材料，且未提交真实凭证、私钥或客户数据。
+          required: true

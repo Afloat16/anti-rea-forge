@@ -1,0 +1,14 @@
+{
+  "executable": "<workspace>/.test-runs/runtime-resistance/sample",
+  "argument_source": "sample-static-literal-recovery.json decoded_text (redacted)",
+  "exit_code": 0,
+  "stdout": "ACCEPTED\n",
+  "stderr": "",
+  "seconds": 0.0043,
+  "sha256_before": "e745495228de8b2ad64de3f5189505cdc2bc9ea007318010682127302645717b",
+  "sha256_after": "e745495228de8b2ad64de3f5189505cdc2bc9ea007318010682127302645717b",
+  "binary_unchanged": true,
+  "digest_matches_static_analysis": true,
+  "accepted": true,
+  "scope": "Unmodified, source-owned synthetic test fixture only. No binary patch or protection implementation change."
+}

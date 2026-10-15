@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.wheelcheck/
+venv/
+build/
+dist/
+.coverage
+# Temporary C++ fixture build directories.
+/rg-native-*/
+*.key
+*.pfx
+*.p12
+*.pem
+!*-public.pem
+.env
+.env.*
+issuer-private*
+*.license.json

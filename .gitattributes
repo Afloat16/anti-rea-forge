@@ -1,0 +1,4 @@
+# Preserve analyzer output, including empty final TSV fields and log padding.
+docs/results/testing-2026-10-15/ghidra/functions.tsv -whitespace
+docs/results/testing-2026-10-15/ghidra/pseudocode.txt -whitespace
+docs/results/testing-2026-10-15/ghidra/sample-direct-headless.stdout.txt -whitespace

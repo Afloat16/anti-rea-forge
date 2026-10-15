@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-15",
+  "implementation_commit": "3e6a147c709941bf9661f000a8bee6028409080f",
+  "command": "RELEASEGUARD_CMAKE=<workspace>/.test-tools/cmake/cmake/data/bin/cmake .venv/bin/python -m unittest discover -s tests",
+  "tests_run": 155,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "elapsed_seconds": 20.027,
+  "record_type": "summary transcribed from completed unittest runner output; not a raw log",
+  "categories": {
+    "core": 37,
+    "pe": 26,
+    "elf": 37,
+    "native": 38,
+    "cpp_literal": 7,
+    "cli": 7,
+    "cmake_integration": 3
+  },
+  "protection_goal_met": false
+}

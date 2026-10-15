@@ -1,0 +1,10 @@
+{
+  "format": "open-release-guard-native/v1",
+  "version": "0.2.0",
+  "seed": "0123456789abcdef",
+  "assets": {
+    "cmake/ReleaseGuard.cmake": "337cd1e7417290b781b2b2aea8ec32e1da0295cfe687458c42c23592b43aa380",
+    "include/releaseguard/literal.hpp": "9049d562affccf5646f3f4deb283242f6fe77cccbf1f5805271df1ae92e9d788",
+    "releaseguard_build.hpp": "31860a74dce87cb4c2c0327facea56d07fce1abad6a247d0c779eca46557617a"
+  }
+}

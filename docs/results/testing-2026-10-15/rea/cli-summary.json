@@ -1,0 +1,99 @@
+[
+  {
+    "name": "version",
+    "args": [
+      "--version"
+    ],
+    "exit_code": 0,
+    "seconds": 24.438,
+    "stdout_bytes": 6,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "help",
+    "args": [
+      "--help"
+    ],
+    "exit_code": 0,
+    "seconds": 1.352,
+    "stdout_bytes": 17408,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "providers",
+    "args": [
+      "providers",
+      "--json"
+    ],
+    "exit_code": 0,
+    "seconds": 3.396,
+    "stdout_bytes": 23459,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "help-objdump",
+    "args": [
+      "inspect-with-objdump",
+      "--help"
+    ],
+    "exit_code": 0,
+    "seconds": 1.689,
+    "stdout_bytes": 1105,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "help-search",
+    "args": [
+      "search",
+      "--help"
+    ],
+    "exit_code": 0,
+    "seconds": 1.44,
+    "stdout_bytes": 1850,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "help-inspect",
+    "args": [
+      "inspect",
+      "--help"
+    ],
+    "exit_code": 0,
+    "seconds": 1.76,
+    "stdout_bytes": 1387,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "help-decompile",
+    "args": [
+      "decompile",
+      "--help"
+    ],
+    "exit_code": 0,
+    "seconds": 1.394,
+    "stdout_bytes": 1650,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "help-instructions",
+    "args": [
+      "instructions",
+      "--help"
+    ],
+    "exit_code": 0,
+    "seconds": 2.129,
+    "stdout_bytes": 1552,
+    "stderr_bytes": 0
+  },
+  {
+    "name": "help-evidence-export",
+    "args": [
+      "evidence-export",
+      "--help"
+    ],
+    "exit_code": 0,
+    "seconds": 1.427,
+    "stdout_bytes": 896,
+    "stderr_bytes": 0
+  }
+]

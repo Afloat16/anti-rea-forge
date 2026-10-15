@@ -1,0 +1,66 @@
+name: 可复现实验 / 公开挑战
+description: 复现恢复结果、验证改进或记录环境阻塞，保留失败和不确定性。
+title: "[Experiment] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        当前自有 Linux 样本的完整测试口令已被静态和运行时分析恢复；防破解目标尚未达到。欢迎将这个失败转为公开、可复现的研究。
+        单次未能恢复不等于防护成功，也不能支持“高概率防 REA”或“绝对无法破解”。
+        只使用自有或获授权样本。不要上传真实秘密、私钥、客户授权或不允许公开的第三方二进制。
+        参考 [测试报告](https://github.com/Afloat16/anti-rea-forge/blob/main/docs/testing-2026-10-15.zh-CN.md)；项目漏洞请按 [SECURITY.md](https://github.com/Afloat16/anti-rea-forge/blob/main/SECURITY.md) 报告。
+  - type: textarea
+    id: goal
+    attributes:
+      label: 实验目标与判定条件
+      description: 例如恢复合成口令、识别某段流程或验证 DLL ABI。开始前怎样定义成功、失败和未知？
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: 本次实际结果
+      options:
+        - 恢复成功 / 防护目标失败
+        - 暂未恢复 / 尚不能证明防护成功
+        - 环境阻塞 / 结果未知
+        - 功能或兼容性回归
+    validations:
+      required: true
+  - type: textarea
+    id: specimen
+    attributes:
+      label: 样本与可复现构建
+      description: 提供最小自有源码或授权说明、项目提交、构建命令、策略、公开种子，以及普通/保护产物的 SHA-256。确实无法公开的部分请说明，不要求提交业务秘密。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 工具与初始可见信息
+      description: 记录平台、编译器、优化/strip/LTO 参数、分析器及 provider 版本，以及分析方事先是否看到源码、头文件或答案。读过答案的实验不能称为二进制盲测。
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: 方法与原始观察
+      description: 给出命令、关键输出、退出码、耗时的测量范围和失败诊断。区分 REA 本身、独立分析器与其他观察方法；整合失败应记录为阻塞。
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: 验证、对照与限制
+      description: 若恢复测试值，请记录未修改原程序的接受结果、错误输入对照及前后文件哈希。评估改动时提供配对对照、功能/ABI影响；没有覆盖的项目请注明，勿从少量样本推算通用概率。
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 实验与披露范围
+      options:
+        - label: 样本属于我或已获授权，提交的材料允许公开，且不包含真实秘密或客户数据。
+          required: true
+        - label: 我保留了失败、环境限制和初始信息范围，没有将门禁通过等同于无法破解。
+          required: true

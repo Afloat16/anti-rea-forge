@@ -1,0 +1,180 @@
+{
+  "baseline": {
+    "binary": {
+      "format": "elf",
+      "sha256": "e20c9d9910c457a84d209d42885a8e74b701993ffb00edcbd2e02c32e2187b21",
+      "size": 16152
+    },
+    "flags": [
+      "-std=c++17",
+      "-O2"
+    ],
+    "gate": {
+      "checks": {
+        "debug_metadata_present": false,
+        "encodings": [
+          "utf-8",
+          "utf-16-le",
+          "utf-16-be",
+          "utf-32-le",
+          "utf-32-be"
+        ],
+        "literal_rules": 1,
+        "native": true,
+        "required_pe_flags_applied": false,
+        "scan_completed": true,
+        "sidecar_scope": "same_stem_siblings",
+        "symbol_table_present": true
+      },
+      "findings": [
+        {
+          "code": "forbidden_literal",
+          "encoding": "utf-8",
+          "offset": 8256,
+          "rule_index": 0
+        },
+        {
+          "code": "symbol_table_present"
+        }
+      ],
+      "notes": [
+        "Static release checks only; passing is not a decompilation/crack resistance score.",
+        "Runtime plaintext, public exports and the implementation remain observable."
+      ],
+      "ok": false
+    }
+  },
+  "environment": {
+    "compiler": "g++",
+    "compiler_version": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+    "machine": "x86_64",
+    "python": "3.12.14",
+    "python_implementation": "CPython",
+    "system": "Linux"
+  },
+  "format": "open-release-guard-native-compare/v1",
+  "functional_equivalence": {
+    "baseline_returncode": 0,
+    "protected_returncode": 0,
+    "stderr_equal": true,
+    "stdout_equal": true,
+    "stdout_sha256": "6f8c5f03274d8d7d2bd8c334022dab9dcbc44d60ff57bd5c8a4b0c35db16d5fa",
+    "stdout_utf8": "ReleaseGuard example: build mitigations enabled.\nreleaseguard-demo-private-literal\n"
+  },
+  "inputs": {
+    "policy": "examples/policy.json",
+    "policy_sha256": "b485a690e30059f46c4770549c0603fdb9c94da75868490aaa6772afeff393f1",
+    "seed": "1af38c4e60b975d2",
+    "seed_is_secret": false,
+    "source": "examples/main.cpp",
+    "source_sha256": "55d295a58060a4ba507e4d446348218da185d7cce5fa7d2d3c9fa2f9d2b915d3"
+  },
+  "limitations": [
+    "This checks only the project's own small sample with the recorded GCC toolchain.",
+    "Static marker/symbol checks and matching stdout do not measure decompilation or crack resistance.",
+    "The reversible literal mask leaves runtime plaintext and its decoding implementation observable.",
+    "No analyst study, REA test or probability-of-protection estimate was performed.",
+    "Hashes are comparable for repeated builds with the same inputs and toolchain; other environments may differ."
+  ],
+  "negative_control": {
+    "binary": {
+      "format": "elf",
+      "sha256": "183a781203f712cc4753125fa0cd87b894c52f97b70048a337c784c47a21f0f8",
+      "size": 14593
+    },
+    "executed": false,
+    "flags": [
+      "-std=c++17",
+      "-O2",
+      "-flto",
+      "-fvisibility=hidden",
+      "-fvisibility-inlines-hidden",
+      "-fstack-protector-strong",
+      "-fPIE",
+      "-pie",
+      "-s",
+      "-Wl,-z,relro,-z,now,-z,noexecstack",
+      "-DRELEASEGUARD_EXAMPLE_PROTECTED=1"
+    ],
+    "gate": {
+      "checks": {
+        "debug_metadata_present": false,
+        "encodings": [
+          "utf-8",
+          "utf-16-le",
+          "utf-16-be",
+          "utf-32-le",
+          "utf-32-be"
+        ],
+        "literal_rules": 1,
+        "native": true,
+        "required_pe_flags_applied": false,
+        "scan_completed": true,
+        "sidecar_scope": "same_stem_siblings",
+        "symbol_table_present": false
+      },
+      "findings": [
+        {
+          "code": "forbidden_literal",
+          "encoding": "utf-8",
+          "offset": 14560,
+          "rule_index": 0
+        }
+      ],
+      "notes": [
+        "Static release checks only; passing is not a decompilation/crack resistance score.",
+        "Runtime plaintext, public exports and the implementation remain observable."
+      ],
+      "ok": false
+    },
+    "operation": "append the policy's UTF-8 forbidden marker to a copy of the protected binary",
+    "rejected_as_expected": true
+  },
+  "ok": true,
+  "protected": {
+    "binary": {
+      "format": "elf",
+      "sha256": "adb18369a9a62182499fa0b85a9fcfc72f402d74a56b9364ec8f2b719cd892d4",
+      "size": 14560
+    },
+    "flags": [
+      "-std=c++17",
+      "-O2",
+      "-flto",
+      "-fvisibility=hidden",
+      "-fvisibility-inlines-hidden",
+      "-fstack-protector-strong",
+      "-fPIE",
+      "-pie",
+      "-s",
+      "-Wl,-z,relro,-z,now,-z,noexecstack",
+      "-DRELEASEGUARD_EXAMPLE_PROTECTED=1"
+    ],
+    "gate": {
+      "checks": {
+        "debug_metadata_present": false,
+        "encodings": [
+          "utf-8",
+          "utf-16-le",
+          "utf-16-be",
+          "utf-32-le",
+          "utf-32-be"
+        ],
+        "literal_rules": 1,
+        "native": true,
+        "required_pe_flags_applied": false,
+        "scan_completed": true,
+        "sidecar_scope": "same_stem_siblings",
+        "symbol_table_present": false
+      },
+      "findings": [],
+      "notes": [
+        "Static release checks only; passing is not a decompilation/crack resistance score.",
+        "Runtime plaintext, public exports and the implementation remain observable."
+      ],
+      "ok": true
+    }
+  },
+  "rea_evaluated": false,
+  "releaseguard_version": "0.2.0"
+}

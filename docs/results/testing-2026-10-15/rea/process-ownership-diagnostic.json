@@ -1,0 +1,9 @@
+{
+  "name": "Error",
+  "message": "Provider process-ownership cannot execute prepare_owned_process: Linux process ownership inspection requires a procps-compatible ps on REA's PATH before launching a child: Command failed: ps -axo pid=,ppid=,pgid=,uid=,stat=,command=\nError, do this: mount -t proc proc /proc\n",
+  "cause": {
+    "name": "Error",
+    "message": "Command failed: ps -axo pid=,ppid=,pgid=,uid=,stat=,command=\nError, do this: mount -t proc proc /proc\n",
+    "code": 47
+  }
+}

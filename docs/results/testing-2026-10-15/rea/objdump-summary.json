@@ -1,0 +1,89 @@
+[
+  {
+    "operation": "file_headers",
+    "exit_code": 1,
+    "seconds": 1.671,
+    "stdout_bytes": 432,
+    "stderr_bytes": 0,
+    "keys": [
+      "code",
+      "category",
+      "message",
+      "retryable",
+      "remediation",
+      "details"
+    ],
+    "result": {
+      "code": "capability_unavailable",
+      "category": "unsupported_provider",
+      "message": "This analysis is unavailable for the current target. Choose another analysis or target.",
+      "retryable": false,
+      "remediation": {
+        "action": "This analysis is unavailable for the current target. Choose another analysis or target."
+      },
+      "details": {
+        "provider_id": "objdump",
+        "operation": "inspect_with_objdump",
+        "reason": "Unable to run configured command (unknown error)"
+      }
+    }
+  },
+  {
+    "operation": "symbols",
+    "exit_code": 1,
+    "seconds": 2.235,
+    "stdout_bytes": 432,
+    "stderr_bytes": 0,
+    "keys": [
+      "code",
+      "category",
+      "message",
+      "retryable",
+      "remediation",
+      "details"
+    ],
+    "result": {
+      "code": "capability_unavailable",
+      "category": "unsupported_provider",
+      "message": "This analysis is unavailable for the current target. Choose another analysis or target.",
+      "retryable": false,
+      "remediation": {
+        "action": "This analysis is unavailable for the current target. Choose another analysis or target."
+      },
+      "details": {
+        "provider_id": "objdump",
+        "operation": "inspect_with_objdump",
+        "reason": "Unable to run configured command (unknown error)"
+      }
+    }
+  },
+  {
+    "operation": "disassemble",
+    "exit_code": 1,
+    "seconds": 1.64,
+    "stdout_bytes": 432,
+    "stderr_bytes": 0,
+    "keys": [
+      "code",
+      "category",
+      "message",
+      "retryable",
+      "remediation",
+      "details"
+    ],
+    "result": {
+      "code": "capability_unavailable",
+      "category": "unsupported_provider",
+      "message": "This analysis is unavailable for the current target. Choose another analysis or target.",
+      "retryable": false,
+      "remediation": {
+        "action": "This analysis is unavailable for the current target. Choose another analysis or target."
+      },
+      "details": {
+        "provider_id": "objdump",
+        "operation": "inspect_with_objdump",
+        "reason": "Unable to run configured command (unknown error)"
+      }
+    }
+  }
+]

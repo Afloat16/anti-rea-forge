@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: '3.10'
+          - os: ubuntu-latest
+            python: '3.13'
+          - os: windows-latest
+            python: '3.12'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install project
+        run: python -m pip install -e .
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Test C++ masking with MSVC
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\VC\Auxiliary\Build\vcvars64.bat"
+          where cl
+          if errorlevel 1 exit /b 1
+          set CXX=cl
+          python -m unittest tests.test_native_literal -v
+
+      - name: Configure MSVC example
+        if: runner.os == 'Windows'
+        run: cmake -S examples -B build -A x64
+
+      - name: Configure Linux example
+        if: runner.os == 'Linux'
+        run: cmake -S examples -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build native examples and enforce release gate
+        run: cmake --build build --config Release
+
+      - name: Run example smoke test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Verify ordinary and protected build controls
+        if: runner.os == 'Linux'
+        run: python benchmarks/native_compare.py --out native-comparison.json
+
+      - name: Build Python distribution
+        run: python -m pip wheel . --no-deps --wheel-dir dist
+
+      - name: Audit example PE
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: releaseguard audit build/Release/releaseguard-example.exe > pe-audit.json
+
+      - name: Keep example audit report
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: windows-example-pe-audit
+          path: pe-audit.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Keep native build comparison
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: native-comparison-python-${{ matrix.python }}
+          path: native-comparison.json
+          if-no-files-found: ignore
+          retention-days: 14

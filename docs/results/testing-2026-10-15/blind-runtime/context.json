@@ -1,0 +1,11 @@
+{
+  "record_type": "retrospective context assembled after the blind experiment, not an independent audit trail",
+  "sample_sha256_at_archive": "e745495228de8b2ad64de3f5189505cdc2bc9ea007318010682127302645717b",
+  "analyst_initial_scope": "binary-only task; fixture source, headers, seed assets and ground truth withheld until recovery completed",
+  "capture": "blind-runtime/probe.stderr",
+  "verification": "blind-runtime-verification.json",
+  "limitations": [
+    "Original blind verification JSON did not record pre/post hashes. Do not interpret the archive-time hash as a contemporaneous blind-test hash record.",
+    "Blind input restrictions are procedural records; independent static recovery and automated runtime-boundary evidence include separate file integrity checks."
+  ]
+}

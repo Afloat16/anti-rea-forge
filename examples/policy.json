@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "formats": ["pe", "elf"],
+  "forbid_literals": ["releaseguard-demo-private-literal"],
+  "forbid_extensions": [".pdb", ".ilk", ".map"],
+  "require_native": true,
+  "require_no_debug_metadata": true,
+  "require_no_symbol_table": true,
+  "required_pe_flags": ["dynamic_base", "nx_compat", "guard_cf"]
+}

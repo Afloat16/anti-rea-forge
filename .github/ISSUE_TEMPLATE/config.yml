@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 安全问题与敏感信息
+    url: https://github.com/Afloat16/anti-rea-forge/blob/main/SECURITY.md
+    about: 请先阅读安全政策；公开 issue 不适合提交私钥、真实凭证或敏感漏洞细节。

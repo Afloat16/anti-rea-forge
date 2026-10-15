@@ -1,0 +1,38 @@
+{
+  "rea_version": "6.5.0",
+  "ghidra_version": "12.1.4",
+  "jdk": "Eclipse Temurin 21.0.12.1+1-LTS amd64",
+  "rea_integration_status": "blocked_by_environment",
+  "rea_final_failure": "Ghidra runtime root creation failed: hardcoded /tmp/rea-ghidra-* parent unavailable; no REA modification made",
+  "standalone_ghidra": {
+    "exit_code": 0,
+    "wall_seconds": 26.989,
+    "observed_decompiler_responses": 24,
+    "external_placeholder_entries": 8,
+    "main_entry": "0x001010a0",
+    "consumer_entry": "0x001012c0",
+    "decoder_entry": "0x00101220",
+    "wipe_entry": "0x001011f0"
+  },
+  "static_literal_recovery": {
+    "recovered_without_fixture_source_or_ground_truth": true,
+    "exact_ground_truth_match": true,
+    "accepted_by_unmodified_binary": true,
+    "binary_sha256_unchanged": true,
+    "run_seconds": 0.0043
+  },
+  "baseline_example": {
+    "exit_code": 0,
+    "wall_seconds": 10.903,
+    "decompiler_responses": 18,
+    "same_program_as_protected_fixture": false
+  },
+  "limitations": [
+    "Linux ELF synthetic fixture only; no Windows EXE/DLL empirical coverage.",
+    "REA integration failed for environmental reasons; this does not show successful anti-REA defense.",
+    "Independent Ghidra used official Java entry point and launch VM arguments because /dev/fd was unavailable to the shell launcher.",
+    "GNU demangler could not execute due permission denied; no installation permissions were changed.",
+    "The comparison-return value was modeled inaccurately by Ghidra; decompiler completion does not imply complete semantic recovery.",
+    "The reconstructed synthetic literal was enough to produce ACCEPTED with exit code 0 without patching the binary."
+  ]
+}

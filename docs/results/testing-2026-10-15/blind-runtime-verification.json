@@ -1,0 +1,16 @@
+[
+  {
+    "input": "RG_TEST_799b7bc55fbdf397165aa99368c53fb2",
+    "returncode": 0,
+    "stdout": "ACCEPTED\n",
+    "stderr": "",
+    "elapsed_seconds": 0.005415168998297304
+  },
+  {
+    "input": "WRONG",
+    "returncode": 1,
+    "stdout": "DENIED\n",
+    "stderr": "",
+    "elapsed_seconds": 0.0028445040006772615
+  }
+]

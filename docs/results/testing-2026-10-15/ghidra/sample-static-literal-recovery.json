@@ -1,0 +1,13 @@
+{
+  "method": "independent static reconstruction from Ghidra pseudocode plus ELF PT_LOAD mapping; fixture source and ground truth not read beforehand",
+  "sample_sha256": "e745495228de8b2ad64de3f5189505cdc2bc9ea007318010682127302645717b",
+  "decoder_entry": "0x00101220",
+  "consumer_entry": "0x001012c0",
+  "cipher_ghidra_address": "0x00102030",
+  "cipher_elf_vaddr": "0x2030",
+  "cipher_file_offset": "0x2030",
+  "cipher_blob_length": 41,
+  "decoded_hex": "52475f544553545f373939623762633535666264663339373136356161393933363863353366623200",
+  "decoded_text": "RG_TEST_799b7bc55fbdf397165aa99368c53fb2",
+  "terminated": true
+}

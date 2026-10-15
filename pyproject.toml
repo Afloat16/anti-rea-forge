@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-release-guard"
+version = "0.2.0"
+description = "Anti-REA Forge: open software protection research and release hardening"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = ["cryptography>=46.0.4,<51"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Security :: Cryptography",
+]
+
+[project.scripts]
+releaseguard = "releaseguard.cli:main"
+
+[project.urls]
+Repository = "https://github.com/Afloat16/anti-rea-forge"
+Issues = "https://github.com/Afloat16/anti-rea-forge/issues"
+Contributing = "https://github.com/Afloat16/anti-rea-forge/blob/main/CONTRIBUTING.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+releaseguard = ["data/cmake/*.cmake", "data/include/releaseguard/*.hpp"]

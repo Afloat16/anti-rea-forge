@@ -1,0 +1,11 @@
+{
+  "ground_truth_path": "<workspace>/.test-runs/runtime-resistance/ground_truth.json",
+  "exact_matching_fields": {
+    "secret": true
+  },
+  "match_found": true,
+  "source_read_before_recovery": false,
+  "limitations": [
+    "This verifies one synthetic literal and visible decoder; it does not establish complete recovery of program source or comparison-return semantics."
+  ]
+}
