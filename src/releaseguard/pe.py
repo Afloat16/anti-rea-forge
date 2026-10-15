@@ -24,6 +24,10 @@ _MACHINES = {
 }
 _MAX_SECTIONS = 96
 _UINT32_LIMIT = 1 << 32
+_DEBUG_ENTRY_SIZE = 28
+_MAX_DEBUG_ENTRIES = 4096
+# Currently documented PE extended DLL flags: CET_COMPAT and FORWARD_CFI_COMPAT.
+_KNOWN_EXTENDED_DLL_CHARACTERISTICS = 0x0001 | 0x0040
 
 
 def _read_at(stream: BinaryIO, offset: int, size: int, file_size: int) -> bytes:
@@ -124,6 +128,22 @@ def audit_pe(path: Path | str) -> dict:
                 return 0, 0
             return struct.unpack_from("<II", optional, directory_offset + index * 8)
 
+        def file_offset_for_rva(address: int, size: int) -> int:
+            if address + size > _UINT32_LIMIT:
+                raise ValueError("数据目录超出 32 位 RVA 空间")
+            matches = set()
+            if address < size_of_headers and size <= size_of_headers - address:
+                matches.add(address)
+            for virtual_address, virtual_span, raw_offset, raw_size in sections:
+                if address >= virtual_address:
+                    delta = address - virtual_address
+                    if delta < virtual_span and size <= virtual_span - delta:
+                        if delta <= raw_size and size <= raw_size - delta:
+                            matches.add(raw_offset + delta)
+            if len(matches) != 1:
+                raise ValueError("被审计的数据目录未唯一映射到文件中的完整数据")
+            return matches.pop()
+
         def checked_directory(index: int, *, file_offset: bool = False) -> bool:
             address, size = directory(index)
             if not address and not size:
@@ -136,17 +156,8 @@ def audit_pe(path: Path | str) -> dict:
                 if address % 8 or address > file_size or size > file_size - address:
                     raise ValueError("证书表未按 8 字节对齐或超出文件范围")
                 return True
-            if address + size > _UINT32_LIMIT:
-                raise ValueError("数据目录超出 32 位 RVA 空间")
-            if address < size_of_headers and size <= size_of_headers - address:
-                return True
-            for virtual_address, virtual_span, _, raw_size in sections:
-                if address >= virtual_address:
-                    delta = address - virtual_address
-                    if delta < virtual_span and size <= virtual_span - delta:
-                        if delta <= raw_size and size <= raw_size - delta:
-                            return True
-            raise ValueError("被审计的数据目录未映射到文件中的完整数据")
+            file_offset_for_rva(address, size)
+            return True
 
         if bool(symbols_offset) != bool(symbol_count):
             raise ValueError("COFF 符号表地址与数量不完整")
@@ -164,6 +175,54 @@ def audit_pe(path: Path | str) -> dict:
             "coff_symbols_present": bool(symbol_count),
             "certificate_table_present": checked_directory(4, file_offset=True),
         }
+        debug_types = []
+        debug_metadata_present = False
+        empty_repro_count = 0
+        extended_characteristics_count = 0
+        if evidence["debug_directory_present"]:
+            debug_address, debug_size = directory(6)
+            if debug_size % _DEBUG_ENTRY_SIZE:
+                raise ValueError("PE 调试目录长度必须为 28 字节条目的整数倍")
+            if debug_size // _DEBUG_ENTRY_SIZE > _MAX_DEBUG_ENTRIES:
+                raise ValueError("PE 调试目录条目数量超过审计上限")
+            debug_offset = file_offset_for_rva(debug_address, debug_size)
+            entries = _read_at(stream, debug_offset, debug_size, file_size)
+            for entry in struct.iter_unpack("<IIHHIIII", entries):
+                reserved, _, major, minor, debug_type, data_size, data_rva, data_offset = entry
+                debug_types.append(debug_type)
+                if data_size:
+                    if (data_offset < size_of_headers or data_offset > file_size
+                            or data_size > file_size - data_offset):
+                        raise ValueError("PE 调试条目原始数据偏移或长度无效")
+                    if data_offset < debug_offset + debug_size and data_offset + data_size > debug_offset:
+                        raise ValueError("PE 调试条目原始数据与调试目录重叠")
+                    # Unmapped debug payloads may have RVA zero and live in a
+                    # file overlay. Otherwise both addresses must agree.
+                    if data_rva and file_offset_for_rva(data_rva, data_size) != data_offset:
+                        raise ValueError("PE 调试条目 RVA 与文件偏移不一致")
+                elif data_rva or data_offset:
+                    raise ValueError("空 PE 调试条目包含非空数据地址")
+
+                canonical_header = reserved == 0 and major == 0 and minor == 0
+                if debug_type == 20:
+                    # The extended DLL characteristics record is a 4-byte
+                    # flags value, not CodeView/PDB or source debug data.
+                    if data_size != 4:
+                        raise ValueError("扩展 DLL characteristics 调试条目必须包含 4 字节标记")
+                    extended_flags = _u32(_read_at(stream, data_offset, 4, file_size), 0)
+                    if canonical_header and not extended_flags & ~_KNOWN_EXTENDED_DLL_CHARACTERISTICS:
+                        extended_characteristics_count += 1
+                    else:
+                        debug_metadata_present = True
+                elif debug_type == 16 and not data_size and canonical_header:
+                    # Microsoft permits empty REPRO payloads. Nonempty digest
+                    # layouts remain unverified and cannot bypass the gate.
+                    empty_repro_count += 1
+                else:
+                    # Includes CodeView, COFF, embedded PDBs, nonempty REPRO,
+                    # and unknown/reserved types, including type zero.
+                    debug_metadata_present = True
+        evidence["debug_metadata_present"] = debug_metadata_present
         managed = checked_directory(14)
         flags = {
             "dynamic_base": bool(dll_characteristics & 0x0040),
@@ -194,8 +253,12 @@ def audit_pe(path: Path | str) -> dict:
                 warnings.append("设置了 GUARD_CF，但未设置 CFG 所需的 DYNAMIC_BASE 标记。")
         else:
             warnings.append("未设置 GUARD_CF 标记。")
-        if evidence["debug_directory_present"]:
-            warnings.append("检测到调试目录；发布前检查 PDB 路径及调试信息。")
+        if debug_metadata_present:
+            warnings.append("检测到调试目录中的调试信息或未验证条目；发布前检查 PDB 路径及调试信息。")
+        if extended_characteristics_count:
+            notes.append("调试目录含有效的 4 字节扩展 DLL characteristics 安全标记；此类条目不等同于 PDB 或源码调试信息，未验证实际运行时防护。")
+        if empty_repro_count:
+            notes.append("调试目录含空载荷 REPRO 可再现构建标记；此类条目不等同于 PDB 或源码调试信息。")
         if evidence["coff_symbols_present"]:
             warnings.append("检测到 COFF 符号表；发布前检查符号信息。")
         if evidence["certificate_table_present"]:
@@ -212,6 +275,7 @@ def audit_pe(path: Path | str) -> dict:
             "managed": managed,
             "flags": flags,
             "evidence": evidence,
+            "debug_directory_types": debug_types,
             "warnings": warnings,
             "notes": notes,
         }

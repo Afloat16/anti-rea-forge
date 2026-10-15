@@ -6,7 +6,7 @@
 
 - [x] Python 签名发布清单与离线许可证工具。
 - [x] CMake 编译接入、选择性 C++ 文字掩码和 PE/ELF 静态发布门禁。
-- [x] 本地 158 项功能与集成测试，包含真实 Linux CMake、共享库调用和 Windows 时间信息兼容回归。
+- [x] 本地 176 项功能与集成测试，包含真实 Linux CMake、共享库调用、Windows 时间信息兼容和 PE 条目分类回归。
 - [x] 公开 Ghidra 静态恢复、独立运行时恢复成功的失败记录与复现材料。
 - [ ] 在可用宿主上完成 REA provider 到分析任务的完整流程。
 - [ ] 实际验证 Windows/MSVC EXE/DLL 与原有调用方兼容性。

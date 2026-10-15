@@ -10,6 +10,8 @@ Anti-REA Forge（底层工具名 Open Release Guard）v0.2 是 alpha 版本，�
 
 `gate` 只证明本次检查的文件符合指定的静态规则；未配置的文字、未知编码、算法逻辑、运行行为及公共导出不在文字扫描保证范围内。PE 标记及相关目录存在不代表完整 CFG 插桩或操作系统已实施缓解措施，也不验证 Authenticode 信任。ELF 名称与 section 表缺失时，默认严格元数据策略拒绝作出“已清除”的结论。文件修改可绕过或移除构建 hook，因此发行流程必须由可信构建环境控制。
 
+PE 的调试目录按条目进行有界解析，保留 `debug_directory_present` 与 `debug_directory_types` 原始证据，并另报 `debug_metadata_present`。只有规范空载荷 REPRO（type 16）及已识别位值的四字节扩展 DLL 特征（type 20）可归为非调试记录；CodeView、COFF/POGO、未知类型或未验证字段仍受默认禁止调试元数据策略约束。分类不证明操作系统实际实施了相关安全特征。
+
 本项目没有测得针对 REA 的破解概率或通用语言覆盖率。CMake/编译器的兼容性、共享库 ABI、优化副作用和性能需要在具体业务上验证；Linux `-z now` 会改变延迟绑定行为。共享库和模块库不自动隐藏公开导出；Linux 可执行目标默认设置 hidden visibility，可能影响由 `dlsym` 或插件查找的可执行文件符号，需要验证这些接口。
 
 ## 信任边界

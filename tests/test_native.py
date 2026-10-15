@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 from releaseguard import native
 from releaseguard.core import GuardError
-from tests.test_pe import make_pe
+from tests.test_pe import make_debug_pe, make_pe
 from tests.test_elf import make_elf
 
 
@@ -447,6 +447,19 @@ class NativeTests(unittest.TestCase):
                 patch.object(native, "read_limited_prefix", metadata_phase):
             with self.assertRaisesRegex(GuardError, "changed after scanning"):
                 self.gate()
+
+    def test_gate_accepts_validated_security_debug_directory_entry(self) -> None:
+        self.binary.write_bytes(make_debug_pe([(20, struct.pack("<I", 1))]))
+        report = self.gate()
+        self.assertTrue(report["ok"])
+        self.assertFalse(report["checks"]["debug_metadata_present"])
+
+    def test_gate_rejects_debug_data_alongside_security_directory_entry(self) -> None:
+        self.binary.write_bytes(make_debug_pe([
+            (20, struct.pack("<I", 1)), (2, b"RSDS synthetic CodeView data"),
+        ]))
+        report = self.assert_failed_gate()
+        self.assertIn({"code": "debug_metadata_present"}, report["findings"])
 
     def test_gate_rejects_same_size_replacement_with_preserved_mtime(self) -> None:
         original_prefix = native.read_limited_prefix

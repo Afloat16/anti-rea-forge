@@ -110,6 +110,10 @@ PE 标志检查还要求相关静态元数据存在。例如 `dynamic_base` 需�
 `high_entropy_va` 不适用于 32 位产物。ELF 在缺少足够 section 元数据而无法判断
 禁止的调试资料或静态符号表时会拒绝通过，不会将未知当作安全。
 
+PE 调试目录会保留原始存在性和条目类型，另按内容判断是否存在调试或未验证元数据。
+默认策略仍拒绝 CodeView、COFF/POGO、未知类型和未验证字段；规范空载荷 REPRO
+标记及已识别位值的四字节扩展 DLL 安全特征不等同于 PDB/源码调试资料。
+
 ## 4. 接入现有 CMake 目标
 
 在 `add_executable` 或 `add_library` 创建目标之后调用保护函数。
@@ -132,6 +136,11 @@ hook 会添加头文件搜索路径、强制包含生成的种子头文件，并
 它在配置阶段为目标生成 `build/releaseguard-generated/myapp` 资产，并检查编译器和
 链接器是否支持 IPO／LTO；不支持时会在配置阶段报错。
 Release 启用 LTO 和平台相应的优化、编译加固及链接选项，链接后运行 policy 门禁。
+
+MSVC 的 Release 保护还设置 `/DEBUG:NONE`、`/INCREMENTAL:NO` 和 `/NOCOFFGRPINFO`，
+抑制 PDB、增量链接及 COFF 分组调试记录。`/NOCOFFGRPINFO` 未列在微软公开 LINK
+选项清单中，其接受情况与实际效果依赖所用工具链；请检查链接诊断和最终门禁结果。
+本项目没有通过放行 COFF/POGO 条目来消除构建失败，也不修改二进制以清空安全元数据。
 
 目标构建目录中的种子与第 2 步 vendor 资产中的种子分别管理；目标不会自动继承
 vendor 种子。默认在同一目标构建目录复用已生成的种子。若要固定实际目标构建种子：

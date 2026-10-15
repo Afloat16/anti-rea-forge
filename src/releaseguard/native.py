@@ -226,7 +226,7 @@ def gate(binary: Path | str, policy_path: Path | str,
     managed = report.get("managed", False)
     if policy["require_native"] and managed:
         findings.append({"code": "managed_artifact"})
-    debug = evidence["debug_directory_present"] if format_name == "pe" else evidence["debug_sections_present"]
+    debug = evidence["debug_metadata_present"] if format_name == "pe" else evidence["debug_sections_present"]
     symbols = evidence["coff_symbols_present"] if format_name == "pe" else evidence["symbol_table_present"]
     if policy["require_no_debug_metadata"] and debug:
         findings.append({"code": "debug_metadata_present"})

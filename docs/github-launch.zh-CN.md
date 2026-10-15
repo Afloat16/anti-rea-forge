@@ -1,6 +1,6 @@
-# GitHub 首发内容
+# GitHub 首发记录
 
-以下是仓库创建与首发时使用的具体文案，创建与推送成功后以 GitHub 页面状态为准。本文件不表示仓库已经发布。
+仓库已于 2026-10-15 公开发布：[Afloat16/anti-rea-forge](https://github.com/Afloat16/anti-rea-forge)。共建招募见已置顶的 [Issue #1](https://github.com/Afloat16/anti-rea-forge/issues/1)。以下保留首次发布时的介绍与招募文案；最新构建结果以 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions) 为准。
 
 | 项目 | 内容 |
 | --- | --- |
@@ -16,11 +16,11 @@
 
 🛡️ 面向 REA 等 AI 逆向工具的软件防护共建工程：C/C++ 编译加固、PE/ELF 发布门禁与可复现对抗实验。公开失败，欢迎一起开发、验证与改进。
 
-## 建议 Topics
+## 已设置 Topics
 
 `software-protection`、`reverse-engineering`、`anti-reverse-engineering`、`rea`、`ghidra`、`cpp`、`cmake`、`windows`、`security-research`、`open-source`
 
-## 共建招募 Issue 草稿
+## 首次共建招募文案
 
 标题：**🛠️ 共建招募｜一起给 REA 出一道更难的公开考题**
 
@@ -41,4 +41,4 @@
 
 欢迎 Star、Fork，也欢迎把有证据的质疑留下来。希望和你一起把下一次实验做得更好。
 
-此草稿若发布为仓库根层级 Issue，应将上面两个相对链接改为对应 GitHub `blob/main/` 绝对链接。公开 Issue 不接收生产私钥、客户资料或未协调披露的敏感安全细节，安全问题请按 [SECURITY.md](../SECURITY.md) 处理。
+Issue 中的链接已替换为对应 GitHub 绝对链接。公开 Issue 不接收生产私钥、客户资料或未协调披露的敏感安全细节，安全问题请按 [SECURITY.md](../SECURITY.md) 处理。

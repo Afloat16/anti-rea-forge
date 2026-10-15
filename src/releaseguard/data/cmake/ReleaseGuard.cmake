@@ -166,7 +166,13 @@ function(releaseguard_protect target)
         releaseguard_harden("${target}")
         target_compile_options("${target}" PRIVATE
             "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C,CXX>>:/GL>")
-        target_link_options("${target}" PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+        # MSVC can emit POGO/COFF group records even in a Release build
+        # without PDB output. Keep the gate strict and suppress those records.
+        target_link_options("${target}" PRIVATE
+            "$<$<CONFIG:Release>:/LTCG>"
+            "$<$<CONFIG:Release>:/DEBUG:NONE>"
+            "$<$<CONFIG:Release>:/INCREMENTAL:NO>"
+            "$<$<CONFIG:Release>:/NOCOFFGRPINFO>")
     else()
         target_compile_options("${target}" PRIVATE
             "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C,CXX>>:-O2>"
