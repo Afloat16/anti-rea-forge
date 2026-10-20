@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 import json
 import multiprocessing
@@ -106,7 +106,7 @@ def real_lock_expiry(base: Path, private: Ed25519PrivateKey) -> dict:
     finally:
         lock.close()
     require("expired" in result, "expired lock-wait request was not rejected as expired")
-    with sqlite3.connect(path) as connection:
+    with closing(sqlite3.connect(path)) as connection, connection:
         floor = connection.execute("SELECT last_seen FROM capability_state").fetchone()[0]
         count = connection.execute("SELECT COUNT(*) FROM capability_nonces").fetchone()[0]
     require((floor, count) == (0, 0), "expired lock-wait request changed authority state")
@@ -148,7 +148,7 @@ def process_race(base: Path, private: Ed25519PrivateKey) -> dict:
         for queue in (ready, results):
             queue.close()
             queue.join_thread()
-    with sqlite3.connect(path) as connection:
+    with closing(sqlite3.connect(path)) as connection, connection:
         count = connection.execute("SELECT COUNT(*) FROM capability_nonces").fetchone()[0]
     require(count == 1, "concurrent authority did not persist exactly one nonce")
     return {"completed": True, "start_method": "spawn", "processes": len(children),

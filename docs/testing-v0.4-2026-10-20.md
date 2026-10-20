@@ -8,7 +8,7 @@ Environment: Linux x86-64, Python 3.12.14, cryptography 50.0.2, GCC 13.3.0 and C
 
 | Check | Observation |
 | --- | --- |
-| Full unittest discovery | **331 run: 330 passed, 1 skipped, no failures/errors**, 24.244 seconds |
+| Full unittest discovery | **331 run: 330 passed, 1 skipped, no failures/errors**, 23.597 seconds |
 | Native buffer | Real C++17 unoptimized, optimized and LTO builds; both guards fault in isolated children; required locking failure rejects construction; clear/destruction wipe the owned rounded pages before unlocking/releasing |
 | Native failure injection | Partial `mprotect`, required `mlock` and required `MADV_DONTDUMP` failures clean up once; tests observe mapped owned memory before release, never freed memory |
 | Independent mapping observation | `/proc/self/smaps` unavailable in this host: skipped, not counted as an observed OS mapping flag or a core-dump experiment |
@@ -27,6 +27,8 @@ An additional [independent process/lock probe](../benchmarks/capability_process_
 An initial schema query used SQL `LIKE 'sqlite_%'` to omit internal objects. Its underscore wildcard could hide an unexpected trigger, including one that deleted consumed nonces. Merely changing to a literal-prefix filter also left manually inserted reserved-name objects unchecked. The final validator accepts **exactly the entire expected SQLite schema**, without ignoring names. Independent regressions check both cases and reject them before consumption.
 
 The initial timestamp was sampled before waiting for the database lock. A queued request could otherwise cross its expiry boundary while using the stale sample. The final implementation samples trusted time again inside the serialized transaction, rechecks validity there and then applies its persisted clock floor. A deterministic regression covers expiry during admission. Cleanup errors and SQLite builds without an extension-loading API also fail safely or use the supported disabled-by-default path.
+
+The [first cross-platform CI run](https://github.com/Afloat16/anti-rea-forge/actions/runs/39365423858) passed on Linux/Python 3.10 and 3.13. Windows exposed 24 cleanup errors: test-fixture `with sqlite3.connect(...)` blocks committed transactions without closing their connections, leaving database files locked during temporary-directory removal. Fixture connections and the independent process-probe reads now explicitly close after their transaction context exits. The production replay-store connection manager already closes its connections and was unchanged by this fix. Check the exact subsequent commit in Actions for the final Windows/MSVC result.
 
 ## Actual Frida attempt
 

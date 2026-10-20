@@ -12,6 +12,7 @@ import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -53,7 +54,7 @@ class CapabilityTests(unittest.TestCase):
         return result
 
     def state(self, path=None) -> tuple[int, int]:
-        with sqlite3.connect(str(self.path if path is None else path)) as connection:
+        with closing(sqlite3.connect(str(self.path if path is None else path))) as connection, connection:
             last_seen = connection.execute("SELECT last_seen FROM capability_state").fetchone()[0]
             count = connection.execute("SELECT COUNT(*) FROM capability_nonces").fetchone()[0]
         return last_seen, count
@@ -329,7 +330,7 @@ class CapabilityTests(unittest.TestCase):
         self.assertFalse(self.path.exists())
 
     def test_corrupt_store_and_wrong_marker_fail_closed(self) -> None:
-        with sqlite3.connect(str(self.path)) as connection:
+        with closing(sqlite3.connect(str(self.path))) as connection, connection:
             connection.execute("PRAGMA application_id = 1")
         with self.assertRaises(GuardError):
             ReplayStore(self.path)
@@ -340,7 +341,7 @@ class CapabilityTests(unittest.TestCase):
             ReplayStore(self.path)
 
     def test_every_extra_trigger_or_view_is_rejected_including_sqlite_like_prefix(self) -> None:
-        with sqlite3.connect(str(self.path)) as connection:
+        with closing(sqlite3.connect(str(self.path))) as connection, connection:
             connection.execute("CREATE TRIGGER sqlitex_replay_escape AFTER INSERT ON capability_nonces "
                                "BEGIN DELETE FROM capability_nonces; END")
         with self.assertRaisesRegex(GuardError, "schema"):

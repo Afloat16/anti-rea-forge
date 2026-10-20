@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import copy
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
@@ -39,12 +40,12 @@ class RuntimeRegressions(unittest.TestCase):
                                   now=self.now if now is None else now)
 
     def state(self, path):
-        with sqlite3.connect(path) as connection:
+        with closing(sqlite3.connect(path)) as connection, connection:
             return (connection.execute("SELECT last_seen FROM capability_state").fetchone()[0],
                     connection.execute("SELECT COUNT(*) FROM capability_nonces").fetchone()[0])
 
     def install_deleting_trigger(self, path, *, reserved_name=False):
-        with sqlite3.connect(path) as connection:
+        with closing(sqlite3.connect(path)) as connection, connection:
             connection.execute("CREATE TRIGGER sqlitex_replay_escape AFTER INSERT ON "
                                "capability_nonces BEGIN DELETE FROM capability_nonces; END")
             if reserved_name:
@@ -85,7 +86,7 @@ class RuntimeRegressions(unittest.TestCase):
         for index, statement in enumerate(statements):
             path = self.base / f"store-{index}.sqlite"
             ReplayStore.create(path)
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 connection.execute(statement)
             with self.subTest(statement=statement), self.assertRaises(GuardError):
                 ReplayStore(path)

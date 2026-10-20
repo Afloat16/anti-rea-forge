@@ -17,7 +17,7 @@
     "skipped": 1,
     "failed": 0,
     "errors": 0,
-    "seconds": 24.244,
+    "seconds": 23.597,
     "skip_reason": "/proc/self/smaps unavailable; independent OS mapping-flag observation skipped"
   },
   "wheel": {
