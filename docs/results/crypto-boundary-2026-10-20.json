@@ -1,0 +1,44 @@
+{
+  "ok": true,
+  "scope": "functional_crypto_boundary_controls_only",
+  "releaseguard": "0.3.0",
+  "python": "3.12.14",
+  "cryptography": "50.0.2",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "rea_evaluated": false,
+  "decompilation_resistance": "not_evaluated",
+  "reversible_reference_control": {
+    "reference_recovered": true,
+    "protection_goal": "failed_by_design"
+  },
+  "argon2id": {
+    "correct_password_accepted": true,
+    "wrong_password_rejected": true,
+    "plaintext_not_in_serialized_record": true,
+    "create_elapsed_ms": 71.464
+  },
+  "weak_password_negative_control": {
+    "dictionary_size": 3,
+    "password_recovered": true
+  },
+  "sealed_asset": {
+    "roundtrip_matches": true,
+    "wrong_key_rejected": true,
+    "tamper_rejected": true,
+    "wrong_product_rejected": true,
+    "wrong_release_rejected": true,
+    "wrong_purpose_rejected": true,
+    "wrong_asset_id_rejected": true
+  },
+  "runtime_boundary": {
+    "authorized_plaintext_available_in_memory": true,
+    "memory_dump_resistance": "not_provided"
+  },
+  "elapsed_ms": 470.974,
+  "notes": [
+    "Only fresh synthetic values are used; passwords, keys and plaintext are not exported.",
+    "A missing plaintext substring is not evidence of cryptographic strength.",
+    "Correct AEAD requires external key custody; a client holding its key can read or forge assets.",
+    "Timing is one local observation, not a cracking-resistance score or confidence estimate."
+  ]
+}

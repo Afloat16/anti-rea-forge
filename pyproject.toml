@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-release-guard"
-version = "0.2.0"
+version = "0.3.0"
 description = "Anti-REA Forge: open software protection research and release hardening"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -4,12 +4,18 @@
 
 ## 当前起点
 
+v0.3 新增单向口令、外部密钥资产和全发布目录检查，接入与边界见 [crypto-protection.zh-CN.md](crypto-protection.zh-CN.md)，本轮验证见 [testing-2026-10-20.md](testing-2026-10-20.md)。下方 176 项是 2026-10-15 的历史测试快照。
+
 - [x] Python 签名发布清单与离线许可证工具。
 - [x] CMake 编译接入、选择性 C++ 文字掩码和 PE/ELF 静态发布门禁。
+- [x] 固定成本 Argon2id 单向口令校验与恶意参数限额。
+- [x] 外部 256 位密钥、HKDF-SHA256 与 AES-256-GCM 数据资产封装。
+- [x] 最终发布文件清单、源码/备份路径、旧制品哈希与有界全目录文字检查。
 - [x] 本地 176 项功能与集成测试，包含真实 Linux CMake、共享库调用、Windows 时间信息兼容和 PE 条目分类回归。
 - [x] 公开 Ghidra 静态恢复、独立运行时恢复成功的失败记录与复现材料。
 - [ ] 在可用宿主上完成 REA provider 到分析任务的完整流程。
-- [ ] 实际验证 Windows/MSVC EXE/DLL 与原有调用方兼容性。
+- [x] Windows/MSVC EXE 构建、运行和发布检查 CI。
+- [ ] Windows DLL ABI 与原有调用方兼容性，以及 Windows 上的逆向抵抗评估。
 - [ ] 按预先固定的配对多样本协议评估恢复成本。
 
 完整现状见 [测试报告](testing-2026-10-15.zh-CN.md)。当前没有已验证的“高概率防 REA”方案。

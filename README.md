@@ -10,11 +10,23 @@ Anti-REA Forge is an open research and engineering project exploring native soft
 
 **Contributions are welcome. Our current anti-cracking goals remain unmet:** independent static and runtime analysis recovered test secrets from protected synthetic samples, and the original programs accepted the recovered values. We publish these failures to guide improvement and make no promise of unbreakable software.
 
-**MIT · 0.2.0 / Alpha · C/C++ build integration · Python tooling · PE / ELF**
+**MIT · 0.3.0 / Alpha · C/C++ build integration · Python tooling · PE / ELF**
 
 [Contribute (Chinese)](CONTRIBUTING.md) · [Community invitation](https://github.com/Afloat16/anti-rea-forge/issues/1) · [Challenges and roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Test report (Chinese)](docs/testing-2026-10-15.zh-CN.md) · [Security model (Chinese)](SECURITY.md)
 
 The tooling retains the **Open Release Guard** Python distribution name `open-release-guard`, CLI/import name `releaseguard`, and existing CMake interfaces. The project targets Windows EXE/DLL protection research and also supports Linux ELF validation. It is independently developed and is not affiliated with or endorsed by REA.
+
+## New in v0.3: remove recoverable secrets and check the whole release
+
+The supplied REA case study motivates three implemented improvements:
+
+- **One-way password verification:** `password-create` / `password-check` use salted Argon2id with a fixed 64 MiB, 3-pass, 4-lane profile. Untrusted verifier parameters are rejected before expensive work. The original password is not encrypted into the verifier; weak passwords can still be guessed and local checks can be patched.
+- **External-key data assets:** `asset-keygen` / `asset-seal` / `asset-open` combine a random external 256-bit master key, per-package HKDF-SHA256 key derivation and AES-256-GCM. Authentication binds trusted product, release, purpose and asset identity. Wrong keys, tampering and context swaps fail before plaintext output is created. Keep the key outside the client release; an authorized process holding its key or plaintext remains observable.
+- **Whole-release exposure checks:** `gate --root` can reject source/backup path components, known old artifact SHA-256 digests, missing or additional files against an exact allowlist, and declared literals in every release file, under a byte budget. The [strict native-release policy](examples/policy-strict-release.json) is an editable example, not a universal secret scanner.
+
+These are Python APIs and CLI/build tools. They do not add a native C/C++ verifier/decryptor SDK, executable virtualization, a server or a key service. A fully offline client cannot keep a permanent key secret from someone who controls it. For logic that must remain confidential, keep execution and authorization in a trusted service and expose only the required operation.
+
+See the [English integration and threat mapping](docs/crypto-protection.md), [中文说明](docs/crypto-protection.zh-CN.md), [v0.3 validation](docs/testing-2026-10-20.md), and [functional crypto observations](docs/results/crypto-boundary-2026-10-20.json). The observations include successful recovery of a weak-password control and explicitly record that authorized plaintext is available in memory. They are not a completed REA cracking evaluation or a protection success rate.
 
 ## Evidence so far
 
@@ -45,6 +57,9 @@ Use **Issues → New issue** for a bug, experiment, or proposal, or submit a PR.
 | `native-init` + `releaseguard_protect(target POLICY ...)` | Generate CMake/C++ build assets, enable Release optimization and LTO, and fail the build when its artifact violates the policy |
 | `RG_TEXT("...")` | Apply reversible compile-time masking to selected C++17 literals; decode into an object with a defined lifetime. Build seeds diversify the static payload |
 | `gate` | Scan declared literals in five encodings, inspect debug/symbol metadata, reject forbidden sidecars, and require configured PE structural evidence |
+| `gate --root` in v0.3 | Optional exact file allowlist, source/backup path rules, old artifact hash denylist, and bounded whole-release literal scans |
+| `password-create / password-check` | Fixed-profile, salted Argon2id one-way verifiers with pre-KDF resource validation |
+| `asset-keygen / asset-seal / asset-open` | External-key AES-256-GCM data assets with HKDF-SHA256 and trusted context binding |
 | `audit` | Read-only inspection of PE32/PE32+ EXE/DLL files, CLR directories, ASLR/DEP/CFG flags and supporting structures, debug directories, and certificate tables |
 | `keygen` | Generate a passphrase-encrypted Ed25519 private key and a distributable public key; refuse to overwrite existing files |
 | `manifest-sign / manifest-verify` | Sign a complete release inventory; verify hashes, product, and version; reject missing, modified, or extra files |

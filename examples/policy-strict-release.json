@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "formats": ["pe", "elf"],
+  "forbid_literals": ["SYNTHETIC-TEST-SECRET-DO-NOT-SHIP"],
+  "forbid_extensions": [".pdb", ".ilk", ".map", ".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".cs", ".py", ".ts", ".tsx", ".js", ".mjs", ".cjs", ".asar", ".zip", ".7z", ".bak", ".old", ".key", ".pem", ".pfx", ".p12"],
+  "forbid_path_components": [".git", ".env", "src", "source", "sources", "backup", "backups", "tests", "testdata", "ground_truth.json", "issuer-private.pem", "asset.key"],
+  "forbid_file_sha256": [],
+  "allowed_release_files": ["MyApp.exe", "model.sealed.json"],
+  "scan_release_literals": true,
+  "max_release_scan_bytes": 67108864,
+  "require_native": true,
+  "require_no_debug_metadata": true,
+  "require_no_symbol_table": true,
+  "required_pe_flags": ["dynamic_base", "nx_compat", "guard_cf"]
+}

@@ -18,7 +18,10 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .core import GuardError, _inventory, _is_link, _root, read_document, read_limited, write_new
+from .core import (
+    MAX_ENTRIES, MAX_FILES, GuardError, _inventory, _is_link, _root,
+    read_document, read_limited, safe_relative_path, write_new,
+)
 from .elf import audit_elf
 from .pe import audit_pe
 
@@ -26,6 +29,12 @@ _FLAG_NAMES = {"dynamic_base", "nx_compat", "guard_cf", "high_entropy_va"}
 _POLICY_FIELDS = {
     "version", "formats", "forbid_literals", "forbid_extensions", "require_native",
     "require_no_debug_metadata", "require_no_symbol_table", "required_pe_flags", "max_binary_bytes",
+    "forbid_path_components", "forbid_file_sha256", "scan_release_literals",
+    "max_release_scan_bytes", "allowed_release_files",
+}
+_ROOT_POLICY_FIELDS = {
+    "forbid_path_components", "forbid_file_sha256", "scan_release_literals",
+    "max_release_scan_bytes", "allowed_release_files",
 }
 _ENCODINGS = ("utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be")
 _ASSET_PATHS = ("cmake/ReleaseGuard.cmake", "include/releaseguard/literal.hpp")
@@ -40,7 +49,7 @@ def _list_of_strings(value: Any, label: str, maximum: int) -> list[str]:
     return value
 
 
-def load_policy(path: Path | str) -> dict[str, Any]:
+def _load_policy(path: Path | str) -> tuple[dict[str, Any], bool]:
     supplied = read_document(path)
     if set(supplied) - _POLICY_FIELDS or "version" not in supplied:
         raise GuardError("Missing version or unknown gate policy fields")
@@ -51,6 +60,9 @@ def load_policy(path: Path | str) -> dict[str, Any]:
         "forbid_extensions": [".pdb", ".ilk", ".map"], "require_native": True,
         "require_no_debug_metadata": True, "require_no_symbol_table": True,
         "required_pe_flags": [], "max_binary_bytes": 512 * 1024 * 1024,
+        "forbid_path_components": [], "forbid_file_sha256": [],
+        "scan_release_literals": False, "max_release_scan_bytes": 64 * 1024 * 1024,
+        "allowed_release_files": None,
     }
     policy.update(supplied)
     formats = _list_of_strings(policy["formats"], "formats", 2)
@@ -67,16 +79,44 @@ def load_policy(path: Path | str) -> dict[str, Any]:
     extensions = _list_of_strings(policy["forbid_extensions"], "forbid_extensions", 32)
     if any(not re.fullmatch(r"\.[a-z0-9]{1,16}", x) for x in extensions):
         raise GuardError("Forbidden extensions must use a lowercase .extension form")
+    components = _list_of_strings(policy["forbid_path_components"], "forbid_path_components", 64)
+    for component in components:
+        # These are exact names, not globs or relative paths. Reuse the same
+        # Unicode and cross-platform path rules as the release inventory.
+        if "/" in component or any(char in component for char in "[]{}"):
+            raise GuardError("Forbidden path components must be exact single names")
+        safe_relative_path(component)
+    if len({component.casefold() for component in components}) != len(components):
+        raise GuardError("Duplicate case-insensitive forbidden path components")
+    digests = _list_of_strings(policy["forbid_file_sha256"], "forbid_file_sha256", 64)
+    if any(not re.fullmatch(r"[0-9a-f]{64}", digest) for digest in digests):
+        raise GuardError("Forbidden file digests must be canonical lowercase SHA-256 hex")
+    if "allowed_release_files" in supplied:
+        allowed = _list_of_strings(policy["allowed_release_files"], "allowed_release_files", MAX_FILES)
+        if not allowed:
+            raise GuardError("allowed_release_files must be a nonempty list")
+        for relative in allowed:
+            safe_relative_path(relative)
+        if len({relative.casefold() for relative in allowed}) != len(allowed):
+            raise GuardError("Duplicate case-insensitive allowed release files")
     flags = _list_of_strings(policy["required_pe_flags"], "required_pe_flags", 4)
     if set(flags) - _FLAG_NAMES:
         raise GuardError("Unknown required PE flag")
-    for name in ("require_native", "require_no_debug_metadata", "require_no_symbol_table"):
+    for name in ("require_native", "require_no_debug_metadata", "require_no_symbol_table",
+                 "scan_release_literals"):
         if type(policy[name]) is not bool:
             raise GuardError(f"{name} must be a boolean")
     limit = policy["max_binary_bytes"]
     if type(limit) is not int or not 1 <= limit <= 4 * 1024**3:
         raise GuardError("max_binary_bytes must be an integer in 1..4294967296")
-    return policy
+    release_limit = policy["max_release_scan_bytes"]
+    if type(release_limit) is not int or not 1 <= release_limit <= 512 * 1024 * 1024:
+        raise GuardError("max_release_scan_bytes must be an integer in 1..536870912")
+    return policy, bool(set(supplied) & _ROOT_POLICY_FIELDS)
+
+
+def load_policy(path: Path | str) -> dict[str, Any]:
+    return _load_policy(path)[0]
 
 
 def _resources() -> dict[str, bytes]:
@@ -152,32 +192,43 @@ def init_native(output_dir: Path | str, seed: str | None = None) -> dict[str, An
     return {"ok": True, "output": str(output), "seed": current_seed, "reused": False}
 
 
-def _scan(path: Path, policy: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _scan(path: Path, policy: dict[str, Any], *, limit: int | None = None,
+          scan_literals: bool = True,
+          limit_name: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    byte_limit = policy["max_binary_bytes"] if limit is None else limit
+    if limit_name is None:
+        limit_name = "max_binary_bytes" if limit is None else "max_release_scan_bytes"
     patterns = [(index, encoding, literal.encode(encoding))
-                for index, literal in enumerate(policy["forbid_literals"]) for encoding in _ENCODINGS]
+                for index, literal in enumerate(policy["forbid_literals"])
+                for encoding in _ENCODINGS] if scan_literals else []
     overlap = max((len(raw) for _, _, raw in patterns), default=1) - 1
     matched: set[tuple[int, str]] = set()
     findings: list[dict[str, Any]] = []
     before = path.lstat()
     if _is_link(before) or not stat.S_ISREG(before.st_mode):
         raise GuardError("Artifact must be a regular file, not a link or special file")
-    if before.st_size > policy["max_binary_bytes"]:
-        raise GuardError("Artifact exceeds max_binary_bytes")
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    if before.st_size > byte_limit:
+        raise GuardError(f"Payload exceeds remaining {limit_name}")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0)
+                         | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
     with os.fdopen(descriptor, "rb") as handle:
         opened = os.fstat(handle.fileno())
-        if (opened.st_dev, opened.st_ino, opened.st_size) != (before.st_dev, before.st_ino, before.st_size):
+        if not stat.S_ISREG(opened.st_mode) or _is_link(opened) or (
+            opened.st_dev, opened.st_ino, opened.st_size
+        ) != (before.st_dev, before.st_ino, before.st_size):
             raise GuardError("Artifact changed before scanning")
         digest = hashlib.sha256()
         tail = b""
         total = 0
-        while chunk := handle.read(_CHUNK_BYTES):
+        # A growing file can consume at most one extra byte before rejection.
+        # Never read an unbounded release file merely to obtain its digest.
+        while chunk := handle.read(min(_CHUNK_BYTES, byte_limit - total + 1)):
             digest.update(chunk)
             window = tail + chunk
             base_offset = total - len(tail)
             total += len(chunk)
-            if total > policy["max_binary_bytes"]:
-                raise GuardError("Artifact grew beyond max_binary_bytes while scanning")
+            if total > byte_limit:
+                raise GuardError(f"Payload grew beyond {limit_name} while scanning")
             for index, encoding, raw in patterns:
                 if (index, encoding) not in matched:
                     found = window.find(raw)
@@ -195,10 +246,75 @@ def _scan(path: Path, policy: dict[str, Any]) -> tuple[dict[str, Any], list[dict
             "_identity": (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)}, findings
 
 
+def _assert_scanned_identity(path: Path, identity: tuple[int, ...], label: str) -> None:
+    """Check path identity and compare timestamps handle-to-handle (Windows safe)."""
+    final = path.lstat()
+    if _is_link(final) or not stat.S_ISREG(final.st_mode):
+        raise GuardError(f"{label} changed after scanning")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0)
+                         | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(descriptor, "rb") as handle:
+        checked = os.fstat(handle.fileno())
+    if not stat.S_ISREG(checked.st_mode) or _is_link(checked) or (
+        checked.st_dev, checked.st_ino, checked.st_size
+    ) != (final.st_dev, final.st_ino, final.st_size) or (
+        checked.st_dev, checked.st_ino, checked.st_size,
+        checked.st_mtime_ns, checked.st_ctime_ns
+    ) != identity:
+        raise GuardError(f"{label} changed after scanning")
+
+
+def _component_findings(root: Path, components: list[str]) -> list[dict[str, Any]]:
+    """Visit bounded release entries, including forbidden empty directories."""
+    rules = {component.casefold(): index for index, component in enumerate(components)}
+    if not rules:
+        return []
+    findings = []
+    directories = [root]
+    entries_seen = 0
+    while directories:
+        current = directories.pop()
+        with os.scandir(current) as entries:
+            for entry in entries:
+                entries_seen += 1
+                if entries_seen > MAX_ENTRIES:
+                    raise GuardError("Too many release files and directories")
+                info = entry.stat(follow_symlinks=False)
+                if _is_link(info):
+                    raise GuardError("Release entry became a link/reparse point")
+                candidate = Path(entry.path)
+                relative = safe_relative_path(candidate.relative_to(root).as_posix())
+                if stat.S_ISDIR(info.st_mode):
+                    directories.append(candidate)
+                elif not stat.S_ISREG(info.st_mode):
+                    raise GuardError("Release entry became a special file")
+                index = rules.get(candidate.name.casefold())
+                if index is not None:
+                    findings.append({"code": "forbidden_path_component", "rule_index": index,
+                                     "path": relative})
+    return sorted(findings, key=lambda finding: finding["path"])
+
+
 def gate(binary: Path | str, policy_path: Path | str,
          root: Path | str | None = None) -> dict[str, Any]:
-    policy = load_policy(policy_path)
+    """Inspect a release under trusted build control, without executing it.
+
+    The selected root and every ancestor must be controlled by the builder and
+    remain unchanged during inspection. Identity checks detect ordinary file
+    changes; they are not an atomic snapshot or a defense against malicious
+    parent-directory races or replacement after the check. Verify later-used
+    bytes with a signed manifest and a trusted installation/loading process.
+    """
+    policy, requires_root = _load_policy(policy_path)
+    if requires_root and root is None:
+        raise GuardError("Explicit release-root policy fields require --root")
     path = Path(binary).absolute()
+    release_root = _root(root) if root is not None else None
+    if release_root is not None and not path.resolve().is_relative_to(release_root):
+        raise GuardError("Artifact must be inside the explicitly selected release root")
+    scan_release_payloads = release_root is not None and bool(
+        policy["scan_release_literals"] or policy["forbid_file_sha256"]
+    )
     initial = path.lstat()
     if _is_link(initial) or not stat.S_ISREG(initial.st_mode):
         raise GuardError("Artifact must be a regular file, not a link or special file")
@@ -210,8 +326,20 @@ def gate(binary: Path | str, policy_path: Path | str,
                 "checks": {"scan_completed": False},
                 "notes": ["Artifact rejected before reading payload due to the configured size limit."]}
     # Scan the same regular file before interpreting format-specific metadata.
-    artifact, findings = _scan(path, policy)
+    if scan_release_payloads and initial.st_size > policy["max_release_scan_bytes"]:
+        raise GuardError("Payload exceeds remaining max_release_scan_bytes")
+    # The main payload is charged once against the same cumulative release
+    # budget. Keep its result for the release pass rather than reading it again.
+    primary_limit = min(policy["max_binary_bytes"], policy["max_release_scan_bytes"])
+    artifact, findings = _scan(
+        path, policy, limit=primary_limit if scan_release_payloads else None,
+        limit_name=("max_release_scan_bytes" if primary_limit == policy["max_release_scan_bytes"]
+                    else "max_binary_bytes") if scan_release_payloads else None,
+    )
     identity = artifact.pop("_identity")
+    primary_relative = path.resolve().relative_to(release_root).as_posix() if release_root is not None else None
+    if policy["scan_release_literals"]:
+        findings = [{**finding, "path": primary_relative} for finding in findings]
     magic = read_limited_prefix(path, 4)
     if magic[:2] == b"MZ":
         format_name, report = "pe", audit_pe(path)
@@ -253,10 +381,7 @@ def gate(binary: Path | str, policy_path: Path | str,
         ):
             findings.append({"code": "invalid_high_entropy_evidence"})
     candidates: dict[str, Path] = {}
-    if root is not None:
-        release_root = _root(root)
-        if not path.resolve().is_relative_to(release_root):
-            raise GuardError("Artifact must be inside the explicitly selected release root")
+    if release_root is not None:
         candidates = _inventory(release_root)
     else:
         with os.scandir(path.parent) as entries:
@@ -271,32 +396,81 @@ def gate(binary: Path | str, policy_path: Path | str,
     for relative, candidate in sorted(candidates.items()):
         if candidate.suffix.lower() in policy["forbid_extensions"]:
             findings.append({"code": "forbidden_sidecar", "path": relative})
+    release_scan_bytes = artifact["size"] if scan_release_payloads else 0
+    scanned_release: list[tuple[Path, tuple[int, ...]]] = []
+    if scan_release_payloads:
+        forbidden_digests = {digest: index for index, digest in enumerate(policy["forbid_file_sha256"])}
+        for relative, candidate in sorted(candidates.items()):
+            if relative == primary_relative:
+                observed, matches = artifact, []
+            else:
+                observed, matches = _scan(
+                    candidate, policy,
+                    limit=policy["max_release_scan_bytes"] - release_scan_bytes,
+                    scan_literals=policy["scan_release_literals"],
+                )
+                release_scan_bytes += observed["size"]
+                scanned_release.append((candidate, observed["_identity"]))
+            index = forbidden_digests.get(observed["sha256"])
+            if index is not None:
+                findings.append({"code": "forbidden_file_digest", "rule_index": index,
+                                 "path": relative})
+            findings.extend({**match, "path": relative} for match in matches)
+    if release_root is not None:
+        # Re-inventory after payload reads: additions/removals cannot silently
+        # evade the scan, and the allowlist describes the final observed set.
+        final_candidates = _inventory(release_root)
+        if set(final_candidates) != set(candidates):
+            raise GuardError("Release inventory changed during scanning")
+        for candidate, scanned_identity in scanned_release:
+            _assert_scanned_identity(candidate, scanned_identity, "Release file")
+        findings.extend(_component_findings(release_root, policy["forbid_path_components"]))
+        if policy["allowed_release_files"] is not None:
+            expected_files = set(policy["allowed_release_files"])
+            for relative in sorted(set(final_candidates) - expected_files):
+                findings.append({"code": "unexpected_release_file", "path": relative})
+            for relative in sorted(expected_files - set(final_candidates)):
+                findings.append({"code": "missing_release_file", "path": relative})
     # Metadata parsing is a separate read; catch ordinary concurrent changes.
     # Windows stat/lstat and fstat can expose different st_ctime semantics.
     # Keep the timestamp comparison handle-to-handle, preserving ChangeTime.
-    final = path.lstat()
-    if _is_link(final) or not stat.S_ISREG(final.st_mode):
-        raise GuardError("Artifact changed after scanning")
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
-    with os.fdopen(descriptor, "rb") as handle:
-        checked = os.fstat(handle.fileno())
-    if (checked.st_dev, checked.st_ino, checked.st_size) != (
-        final.st_dev, final.st_ino, final.st_size
-    ) or (checked.st_dev, checked.st_ino, checked.st_size,
-          checked.st_mtime_ns, checked.st_ctime_ns) != identity:
-        raise GuardError("Artifact changed after scanning")
+    _assert_scanned_identity(path, identity, "Artifact")
     return {
         "ok": not bool(findings), "artifact": artifact, "findings": findings,
         "checks": {"scan_completed": True, "literal_rules": len(policy["forbid_literals"]), "encodings": list(_ENCODINGS),
                    "native": not managed, "debug_metadata_present": debug,
                    "symbol_table_present": symbols,
                    "required_pe_flags_applied": format_name == "pe",
-                   "sidecar_scope": "release_root" if root is not None else "same_stem_siblings"},
+                   "sidecar_scope": "release_root" if root is not None else "same_stem_siblings",
+                   "release_payload_scan_completed": scan_release_payloads,
+                   "release_literals_scanned": scan_release_payloads and policy["scan_release_literals"],
+                   "release_scan_bytes": release_scan_bytes,
+                   "max_release_scan_bytes": policy["max_release_scan_bytes"],
+                   "release_allowlist_applied": policy["allowed_release_files"] is not None},
         "notes": ["Static release checks only; passing is not a decompilation/crack resistance score.",
-                  "Runtime plaintext, public exports and the implementation remain observable."]
+                  "Runtime plaintext, public exports and the implementation remain observable.",
+                  "Release roots and ancestor directories must remain under trusted build control with no concurrent modification; "
+                  "these checks do not prevent malicious parent-directory races or replacement after inspection.",
+                  "Use a signed manifest and trusted installation/loading process to verify bytes used later."]
     }
 
 
 def read_limited_prefix(path: Path, length: int) -> bytes:
-    with path.open("rb") as handle:
-        return handle.read(length)
+    before = path.lstat()
+    if _is_link(before) or not stat.S_ISREG(before.st_mode):
+        raise GuardError("Artifact must remain a regular file for metadata inspection")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0)
+                         | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(descriptor, "rb") as handle:
+        opened = os.fstat(handle.fileno())
+        if not stat.S_ISREG(opened.st_mode) or _is_link(opened) or (
+            opened.st_dev, opened.st_ino, opened.st_size
+        ) != (before.st_dev, before.st_ino, before.st_size):
+            raise GuardError("Artifact changed before metadata inspection")
+        value = handle.read(length)
+        after = os.fstat(handle.fileno())
+    if (opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns) != (
+        after.st_size, after.st_mtime_ns, after.st_ctime_ns
+    ):
+        raise GuardError("Artifact changed while reading metadata prefix")
+    return value

@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from releaseguard import __version__
 from releaseguard import native
 from releaseguard.core import GuardError
 from tests.test_pe import make_debug_pe, make_pe
@@ -87,7 +88,7 @@ class NativeTests(unittest.TestCase):
     def assert_assets(self, output: Path) -> dict:
         metadata = self.metadata(output)
         self.assertEqual(metadata["format"], "open-release-guard-native/v1")
-        self.assertEqual(metadata["version"], "0.2.0")
+        self.assertEqual(metadata["version"], __version__)
         self.assertRegex(metadata["seed"], r"\A[0-9a-f]{16}\Z")
         expected = {
             "releaseguard_build.hpp", "cmake/ReleaseGuard.cmake",
@@ -185,6 +186,11 @@ class NativeTests(unittest.TestCase):
         self.assertIs(policy["require_no_symbol_table"], True)
         self.assertEqual(policy["required_pe_flags"], [])
         self.assertEqual(policy["max_binary_bytes"], 512 * 1024 * 1024)
+        self.assertEqual(policy["forbid_path_components"], [])
+        self.assertEqual(policy["forbid_file_sha256"], [])
+        self.assertIs(policy["scan_release_literals"], False)
+        self.assertEqual(policy["max_release_scan_bytes"], 64 * 1024 * 1024)
+        self.assertIsNone(policy["allowed_release_files"])
 
     def test_load_policy_accepts_explicit_values(self) -> None:
         expected = self.write_policy(
@@ -193,6 +199,10 @@ class NativeTests(unittest.TestCase):
             require_no_debug_metadata=False, require_no_symbol_table=False,
             required_pe_flags=["dynamic_base", "nx_compat", "guard_cf", "high_entropy_va"],
             max_binary_bytes=4 * 1024 * 1024 * 1024,
+            forbid_path_components=["src", ".git", "Backups"],
+            forbid_file_sha256=["0" * 64], scan_release_literals=True,
+            max_release_scan_bytes=512 * 1024 * 1024,
+            allowed_release_files=["app.exe", "data/catalog.bin"],
         )
         self.assertEqual(native.load_policy(self.policy_path), expected)
 
@@ -223,6 +233,13 @@ class NativeTests(unittest.TestCase):
             {"require_no_symbol_table": None}, {"max_binary_bytes": True},
             {"max_binary_bytes": "512"}, {"max_binary_bytes": 0},
             {"max_binary_bytes": 4 * 1024 * 1024 * 1024 + 1},
+            {"forbid_path_components": "src"}, {"forbid_path_components": [True]},
+            {"forbid_file_sha256": "0" * 64}, {"forbid_file_sha256": [True]},
+            {"scan_release_literals": 1}, {"scan_release_literals": "true"},
+            {"max_release_scan_bytes": True}, {"max_release_scan_bytes": "64"},
+            {"max_release_scan_bytes": 0}, {"max_release_scan_bytes": 512 * 1024 * 1024 + 1},
+            {"allowed_release_files": None}, {"allowed_release_files": "app.exe"},
+            {"allowed_release_files": [True]},
         ]
         for changes in cases:
             self.write_policy(**changes)
@@ -236,6 +253,309 @@ class NativeTests(unittest.TestCase):
                 native.load_policy(self.policy_path)
         self.write_policy(forbid_literals=["x" * 1024] + [f"rule_{i}" for i in range(63)])
         self.assertEqual(len(native.load_policy(self.policy_path)["forbid_literals"]), 64)
+
+    def test_path_component_rules_reject_paths_globs_aliases_and_casefold_duplicates(self) -> None:
+        for components in [
+            [""], ["."], [".."], ["src/main.cpp"], ["src\\main.cpp"],
+            ["*.cpp"], ["src?"], ["[Ss]rc"], ["{src,source}"],
+            ["src "], ["src."], ["src\x00"], ["src", "SRC"],
+            ["x" * 256], [f"dir{i}" for i in range(65)],
+        ]:
+            self.write_policy(forbid_path_components=components)
+            with self.subTest(components=components), self.assertRaises(GuardError):
+                native.load_policy(self.policy_path)
+
+    def test_digest_rules_require_bounded_unique_canonical_sha256(self) -> None:
+        for digests in [["0" * 63], ["A" * 64], ["z" * 64], ["0" * 64 + "\n"],
+                        ["0" * 64] * 2, [f"{i:064x}" for i in range(65)]]:
+            self.write_policy(forbid_file_sha256=digests)
+            with self.subTest(digests=digests), self.assertRaises(GuardError):
+                native.load_policy(self.policy_path)
+
+    def test_allowlist_requires_bounded_nonempty_safe_exact_paths(self) -> None:
+        for paths in [[], ["app.exe", "APP.EXE"], ["../app.exe"], ["/app.exe"],
+                      ["data\\app.exe"], ["data/../app.exe"], ["data/*.bin"],
+                      [f"file{i}.bin" for i in range(20_001)]]:
+            self.write_policy(allowed_release_files=paths)
+            with self.subTest(count=len(paths), paths=paths[:2]), self.assertRaises(GuardError):
+                native.load_policy(self.policy_path)
+
+    def test_each_explicit_release_policy_field_requires_root_even_if_inactive(self) -> None:
+        for changes in [
+            {"forbid_path_components": []}, {"forbid_path_components": ["src"]},
+            {"forbid_file_sha256": []}, {"forbid_file_sha256": ["0" * 64]},
+            {"scan_release_literals": False}, {"scan_release_literals": True},
+            {"max_release_scan_bytes": 64 * 1024 * 1024},
+            {"allowed_release_files": ["app.exe"]},
+        ]:
+            self.write_policy(**changes)
+            with self.subTest(changes=changes), self.assertRaisesRegex(GuardError, "require --root"):
+                self.gate()
+
+    def make_release(self) -> Path:
+        release = self.base / "release"
+        release.mkdir()
+        self.binary.rename(release / self.binary.name)
+        self.binary = release / self.binary.name
+        return release
+
+    def test_forbidden_components_cover_source_git_backups_and_empty_directories(self) -> None:
+        release = self.make_release()
+        self.write_policy(forbid_path_components=["src", ".git", "backups"])
+        (release / "sRc").mkdir()
+        (release / "sRc" / "main.cpp").write_bytes(b"source")
+        (release / "nested" / ".GIT").mkdir(parents=True)
+        (release / "nested" / ".GIT" / "config").write_bytes(b"metadata")
+        (release / "Backups").mkdir()
+        (release / "src-old").mkdir()
+        report = self.assert_failed_gate(root=release)
+        matches = [finding for finding in report["findings"]
+                   if finding["code"] == "forbidden_path_component"]
+        self.assertEqual({finding["path"] for finding in matches},
+                         {"sRc", "nested/.GIT", "Backups"})
+        self.assertEqual(len(matches), 3)
+        self.assertEqual(report["checks"]["release_scan_bytes"], 0)
+
+    def test_forbidden_components_match_file_names_and_unicode_casefold(self) -> None:
+        release = self.make_release()
+        (release / "Straße").write_bytes(b"not executable")
+        self.write_policy(forbid_path_components=["STRASSE"])
+        report = self.assert_failed_gate(root=release)
+        self.assertIn({"code": "forbidden_path_component", "rule_index": 0, "path": "Straße"},
+                      report["findings"])
+
+    def test_release_digest_rules_find_renamed_old_binary_without_read_bytes(self) -> None:
+        release = self.make_release()
+        old_bytes = b"old source-owned binary fixture"
+        nested = release / "assets"
+        nested.mkdir()
+        old = nested / "renamed-resource.dat"
+        old.write_bytes(old_bytes)
+        self.write_policy(forbid_file_sha256=["0" * 64, hashlib.sha256(old_bytes).hexdigest()])
+        with patch.object(Path, "read_bytes", side_effect=AssertionError("Unbounded reading forbidden")):
+            report = self.assert_failed_gate(root=release)
+        self.assertIn({"code": "forbidden_file_digest", "rule_index": 1,
+                       "path": "assets/renamed-resource.dat"}, report["findings"])
+        self.assertEqual(report["checks"]["release_scan_bytes"], self.binary.stat().st_size + len(old_bytes))
+        self.assertFalse(report["checks"]["release_literals_scanned"])
+
+    def test_release_digest_rules_include_main_artifact(self) -> None:
+        release = self.make_release()
+        self.write_policy(forbid_file_sha256=[hashlib.sha256(self.binary.read_bytes()).hexdigest()])
+        report = self.assert_failed_gate(root=release)
+        self.assertIn({"code": "forbidden_file_digest", "rule_index": 0, "path": "app.exe"},
+                      report["findings"])
+
+    def test_release_literal_scan_covers_non_artifact_files_in_all_five_encodings(self) -> None:
+        release = self.make_release()
+        literal = "ReleaseResource_保护"
+        self.write_policy(forbid_literals=[literal], scan_release_literals=True)
+        resource = release / "asset.dat"
+        for encoding in native._ENCODINGS:
+            resource.write_bytes(b"\xa5" * 7 + literal.encode(encoding))
+            with self.subTest(encoding=encoding):
+                report = self.assert_failed_gate(root=release)
+                self.assertIn({"code": "forbidden_literal", "rule_index": 0,
+                               "encoding": encoding, "offset": 7, "path": "asset.dat"},
+                              report["findings"])
+                self.assertNotIn(literal, json.dumps(report, ensure_ascii=False))
+
+    def test_release_literal_scan_reports_main_artifact_path_without_duplicate(self) -> None:
+        release = self.make_release()
+        literal = "main-only-secret"
+        offset = self.binary.stat().st_size
+        with self.binary.open("ab") as handle:
+            handle.write(literal.encode())
+        self.write_policy(forbid_literals=[literal], scan_release_literals=True)
+        report = self.assert_failed_gate(root=release)
+        matches = [finding for finding in report["findings"] if finding["code"] == "forbidden_literal"]
+        self.assertEqual(matches, [{"code": "forbidden_literal", "rule_index": 0,
+                                    "encoding": "utf-8", "offset": offset, "path": "app.exe"}])
+
+    def test_release_literal_scan_detects_multiple_chunk_spans(self) -> None:
+        release = self.make_release()
+        literal = "CrossChunk_保护_string"
+        self.write_policy(forbid_literals=[literal], scan_release_literals=True)
+        resource = release / "resource.bin"
+        for encoding in native._ENCODINGS:
+            resource.write_bytes(b"\xa5" * 29 + literal.encode(encoding) + b"\xa5")
+            with self.subTest(encoding=encoding), patch.object(native, "_CHUNK_BYTES", 32):
+                report = self.assert_failed_gate(root=release)
+                self.assertTrue(any(finding.get("path") == "resource.bin" and
+                                    finding.get("encoding") == encoding and
+                                    finding.get("offset") == 29 for finding in report["findings"]))
+
+    def test_release_payload_budget_is_cumulative_including_main_and_exact_limit_passes(self) -> None:
+        release = self.make_release()
+        (release / "one.bin").write_bytes(b"a" * 47)
+        (release / "two.bin").write_bytes(b"b" * 53)
+        total = self.binary.stat().st_size + 100
+        for options in [{"scan_release_literals": True}, {"forbid_file_sha256": ["0" * 64]}]:
+            self.write_policy(**options, max_release_scan_bytes=total)
+            with self.subTest(options=options):
+                report = self.gate(root=release)
+                self.assertTrue(report["ok"], report)
+                self.assertEqual(report["checks"]["release_scan_bytes"], total)
+                self.assertTrue(report["checks"]["release_payload_scan_completed"])
+                self.write_policy(**options, max_release_scan_bytes=total - 1)
+                with self.assertRaisesRegex(GuardError, "max_release_scan_bytes"):
+                    self.gate(root=release)
+
+    def test_release_budget_rejects_main_before_payload_read_and_charges_each_file_once(self) -> None:
+        release = self.make_release()
+        self.write_policy(scan_release_literals=True,
+                          max_release_scan_bytes=self.binary.stat().st_size - 1)
+        with patch.object(native, "_scan", side_effect=AssertionError("Over-budget payload must not be read")), \
+                self.assertRaisesRegex(GuardError, "max_release_scan_bytes"):
+            self.gate(root=release)
+        resource = release / "resource.bin"
+        resource.write_bytes(b"data")
+        self.write_policy(scan_release_literals=True,
+                          max_release_scan_bytes=self.binary.stat().st_size + resource.stat().st_size)
+        with patch.object(native, "_scan", wraps=native._scan) as scanned:
+            report = self.gate(root=release)
+        self.assertTrue(report["ok"], report)
+        scanned_paths = [Path(call.args[0]) for call in scanned.call_args_list]
+        self.assertEqual(scanned_paths.count(self.binary), 1)
+        self.assertEqual(scanned_paths.count(resource), 1)
+
+    def test_release_empty_files_do_not_consume_budget_or_get_silently_skipped(self) -> None:
+        release = self.make_release()
+        (release / "zero.bin").write_bytes(b"")
+        self.write_policy(forbid_file_sha256=[hashlib.sha256(b"").hexdigest()],
+                          max_release_scan_bytes=self.binary.stat().st_size)
+        report = self.assert_failed_gate(root=release)
+        self.assertIn({"code": "forbidden_file_digest", "rule_index": 0, "path": "zero.bin"},
+                      report["findings"])
+
+    def test_allowlist_reports_extra_and_missing_files_with_exact_names(self) -> None:
+        release = self.make_release()
+        (release / "renamed-source.dat").write_bytes(b"source without a revealing extension")
+        self.write_policy(allowed_release_files=["app.exe", "required.bin"])
+        report = self.assert_failed_gate(root=release)
+        self.assertIn({"code": "unexpected_release_file", "path": "renamed-source.dat"}, report["findings"])
+        self.assertIn({"code": "missing_release_file", "path": "required.bin"}, report["findings"])
+        self.write_policy(allowed_release_files=["app.exe", "renamed-source.dat"])
+        self.assertTrue(self.gate(root=release)["ok"])
+        self.write_policy(allowed_release_files=["APP.EXE", "renamed-source.dat"])
+        report = self.assert_failed_gate(root=release)
+        self.assertIn({"code": "unexpected_release_file", "path": "app.exe"}, report["findings"])
+        self.assertIn({"code": "missing_release_file", "path": "APP.EXE"}, report["findings"])
+
+    def test_release_payload_changed_after_scan_is_rejected_even_with_preserved_mtime(self) -> None:
+        release = self.make_release()
+        resource = release / "resource.bin"
+        resource.write_bytes(b"original")
+        self.write_policy(scan_release_literals=True)
+        real_inventory = native._inventory
+        inventory_calls = 0
+
+        def changed_inventory(root):
+            nonlocal inventory_calls
+            inventory_calls += 1
+            observed = real_inventory(root)
+            if inventory_calls == 2:
+                before = resource.stat()
+                replacement = self.base / "replacement.bin"
+                replacement.write_bytes(b"modified")
+                os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+                os.replace(replacement, resource)
+            return observed
+
+        with patch.object(native, "_inventory", changed_inventory), \
+                self.assertRaisesRegex(GuardError, "Release file changed after scanning"):
+            self.gate(root=release)
+
+    def test_new_release_file_during_scan_cannot_be_silently_skipped(self) -> None:
+        release = self.make_release()
+        self.write_policy(scan_release_literals=True)
+        real_inventory = native._inventory
+        calls = 0
+
+        def growing_inventory(root):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                (release / "late-source.cpp").write_bytes(b"source")
+            return real_inventory(root)
+
+        with patch.object(native, "_inventory", growing_inventory), \
+                self.assertRaisesRegex(GuardError, "inventory changed"):
+            self.gate(root=release)
+
+    def test_release_file_replacement_between_lstat_and_open_is_rejected(self) -> None:
+        release = self.make_release()
+        resource = release / "resource.bin"
+        resource.write_bytes(b"original")
+        self.write_policy(forbid_file_sha256=["0" * 64])
+        real_open = native.os.open
+        changed = False
+
+        def replacing_open(path, flags, *args, **kwargs):
+            nonlocal changed
+            if Path(path) == resource and not changed:
+                changed = True
+                replacement = self.base / "replacement.bin"
+                replacement.write_bytes(b"modified")
+                os.replace(replacement, resource)
+            return real_open(path, flags, *args, **kwargs)
+
+        with patch.object(native.os, "open", replacing_open), \
+                self.assertRaisesRegex(GuardError, "changed before scanning"):
+            self.gate(root=release)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"), "POSIX FIFO test")
+    def test_release_file_replaced_by_fifo_is_rejected_without_blocking(self) -> None:
+        release = self.make_release()
+        resource = release / "resource.bin"
+        resource.write_bytes(b"original")
+        self.write_policy(scan_release_literals=True)
+        real_open = native.os.open
+        changed = False
+
+        def fifo_open(path, flags, *args, **kwargs):
+            nonlocal changed
+            if Path(path) == resource and not changed:
+                self.assertTrue(flags & os.O_NONBLOCK, "Opening replacement FIFO must not block")
+                changed = True
+                resource.unlink()
+                os.mkfifo(resource)
+            return real_open(path, flags, *args, **kwargs)
+
+        with patch.object(native.os, "open", fifo_open), \
+                self.assertRaisesRegex(GuardError, "changed before scanning"):
+            self.gate(root=release)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"), "POSIX FIFO test")
+    def test_identity_recheck_rejects_fifo_replacement_without_blocking(self) -> None:
+        before = self.binary.stat()
+        identity = (before.st_dev, before.st_ino, before.st_size,
+                    before.st_mtime_ns, before.st_ctime_ns)
+        real_open = native.os.open
+
+        def fifo_open(path, flags, *args, **kwargs):
+            self.assertTrue(flags & os.O_NONBLOCK, "Identity recheck must not block on FIFO")
+            self.binary.unlink()
+            os.mkfifo(self.binary)
+            return real_open(path, flags, *args, **kwargs)
+
+        with patch.object(native.os, "open", fifo_open), \
+                self.assertRaisesRegex(GuardError, "changed after scanning"):
+            native._assert_scanned_identity(self.binary, identity, "Artifact")
+
+    @unittest.skipUnless(hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"), "POSIX FIFO test")
+    def test_metadata_prefix_rejects_fifo_replacement_without_blocking(self) -> None:
+        real_open = native.os.open
+
+        def fifo_open(path, flags, *args, **kwargs):
+            self.assertTrue(flags & os.O_NONBLOCK, "Prefix inspection must not block on FIFO")
+            self.binary.unlink()
+            os.mkfifo(self.binary)
+            return real_open(path, flags, *args, **kwargs)
+
+        with patch.object(native.os, "open", fifo_open), \
+                self.assertRaisesRegex(GuardError, "changed before metadata inspection"):
+            native.read_limited_prefix(self.binary, 4)
 
     def test_minimal_native_pe_passes_default_policy(self) -> None:
         report = self.gate()

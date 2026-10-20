@@ -1,0 +1,74 @@
+{
+  "binary": {
+    "probe_flags": [
+      "-std=c++17",
+      "-O2",
+      "-shared",
+      "-fPIC",
+      "-fno-builtin"
+    ],
+    "sample_flags": [
+      "-std=c++17",
+      "-O2",
+      "-flto",
+      "-fvisibility=hidden",
+      "-fvisibility-inlines-hidden",
+      "-fstack-protector-strong",
+      "-fPIE",
+      "-pie",
+      "-s",
+      "-Wl,-z,relro,-z,now,-z,noexecstack",
+      "-fno-builtin-strcmp"
+    ],
+    "sha256_after": "71682b6f02f8c2c9c288679374ccc8b23c1e23381e3e80361f01db79431bbad2",
+    "sha256_before": "71682b6f02f8c2c9c288679374ccc8b23c1e23381e3e80361f01db79431bbad2",
+    "size_bytes": 14560,
+    "unchanged": true
+  },
+  "elapsed_seconds": 0.188959,
+  "environment": {
+    "compiler": "g++",
+    "compiler_version": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+    "machine": "x86_64",
+    "python": "3.12.14",
+    "system": "Linux"
+  },
+  "experiment_completed": true,
+  "format": "open-release-guard-runtime-boundary/v1",
+  "notes": [
+    "Exit 0 means experiment completion, not successful protection: recovery fails the protection goal.",
+    "Only a newly generated, project-owned Linux/GCC fixture is compiled and executed; no binary input is accepted.",
+    "The fixture deliberately uses dynamically linked strcmp; inline comparisons and other toolchains are not evaluated.",
+    "RG_TEXT masks static literals reversibly and does not prevent observation of runtime plaintext.",
+    "Null observations mean unknown; inability to recover is not evidence of successful protection.",
+    "This is a reproducible boundary demonstration, not a REA study or protection probability estimate."
+  ],
+  "probe": {
+    "comparison_semantics_preserved": true,
+    "returncode": 1,
+    "scope": "LD_PRELOAD only on the new sample, plus exact caller-executable path filtering"
+  },
+  "protection_goal_met": false,
+  "rea_evaluated": false,
+  "recovered_secret_sha256": "8956f3d4a87d57279cc5b25faf39c9add77bd77cf13fd824fe83084da67afbb4",
+  "releaseguard_version": "0.3.0",
+  "runtime_secret_recovered": true,
+  "static_plaintext_absent": true,
+  "static_scan_encodings": [
+    "utf-8",
+    "utf-16-le",
+    "utf-16-be",
+    "utf-32-le",
+    "utf-32-be"
+  ],
+  "synthetic_secret_sha256": "8956f3d4a87d57279cc5b25faf39c9add77bd77cf13fd824fe83084da67afbb4",
+  "unmodified_binary_accepts_recovered": true,
+  "verification": {
+    "accepted_returncode": 0,
+    "accepted_stdout_sha256": "45ac8388b0fcc0c6f3aaa8ffa15435db4385d67a1c12e1e5b70a79d999f59e7b",
+    "ld_preload_absent": true,
+    "wrong_input_rejected": true,
+    "wrong_returncode": 1,
+    "wrong_stdout_sha256": "0d71336df359cfa3e4768fa67f1d93f931f08165cb5e236f21e059f5b0bf0a80"
+  }
+}

@@ -8,11 +8,23 @@
 
 面向 **REA 等 AI 辅助逆向工具**的开源软件保护实验工程。我们想把“防反编译、防破解”从一句宣传语，变成有样本、有复现、有失败记录的工程挑战。**欢迎开发者与逆向研究者一起造防护、做分析、公开证据，再一起改进。**
 
-**MIT · 0.2.0 / Alpha · C/C++ 构建接入 · Python 工具链 · PE / ELF**
+**MIT · 0.3.0 / Alpha · C/C++ 构建接入 · Python 工具链 · PE / ELF**
 
 [加入共建](CONTRIBUTING.md) · [共建招募 Issue](https://github.com/Afloat16/anti-rea-forge/issues/1) · [公开挑战与路线图](docs/ROADMAP.zh-CN.md) · [实际测试报告](docs/testing-2026-10-15.zh-CN.md) · [安全模型](SECURITY.md)
 
 底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口，避免品牌调整影响现有代码。目标面向 Windows EXE/DLL；Linux 与 Windows/MSVC 的构建验证结果见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
+
+## v0.3：移除可逆参考口令，检查整个发布目录
+
+根据用户提供的 REA 实测文章，本轮实现三项强化：
+
+- **单向口令校验：** `password-create / password-check` 使用固定 64 MiB、3 次迭代、4 lanes 的 Argon2id，随机盐、32 字节校验值，在调用 KDF 前拒绝恶意成本参数。不再把可解密的参考口令存入校验记录；弱口令仍能被猜中，本地校验分支仍可被补丁绕过。
+- **外部密钥资产：** `asset-keygen / asset-seal / asset-open` 使用随机外部 256 位主密钥、每包 HKDF-SHA256 派生和 AES-256-GCM；绑定调用方可信的产品、版本、用途、资产身份。错误密钥、篡改或跨上下文替换均在创建明文输出前失败。密钥不能随客户端发布；合法解密后的明文和密钥仍可能被内存观察。
+- **完整发布目录门禁：** `gate --root` 可按精确文件清单拒绝多余或缺失文件，拦截源码/备份路径、已知旧制品 SHA-256，并在字节预算内检查全部发布文件的声明文字。[严格原生发布策略](examples/policy-strict-release.json) 需要按自己的应用调整，不是通用秘密扫描器。
+
+本版提供 Python API、CLI 和构建工具，尚未提供原生 C/C++ 校验/解密 SDK、代码虚拟化、服务端或密钥服务。离线客户端中的永久秘密无法对控制运行环境的人保证保密；真正要求保密的逻辑应由可信服务端执行并授权，只暴露必要操作。
+
+见[中文接入与文章威胁映射](docs/crypto-protection.zh-CN.md)、[English](docs/crypto-protection.md)、[v0.3 验证记录](docs/testing-2026-10-20.md)及[密码学边界实测](docs/results/crypto-boundary-2026-10-20.json)。实测保留了弱口令被恢复和合法明文在内存可见的对照；它不代表已完成 REA 对抗测评，也不是防破解成功率。
 
 ## 先看真实战况
 
@@ -44,6 +56,9 @@
 | `native-init` + `releaseguard_protect(target POLICY ...)` | 生成 CMake/C++ 构建组件，启用 Release 优化与 LTO，并在产物违反策略时使构建失败 |
 | `RG_TEXT("...")` | 对选择的 C++17 字符串做编译期可逆掩码，使用时恢复到作用域对象；不同构建种子改变静态载荷 |
 | `gate` | 扫描五种编码的声明文字、检查调试/符号元数据、禁发旁文件和所需 PE 静态证据 |
+| v0.3 `gate --root` | 精确文件清单、源码/备份路径、旧制品哈希拒绝与有界全目录文字扫描 |
+| `password-create / password-check` | 固定成本的加盐 Argon2id 单向口令校验，在 KDF 前限制参数 |
+| `asset-keygen / asset-seal / asset-open` | 外部密钥 AES-256-GCM 数据资产，HKDF-SHA256 派生与可信上下文绑定 |
 | `audit` | 只读检查 PE32/PE32+ EXE/DLL、CLR 目录、ASLR/DEP/CFG 标记和结构证据、调试目录与证书表 |
 | `keygen` | 生成口令加密的 Ed25519 私钥和可分发公钥；拒绝覆盖现有文件 |
 | `manifest-sign / manifest-verify` | 签名完整发布文件清单；验证哈希、产品和版本，拒绝缺失、篡改及额外文件 |

@@ -76,6 +76,9 @@ jobs:
         if: runner.os == 'Linux'
         run: python benchmarks/native_compare.py --out native-comparison.json
 
+      - name: Exercise cryptographic boundary controls (not a REA evaluation)
+        run: python benchmarks/crypto_boundary.py --out crypto-boundary.json
+
       - name: Build Python distribution
         run: python -m pip wheel . --no-deps --wheel-dir dist
 
@@ -102,5 +105,14 @@ jobs:
         with:
           name: native-comparison-python-${{ matrix.python }}
           path: native-comparison.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Keep cryptographic boundary observations
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: crypto-boundary-${{ matrix.os }}-python-${{ matrix.python }}
+          path: crypto-boundary.json
           if-no-files-found: ignore
           retention-days: 14

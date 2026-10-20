@@ -6,6 +6,7 @@ import argparse
 import getpass
 import json
 import os
+import stat
 import sys
 from pathlib import Path
 
@@ -13,10 +14,12 @@ from . import __version__
 from .core import (
     GuardError, create_manifest, generate_keys, issue_license, key_id,
     load_private_key, load_public_key, read_document, save_document,
-    verify_license, verify_manifest,
+    verify_license, verify_manifest, canonical, parse_json, write_new, _is_link,
 )
 from .pe import audit_pe
 from .native import gate, init_native
+from .passwords import create_password_verifier, verify_password
+from .sealed import generate_asset_key, load_asset_key, seal_asset, open_asset, MAX_ASSET_BYTES
 
 
 def parser() -> argparse.ArgumentParser:
@@ -72,6 +75,21 @@ def parser() -> argparse.ArgumentParser:
     release_gate.add_argument("artifact", type=Path)
     release_gate.add_argument("--policy", type=Path, required=True)
     release_gate.add_argument("--root", type=Path, help="Check forbidden sidecar extensions throughout this release directory")
+
+    password_create = commands.add_parser("password-create", help="Create a salted, one-way Argon2id password verifier")
+    password_create.add_argument("--out", type=Path, required=True)
+    password_check = commands.add_parser("password-check", help="Check a password against a bounded Argon2id verifier")
+    password_check.add_argument("verifier", type=Path)
+    asset_keygen = commands.add_parser("asset-keygen", help="Create a random 256-bit asset key; keep it outside releases")
+    asset_keygen.add_argument("--out", type=Path, required=True)
+    for command, description in (("asset-seal", "Encrypt a data asset with an external key and trusted context"),
+                                 ("asset-open", "Authenticate a sealed data asset before writing plaintext")):
+        asset = commands.add_parser(command, help=description)
+        asset.add_argument("input", type=Path)
+        asset.add_argument("--key-file", type=Path, required=True, help="External 32-byte binary key, never a build seed")
+        for name in ("product", "release", "purpose", "asset-id"):
+            asset.add_argument("--" + name, required=True, help="Expected context from trusted application configuration")
+        asset.add_argument("--out", type=Path, required=True, help="New output file; existing files are never replaced")
     return cli
 
 
@@ -95,7 +113,70 @@ def _outside_root(path: Path, root: Path, label: str) -> None:
         raise GuardError(f"{label} must be outside the release directory")
 
 
+def _user_password(confirm: bool = False) -> bytes:
+    value = os.environ.get("RELEASEGUARD_USER_PASSWORD")
+    if value is None:
+        if not sys.stdin.isatty():
+            raise GuardError("No interactive terminal. Set RELEASEGUARD_USER_PASSWORD via a secret manager.")
+        value = getpass.getpass("User password: ")
+        if confirm and getpass.getpass("Confirm user password: ") != value:
+            raise GuardError("Passwords do not match")
+    try:
+        return value.encode("utf-8")
+    except UnicodeError as exc:
+        raise GuardError("Password must be valid UTF-8") from exc
+
+
+def _crypto_input(path: Path, limit: int) -> bytes:
+    """Bound file input and reject links/FIFOs before consuming a crypto record."""
+    before = path.lstat()
+    if _is_link(before) or not stat.S_ISREG(before.st_mode):
+        raise GuardError("Crypto input must be a regular file, not a link or special file")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    descriptor = os.open(path, flags)
+    with os.fdopen(descriptor, "rb") as handle:
+        opened = os.fstat(handle.fileno())
+        if not stat.S_ISREG(opened.st_mode) or _is_link(opened) or (
+            opened.st_dev, opened.st_ino, opened.st_size
+        ) != (before.st_dev, before.st_ino, before.st_size):
+            raise GuardError("Crypto input changed before reading")
+        if opened.st_size > limit:
+            raise GuardError("Crypto input exceeds its size limit")
+        content = handle.read(limit + 1)
+        after = os.fstat(handle.fileno())
+    if len(content) > limit or len(content) != opened.st_size or (
+        opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns
+    ) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+        raise GuardError("Crypto input changed or exceeded its size limit")
+    return content
+
+
 def _run(args: argparse.Namespace) -> tuple[dict, int]:
+    if args.command == "password-create":
+        document = create_password_verifier(_user_password(confirm=True))
+        write_new(args.out, canonical(document) + b"\n", secret=True)
+        return {"ok": True, "verifier": str(args.out), "algorithm": "argon2id"}, 0
+    if args.command == "password-check":
+        # Parse a bounded record before prompting; verify_password validates its profile.
+        document = parse_json(_crypto_input(args.verifier, 4096))
+        passed = verify_password(_user_password(), document)
+        return {"ok": passed, "password_verified": passed}, 0 if passed else 3
+    if args.command == "asset-keygen":
+        generate_asset_key(args.out)
+        return {"ok": True, "key_file": str(args.out), "key_bits": 256}, 0
+    if args.command in {"asset-seal", "asset-open"}:
+        key = load_asset_key(args.key_file)
+        context = (args.product, args.release, args.purpose, args.asset_id)
+        if args.command == "asset-seal":
+            plaintext = _crypto_input(args.input, MAX_ASSET_BYTES)
+            document = seal_asset(plaintext, key, *context)
+            save_document(args.out, document)
+            return {"ok": True, "sealed_asset": str(args.out), "plaintext_bytes": len(plaintext)}, 0
+        document = parse_json(_crypto_input(args.input, 2 * MAX_ASSET_BYTES))
+        plaintext = open_asset(document, key, *context)
+        # No output is created until authentication succeeds. This never executes data.
+        write_new(args.out, plaintext, secret=True)
+        return {"ok": True, "plaintext_file": str(args.out), "plaintext_bytes": len(plaintext)}, 0
     if args.command == "native-init":
         return init_native(args.out, args.seed), 0
     if args.command == "gate":

@@ -1,12 +1,12 @@
 # 安全政策
 
-Anti-REA Forge（底层工具名 Open Release Guard）v0.2 是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF 静态发布检查、签名发布清单和离线授权基础能力，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
+Anti-REA Forge（底层工具名 Open Release Guard）v0.3 是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF 发布检查、签名清单、离线授权、单向口令校验和外部密钥资产封装，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
 
 ## 构建保护的范围
 
 `RG_TEXT` 是可以恢复的静态文字掩码，不是加密保密边界。种子可从产物和解码逻辑中恢复；新种子只是改变静态载荷，不能视为私钥或防破解秘密。解码文字在对象存活期间位于内存中，调用者复制、寄存器、标准库和操作系统缓冲不属于析构擦除范围。REA 等工具可以分析解码器或观察运行时。
 
-2026-10-15 的 [实际测试](docs/testing-2026-10-15.zh-CN.md) 已观察到这一限制：自有 Linux 样本的完整测试口令未以明文出现在文件中，但可从 Ghidra 伪代码和常量静态恢复，也可在动态比较边界恢复；恢复值被未修改的原程序接受。这是当前保护设计的边界，不是签名私钥恢复或 Ed25519 伪造实验。REA 整合分析受环境限制，Windows EXE/DLL 尚未实测。
+2026-10-15 的 [实际测试](docs/testing-2026-10-15.zh-CN.md) 已观察到这一限制：自有 Linux 样本的完整测试口令未以明文出现在文件中，但可从 Ghidra 伪代码和常量静态恢复，也可在动态比较边界恢复；恢复值被未修改的原程序接受。这是当前保护设计的边界，不是签名私钥恢复或 Ed25519 伪造实验。该逆向实验未覆盖 Windows；后续已有 Windows/MSVC EXE 构建与发布检查 CI 通过，Windows DLL ABI 和逆向抵抗仍未验证。REA 整合分析受环境限制未完成。
 
 `gate` 只证明本次检查的文件符合指定的静态规则；未配置的文字、未知编码、算法逻辑、运行行为及公共导出不在文字扫描保证范围内。PE 标记及相关目录存在不代表完整 CFG 插桩或操作系统已实施缓解措施，也不验证 Authenticode 信任。ELF 名称与 section 表缺失时，默认严格元数据策略拒绝作出“已清除”的结论。文件修改可绕过或移除构建 hook，因此发行流程必须由可信构建环境控制。
 
@@ -44,3 +44,13 @@ PE 的调试目录按条目进行有界解析，保留 `debug_directory_present`
 如果私密报告入口未启用，可以开一个不含敏感细节的一般 issue，请维护者提供私密沟通方式。不要在公开 issue、讨论、pull request 或日志中发布私钥、口令、仍可使用的授权、客户数据或尚未协调披露的完整利用细节。
 
 有助于定位问题的信息包括：受影响版本或提交、运行环境、最小复现、预期与实际行为，以及不包含真实秘密的测试数据。请使用临时生成的测试密钥复现，描述你认为跨越的信任边界，并区分实现缺陷与上述已经说明的客户端信任限制。
+
+## v0.3 cryptographic boundaries
+
+The password verifier stores a salted Argon2id PHC record, not an encrypted reference password. Its fixed profile limits one operation; applications must add authentication rate and concurrency limits. Verifier integrity, password entropy and trusted server-side enforcement remain application responsibilities.
+
+Sealed assets require a separately held 32-byte master key and trusted product/release/purpose/asset identifiers. They authenticate data, never execute code, and provide no freshness within identical context. Anyone holding the symmetric master key can create valid assets. Use the existing issuer-signed release manifest with a pinned public key for publisher authenticity; keep release/signing keys separate. Master keys, derived keys and decrypted data can appear in Python or native memory; zeroization and memory-dump resistance are not provided.
+
+Release-root scans require a trusted, stable build directory and trusted ancestors. They detect configured names, hashes, file sets and literal bytes, not all secrets or archive contents. Ordinary identity/inventory changes fail closed; this does not guarantee safety against hostile parent-directory races or replacement after inspection. Continue to use trusted installation/loading/update controls.
+
+Details: [crypto integration](docs/crypto-protection.md). Functional crypto checks and earlier native recovery evidence are separate from a complete REA/provider/model evaluation.
