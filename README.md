@@ -16,6 +16,8 @@ Anti-REA Forge is an open research and engineering project exploring native soft
 
 The tooling retains the **Open Release Guard** Python distribution name `open-release-guard`, CLI/import name `releaseguard`, and existing CMake interfaces. The project targets Windows EXE/DLL protection research and also supports Linux ELF validation. It is independently developed and is not affiliated with or endorsed by REA.
 
+**New here?** Start with the [community guide and reproducible tasks](docs/community/README.md), read the [technical project story](docs/community/PROJECT_STORY.md), or use the [English/Chinese introductions](docs/community/SHARE_COPY.md) where community rules permit. [Outreach status](docs/community/OUTREACH.md) distinguishes submitted suggestions from unsubmitted drafts.
+
 ## New in v0.4: reduce runtime exposure and enforce requests outside the client
 
 - **Native sensitive buffers:** the C++17 `releaseguard::secure_buffer` owns guarded, non-executable pages, checks memory locking, clears its allocation before release, and reports actual protection status. Linux can exclude these pages from core dumps. Windows reports no dump exclusion in this version. None of these measures stop a hook from observing data while it is used.

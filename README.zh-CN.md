@@ -14,6 +14,8 @@
 
 底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口，避免品牌调整影响现有代码。目标面向 Windows EXE/DLL；Linux 与 Windows/MSVC 的构建验证结果见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
 
+从[共建入口与可复现任务](docs/community/README.md)开始，或阅读[技术故事](docs/community/PROJECT_STORY.md)、[中英文介绍](docs/community/SHARE_COPY.md)与[推广投递记录](docs/community/OUTREACH.md)。介绍稿仅适用于允许该类内容的社区；已提交建议与尚未投递的草稿分开记录。
+
 ## v0.4：减少动态暴露，把请求授权放到可信服务端
 
 - **原生敏感缓冲区：** C++17 `releaseguard::secure_buffer` 独占带守卫页的不可执行内存，检查锁页结果，在释放前清理自身分配并报告实际保护状态。Linux 可排除这些页的 core dump；本版 Windows 如实报告不提供 dump 排除。使用期间的进程内 hook 仍能观察明文。
