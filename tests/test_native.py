@@ -52,7 +52,9 @@ class NativeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.base = Path(self.temporary.name)
+        # Match _root's canonical directory spelling before using paths in
+        # scan counters and replacement hooks (e.g. Windows RUNNER~1 aliases).
+        self.base = Path(self.temporary.name).resolve()
         self.binary = self.base / "app.exe"
         self.binary.write_bytes(make_pe())
         self.policy_path = self.base / "policy.json"
@@ -503,6 +505,7 @@ class NativeTests(unittest.TestCase):
         with patch.object(native.os, "open", replacing_open), \
                 self.assertRaisesRegex(GuardError, "changed before scanning"):
             self.gate(root=release)
+        self.assertTrue(changed, "The replacement hook must exercise the identity check")
 
     @unittest.skipUnless(hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"), "POSIX FIFO test")
     def test_release_file_replaced_by_fifo_is_rejected_without_blocking(self) -> None:
