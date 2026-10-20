@@ -1,23 +1,32 @@
-# Prepared submission: 【开源自荐】Anti-REA Forge：可复现的软件保护边界实验与发布加固
+# Prepared submission: 【开源自荐】Anti-REA Forge：把原生软件防护接入构建与服务端
 
-**Status: NOT SUBMITTED.** The GitHub integration returned HTTP 403. No public issue was created. This file is a reviewable draft, not evidence of publication. Recheck rules and duplicates before submitting through an authorized account.
+**Status: NOT SUBMITTED.** Previous submission attempt returned HTTP 403. Recheck access, destination rules and duplicates before submitting. This notice is not part of the proposed post.
 
-Suggested issue title: 【开源自荐】Anti-REA Forge：可复现的软件保护边界实验与发布加固
+Suggested issue title: 【开源自荐】Anti-REA Forge：把原生软件防护接入构建与服务端
 
 ---
 
 项目：Anti-REA Forge
+
 仓库：https://github.com/Afloat16/anti-rea-forge
 
-English summary: An MIT alpha lab for native release hardening and reproducible software-protection boundary experiments.
+English summary: An MIT toolkit combining native release hardening, guarded C++ memory and request-bound server authorization.
 
-这是我维护的开源软件保护实验工具，面向 AI 辅助逆向下可验证的防护边界。它提供 CMake/C++17 构建组件、PE/ELF 发布检查、敏感缓冲区和绑定实际请求的一次性服务端授权。
+Anti-REA Forge 把原生软件发布加固、敏感数据管理和服务端授权组件放进了同一个开源工具箱，适合 C/C++ 开发者、发布工程师和软件保护研究者接入自己的工作流。
 
-项目公开失败记录：自有样本的测试口令曾被静态和运行时分析恢复；Frida 插桩受测试环境阻塞，尚无完整 REA 评测或防破解成功率。v0.4 本地 331 项检查中 330 通过、1 跳过，Linux 和 Windows/MSVC CI 通过；32 线程和 6 进程的合成重放实验均只有一次获准。这些是功能验证，不能外推为抵抗率。
+它的实用之处是可以逐层采用：
 
-中文设计：https://github.com/Afloat16/anti-rea-forge/blob/main/docs/runtime-protection.zh-CN.md
-验证：https://github.com/Afloat16/anti-rea-forge/blob/main/docs/testing-v0.4-2026-10-20.md
-CI：https://github.com/Afloat16/anti-rea-forge/actions/runs/39365796755
+- **接入现有构建：** 通过 CMake 函数为目标启用构建选项，并按策略检查 PE/ELF 产物。
+- **检查完整发布包：** 对声明文字、调试/符号元数据、旁文件、目录清单和已知制品哈希进行配置化检查。
+- **明确管理敏感内存：** C++17 缓冲区提供守卫页、受检锁页、清理与 Linux core dump 排除。
+- **复用密码学组件：** 签名发布清单、Argon2id 口令校验、外部密钥 AES-GCM 资产，以及在可信服务端使用的请求绑定 Ed25519 一次性授权与持久防重放。
 
-欢迎 C++、Python、Windows 与逆向研究者复现和改进。当前为 alpha，需要业务集成。
-关联披露：本人是维护者，本投稿由 AI 辅助整理，供编辑判断是否适合收录。
+项目提供 CLI、Python API、CMake 组件、可运行示例和中英文设计说明。MIT 许可便于审阅、定制和共同扩展；既能作为原生软件发布流程的工具，也能作为研究保护机制的实验起点。
+
+当前版本为 v0.4.0 alpha。工具链要求 Python 3.10+；原生组件面向 Linux 与 Windows/MSVC，使用 C++17/CMake。
+
+中文接入：https://github.com/Afloat16/anti-rea-forge/blob/main/docs/runtime-protection.zh-CN.md
+
+共建入口：https://github.com/Afloat16/anti-rea-forge/issues/1
+
+作者关联：本人是项目维护者，欢迎开发者和安全研究者一起完善接入、平台兼容和保护组件。

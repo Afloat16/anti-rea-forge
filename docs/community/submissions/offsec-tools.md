@@ -1,6 +1,6 @@
 # Prepared submission: [addtool] Anti-REA Forge
 
-**Status: NOT SUBMITTED.** The GitHub integration returned HTTP 403. No public issue was created. This file is a reviewable draft, not evidence of publication. Recheck rules and duplicates before submitting through an authorized account.
+**Status: NOT SUBMITTED.** Previous submission attempt returned HTTP 403. Recheck access, destination rules and duplicates before submitting. This notice is not part of the proposed post.
 
 Suggested issue title: [addtool] Anti-REA Forge
 
@@ -13,16 +13,16 @@ List of tags separated by comma:
 [tags]reverse-engineering,security-auditing,hardening[/tags]
 
 Short description:
-[short_descr]Native release hardening and reproducible software-protection boundary experiments.[/short_descr]
+[short_descr]Native release hardening, guarded memory and signed request authorization in one toolkit.[/short_descr]
 
 A bigger description:
-[long_descr]Anti-REA Forge is an MIT-licensed alpha toolkit and experiment lab for native software release hardening. Its CMake integration and read-only PE/ELF gates check declared literals, debug/symbol metadata and configured release files. Additional components provide C++17 guarded sensitive buffers with checked locking and clearing, Argon2id password verifiers, external-key AES-GCM data assets, signed release manifests and request-bound Ed25519 server capabilities with persistent atomic replay rejection.
+[long_descr]Anti-REA Forge brings native software release hardening and reusable protection components into one MIT-licensed project. Developers can integrate its CMake functions into an existing build, enforce configurable PE/ELF release policies and inspect the files shipped with an application.
 
-The differentiating material is its reproducible boundary controls and public failure evidence, including successful secret recovery from its own masked sample. It is intended to help developers and security reviewers test what these mechanisms actually establish. It is not a packer, executable virtualizer or demonstrated way to defeat REA/Frida; integrated REA evaluation remains incomplete.
+The release gates check declared literals, debug and symbol metadata, sidecar files, release inventories and configured artifact hashes. C++17 sensitive buffers add guarded pages, checked memory locking, explicit clearing and Linux core-dump exclusion. Cryptographic tools provide signed release manifests, Argon2id password verifiers and external-key AES-GCM data assets. Request-bound Ed25519 capabilities with persistent atomic replay rejection support authorization inside a trusted service.
 
-Tooling requires Python 3.10+. Native build/memory components support Linux and Windows/MSVC with C++17/CMake. Server capabilities require integration into a trusted service. Permanent secrets and active plaintext in an attacker-controlled client remain observable.
+The project includes runnable examples, bilingual design notes and reproducible experiments, making it useful for release engineers, native application developers and software-protection researchers. Its modular Python APIs, CLI and CMake integration offer practical starting points for application-specific protection workflows.
 
-Disclosure: submitted by the project's maintainer, with AI-assisted preparation. The image is the official repository banner, not a screenshot or evidence of protection.[/long_descr]
+Current version: v0.4.0 alpha. Tooling requires Python 3.10+. Native build and memory components target Linux and Windows/MSVC with C++17 and CMake. Submitted by the project maintainer.[/long_descr]
 
-Repository image:
+Repository banner:
 [image]https://raw.githubusercontent.com/Afloat16/anti-rea-forge/d3195d4a7cf6fce0861e2149b0cb2949b2dc90d1/assets/anti-rea-forge.svg[/image]

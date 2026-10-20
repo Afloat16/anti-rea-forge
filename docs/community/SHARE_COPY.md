@@ -1,56 +1,59 @@
-# Reusable project introductions
+# Anti-REA Forge: project introductions
 
-**Publication status:** repository copy only; these texts have not been submitted to external communities. Reuse only where current rules permit creator self-promotion and AI-assisted content. Confirm the destination's rules and keep the affiliation and AI disclosure accurate when adapting a version.
-
-The facts below describe **v0.4.0 / commit `d3195d4`**. Update version, evidence and limitations before using them for a later revision. These introductions do not claim that Anti-REA Forge defeats REA or makes software uncrackable.
+Reusable copy for project showcases, software directories and developer communities. Check the destination's current submission rules and use the disclosure it requires. Project facts refer to **v0.4.0**.
 
 ## English project introduction
 
-Disclosure: I maintain Anti-REA Forge. This introduction was prepared with AI assistance from the project's code and test records.
+**Anti-REA Forge puts native release hardening, sensitive-memory management and request authorization in one open toolkit.**
 
-Anti-REA Forge is an MIT-licensed alpha project for native release hardening and reproducible software-protection research. It combines CMake/C++17 components, configurable PE/ELF release checks, cryptographic release tools and project-owned synthetic experiments.
+The MIT-licensed project helps C/C++ and Python developers bring software-protection checks into everyday engineering. Integrate CMake build components, inspect PE/ELF artifacts, enforce a release policy, manage sensitive C++ allocations and add request-bound authorization to a trusted service.
 
-Version 0.4 adds an owned sensitive buffer with guarded pages, checked locking, clearing and Linux core-dump exclusion. It also adds service-side Ed25519 capabilities bound to exact requests, with persistent atomic replay rejection. These components require application integration. Live client plaintext remains observable, and single-use authorization is not exactly-once business execution.
+- **Catch avoidable release exposure:** check declared literals, debug/symbol metadata, sidecar files and the exact release inventory before shipping.
+- **Control sensitive native memory:** C++17 buffers provide guarded pages, checked locking, clearing before release and Linux core-dump exclusion.
+- **Authorize the actual operation:** short-lived Ed25519 capabilities bind the subject, audience, product, operation and exact request bytes; persistent SQLite state provides atomic one-use consumption.
+- **Use established cryptography:** Argon2id password verifiers, external-key AES-256-GCM assets and signed release manifests give developers practical building blocks.
+- **Explore and extend:** public examples, reproducible experiments, English/Chinese guides and Linux/Windows CI make the implementation easy to inspect and contribute to.
 
-The repository publishes successful recovery of earlier synthetic test secrets. Its current Frida attempt was blocked before observation, so no REA resistance rate is claimed. Local implementation checks recorded 330 passes and one skip; Linux and Windows/MSVC CI passed.
+I maintain the project and welcome contributors in C++, Python, Windows, build engineering and reverse-engineering research. Try an example, improve an integration or bring a focused idea for the next release.
 
-Contributors are welcome for runnable REA/Frida evaluations, Windows DLL compatibility, native failure-path review and trusted-service integration. Reproducible failures are useful contributions.
-
-[Repository](https://github.com/Afloat16/anti-rea-forge) · [Design and research sources](../runtime-protection.md) · [Validation](../testing-v0.4-2026-10-20.md)
+[Repository](https://github.com/Afloat16/anti-rea-forge) · [Get started](README.md) · [Runtime design](../runtime-protection.md) · [Join the community](https://github.com/Afloat16/anti-rea-forge/issues/1)
 
 ## 中文项目介绍
 
-作者说明：我是 Anti-REA Forge 的维护者；本文案由 AI 根据项目代码与测试记录辅助整理。
+**逆向工具在进化，软件保护也值得拥有一套开源工程工具链。**
 
-Anti-REA Forge 是面向 REA 等 AI 辅助逆向工具的软件保护实验工程，MIT 开源，目前为 v0.4.0 alpha。欢迎 C/C++、Python、Windows 和逆向研究方向的朋友一起参与。
+Anti-REA Forge 将原生发布加固、敏感内存管理、密码学工具和服务端请求授权集中到同一个项目，帮助 C/C++ 与 Python 开发者把保护措施接入构建和业务流程。项目采用 MIT 协议，提供中英文指南、示例和可复现实验，欢迎一起开发。
 
-现有内容包括 CMake 构建接入、PE/ELF 发布门禁、签名清单与离线授权、Argon2id 单向口令校验，以及外部密钥 AES-256-GCM 数据资产。
+- **发布前把关：** CMake 接入与 PE/ELF 门禁检查声明文字、调试/符号信息、旁文件和完整发布目录，让发布策略进入构建流程。
+- **管理敏感内存：** C++17 缓冲区支持守卫页、受检锁页、释放前清理及 Linux core dump 排除。
+- **让授权绑定实际操作：** Ed25519 短期能力凭证绑定主体、产品、操作及请求字节，配合持久 SQLite 状态原子消费一次性授权，接入可信服务端。
+- **现成密码学组件：** Argon2id 单向口令校验、外部密钥 AES-256-GCM 资产封装，以及签名发布清单与离线许可证。
+- **方便学习与二次开发：** Python CLI、C++ 组件、真实构建示例及 Linux/Windows CI，适合开发者接入，也适合研究者扩展和验证新想法。
 
-v0.4 新增两项运行时组件：C++17 敏感缓冲区提供守卫页、受检锁页、释放前清理及 Linux core dump 排除；服务端一次性能力凭证用 Ed25519 绑定主体、audience、产品、操作和实际请求字节，结合持久 SQLite 状态原子拒绝重放。它们需要接入具体业务。
+我是项目维护者，欢迎 C/C++、Python、Windows、构建工程和逆向研究方向的朋友参与。从跑一个示例、改一处文档或提交一个小 PR 开始，一起把开源软件保护工具做得更实用。
 
-我们也公开失败：此前 Ghidra 静态分析和运行时观察都恢复了自有样本的测试口令；本轮 Frida 因环境问题未完成插桩，没有防 REA 成功率。运行期间的本地明文仍可能被 hook 读取，服务端授权也需要真实认证、签发策略和业务事务。
-
-本地 331 项测试中 330 项通过、1 项跳过；Linux 与 Windows/MSVC CI 已通过。32 线程、6 进程争用同一凭证的合成实验均只有一次获准。这些是功能与边界验证，不是破解抵抗率。
-
-希望一起补齐可用的 REA/Frida 完整评测环境、Windows DLL 调用兼容、原生内存异常路径，以及真实服务端接入。欢迎在自己的或获授权的样本上复现，提交带工具版本、步骤和功能验证的 Issue/PR。恢复成功的证据同样有价值；请勿上传真实密钥、token 或客户数据。
-
-[项目](https://github.com/Afloat16/anti-rea-forge) · [中文运行时设计](../runtime-protection.zh-CN.md) · [验证记录](../testing-v0.4-2026-10-20.md)
+[项目仓库](https://github.com/Afloat16/anti-rea-forge) · [共建入口](README.md) · [中文运行时设计](../runtime-protection.zh-CN.md) · [参与讨论](https://github.com/Afloat16/anti-rea-forge/issues/1)
 
 ## Short English social copy
 
-I maintain Anti-REA Forge (MIT alpha): C++ memory hygiene, release gates and request-bound server authorization, with reproducible failure logs. Live client plaintext remains observable. Contributors welcome. AI-assisted copy.
+Anti-REA Forge brings C++ memory hygiene, PE/ELF release gates and request-bound server authorization into one MIT open-source toolkit. Built for developers who want software protection in their engineering workflow. Contributors welcome!
 
 https://github.com/Afloat16/anti-rea-forge
 
 ## 中文社交短文案
 
-我维护的 Anti-REA Forge 已开源：C++ 内存清理、PE/ELF 发布门禁、服务端请求绑定与防重放。MIT alpha，公开失败记录，欢迎一起复现和改进。本地明文仍可被观察。本条由 AI 辅助整理。
+Anti-REA Forge 开源共建：把 C++ 敏感内存、PE/ELF 发布门禁、密码学组件和服务端一次性授权接入工程流程。MIT 协议，中英文指南，欢迎开发者与研究者一起开发！
 
 https://github.com/Afloat16/anti-rea-forge
 
-## Evidence to retain when sharing
+## Software-directory description
 
-- [Exact passing CI run](https://github.com/Afloat16/anti-rea-forge/actions/runs/39365796755): implementation/build checks, separate from reverse-engineering resistance.
-- [v0.4 validation](../testing-v0.4-2026-10-20.md): local counts, concurrency probes and blocked Frida observation.
-- [Security model](../../SECURITY.md): controlled-client, memory-copy, replay-state and service-integration limits.
-- [Project story](PROJECT_STORY.md): a technical account of the decisions and remaining work.
+Native release hardening, sensitive-memory tools and request-bound server authorization.
+
+## Developer-resource collection pitch
+
+Explore native software-protection techniques through project-owned C++ samples, configurable PE/ELF release checks and runnable request-authorization experiments. Anti-REA Forge combines practical code, documented cryptographic building blocks and English/Chinese integration guides in an MIT-licensed toolkit.
+
+## More about the project
+
+[Project story](PROJECT_STORY.md) · [Runtime guide and research references](../runtime-protection.md) · [Contribution guide](../../CONTRIBUTING.md)

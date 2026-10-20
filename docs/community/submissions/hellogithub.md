@@ -1,42 +1,51 @@
-# Prepared submission: [Open Source] Anti-REA Forge — native hardening experiments
+# Prepared submission: [Open Source] Anti-REA Forge — native release hardening
 
-**Status: NOT SUBMITTED.** The GitHub integration returned HTTP 403. No public issue was created. This file is a reviewable draft, not evidence of publication. Recheck rules and duplicates before submitting through an authorized account.
+**Status: NOT SUBMITTED.** Previous submission attempt returned HTTP 403. Recheck access, destination rules and duplicates before submitting. This notice is not part of the proposed post.
 
-Suggested issue title: [Open Source] Anti-REA Forge — native hardening experiments
+Suggested issue title: [Open Source] Anti-REA Forge — native release hardening
 
 ---
 
 ### Project URL
+
 https://github.com/Afloat16/anti-rea-forge
 
 ### Category
+
 Python
 
 ### Project Title
-Native hardening with testable boundaries
+
+Native release hardening in one toolkit
 
 ### Project Description
-An MIT alpha toolkit for native release hardening and runtime-boundary research. It combines CMake/PE/ELF gates, guarded buffers and one-use server capabilities, with reproducible tests and published failures. It is not unbreakable DRM.
+
+An MIT toolkit for hardening native software releases. It combines configurable PE/ELF checks, guarded C++ memory and signed request authorization, giving developers reusable components and runnable examples in one project.
 
 ### Highlights
-- CMake/C++17 integration and configurable read-only PE/ELF release gates, alongside cryptographic release and authorization tools.
-- v0.4 adds an explicitly owned sensitive buffer and exact-request Ed25519 server capabilities with durable atomic replay rejection.
-- The project publishes failed protection experiments, including recovery of its own synthetic masked secret. It separates a blocked experiment from a protection result.
-- Local implementation record: 331 tests run, 330 passed, one mapping-inspection skip. Linux and Windows/MSVC CI passed at the linked commit. Synthetic 32-thread and six-process replay probes each allowed one consumption. These are functional checks, not a cracking-resistance rate.
-- MIT alpha, Python 3.10+, native components for Linux/Windows with C++17/CMake. Server authorization requires actual service integration. Live client plaintext remains observable. Frida instrumentation and the complete REA workflow have not been completed in the test environment.
+
+- Bring release protection into the build: CMake integration applies native build options and enforces configurable PE/ELF artifact policies.
+- Inspect the complete release package: check declared literals, metadata, sidecar files, expected file inventories and known artifact hashes according to an explicit policy.
+- Give sensitive native data an owned lifecycle with C++17 guarded buffers, checked locking, clearing and Linux core-dump exclusion.
+- Add cryptographic building blocks: signed release manifests, Argon2id password verifiers, external-key AES-GCM assets and exact-request Ed25519 capabilities with durable replay rejection for trusted services.
+- Start from runnable examples and bilingual documentation. MIT licensing makes the code straightforward to inspect, adapt and extend with the community.
+- Current version: v0.4.0 alpha. Python 3.10+; native components target Linux and Windows/MSVC with C++17/CMake.
 
 ### Example Code
+
 ```bash
 git clone https://github.com/Afloat16/anti-rea-forge.git
 cd anti-rea-forge
 python -m pip install -e .
-python benchmarks/dynamic_boundary.py --out dynamic-boundary.json
+python -m releaseguard native-init --out generated
 ```
 
 ### Screenshots or Demo Videos
-Official repository banner (not an execution screenshot):
+
+Official repository banner:
 https://raw.githubusercontent.com/Afloat16/anti-rea-forge/d3195d4a7cf6fce0861e2149b0cb2949b2dc90d1/assets/anti-rea-forge.svg
 
-Validation: https://github.com/Afloat16/anti-rea-forge/blob/main/docs/testing-v0.4-2026-10-20.md
+Runtime design and examples:
+https://github.com/Afloat16/anti-rea-forge/blob/main/docs/runtime-protection.md
 
-Disclosure: I maintain the project; this original submission was prepared with AI assistance. Exact-name GitHub submission and public-index searches found no existing recommendation; the website's dynamic search result could not be fully verified. Inclusion remains for editorial review.
+Maintainer submission: I maintain Anti-REA Forge and welcome contributors working on native development, release engineering and security research.

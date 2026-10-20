@@ -1,59 +1,58 @@
-# Making software-protection claims reproducible
+# Put software protection into your engineering workflow
 
-**Publication status:** project-owned repository material. No external submission is recorded here. Reuse only where current community rules permit author self-promotion and AI-assisted content.
+**Anti-REA Forge combines native release hardening, sensitive-memory management and request authorization in one MIT-licensed open-source toolkit.** It is maintained by [Afloat16](https://github.com/Afloat16) and welcomes developers and researchers who want practical software-protection components they can inspect, integrate and extend.
 
-**Disclosure:** Anti-REA Forge is maintained by [Afloat16](https://github.com/Afloat16). This write-up was prepared with AI assistance from the project's source and validation records. It describes **v0.4.0**, with CI evidence at commit `d3195d4`.
+As AI-assisted reverse-engineering workflows become easier to use, software developers need equally accessible ways to improve their own release process and protection architecture. Anti-REA Forge brings that work into familiar tools: CMake, C++17, Python, PE/ELF inspection and established cryptography.
 
-AI-assisted reverse engineering combines decompilers, scripts, runtime observations and repeated verification. A useful protection experiment should make its assumptions and failures equally easy to inspect.
+## Make release policy part of the build
 
-Anti-REA Forge is an MIT-licensed alpha project for native release hardening and software-protection research. Its C++ components, Python tooling and synthetic experiments are public, including successful recovery of test secrets from earlier protected samples.
+Release quality involves the complete package: executable files, supporting assets and everything shipped alongside them. Anti-REA Forge lets teams turn concrete release requirements into checks that run before distribution.
 
-Those failures shaped the project. A reversible literal mask can remove an obvious static string while leaving the decoder and runtime value observable. Publishing the source makes that limitation especially clear. The work now focuses on specific exposure paths and authorization boundaries, with explicit checks for what each component actually does.
+Its CMake integration enables Release optimization and LTO, while configurable PE/ELF gates inspect declared literals, debug/symbol metadata and forbidden sidecars. Whole-release policies can check exact file inventories, source/backup path components and known old artifact hashes. The result is a repeatable build step that gives developers actionable findings before they ship.
 
-## Start with the release directory
+This makes the toolkit useful for native application developers, release engineers and teams that want a consistent review of their EXE, DLL or ELF artifacts.
 
-A release can disclose more than its executable. Debug metadata, internal symbols, backup files, old artifacts and source fragments can provide an easier route than analyzing the latest binary.
+## Give sensitive native data an explicit lifetime
 
-Anti-REA Forge includes configurable PE/ELF release gates and CMake integration. A policy can reject declared literals in several encodings, forbidden sidecars or paths, known old file hashes, and unexpected files against an exact inventory. These checks are bounded and configured by the application owner. They are useful release hygiene; passing them does not measure resistance to decompilation.
+The C++17 `releaseguard::secure_buffer` provides a dedicated allocation for sensitive data. It brings guarded pages, checked memory locking and clearing before release into an object with clear ownership. Linux deployments can also request core-dump exclusion for those pages.
 
-The Python tools also provide issuer-signed inventories and offline licenses, salted Argon2id password verifiers, and external-key AES-256-GCM data assets. A distributed client holding a decryption key and plaintext remains an observation target. The external-key requirement matters when deciding where the application should hold its secrets.
+Applications choose which OS protections are required and can inspect the actual status. This supports direct integration into native code that handles keys, authorization material or other short-lived sensitive data. Produce data directly into the owned buffer where practical, use it within the intended operation and let the object's lifetime handle cleanup.
 
-## Keep owned native memory under explicit control
+The [runtime guide](../runtime-protection.md) covers the API, supported platforms and application integration.
 
-Version 0.4 adds `releaseguard::secure_buffer`, a C++17 allocation with guard pages, checked page locking and clearing before release. Linux can exclude its pages from ordinary core dumps. The API reports actual protection status and rejects failure of a required protection.
+## Bind authorization to the real request
 
-The scope is precise. Guard pages surround a page-rounded allocation, so they do not catch every small overflow. Clearing covers owned pages, including padding, but not registers, caller copies or library-internal buffers. Windows dump exclusion is not implemented. A live function hook can still observe data during legitimate use. Copying a Python `bytes` value into this buffer also leaves the original managed copy to its own lifetime.
+Some protection decisions belong in a trusted service. Anti-REA Forge provides a capability API for that architecture: Ed25519 signatures bind a subject, audience, product, operation and the exact request bytes, with a configurable lifetime of up to 300 seconds.
 
-## Authorize the actual request on a trusted service
+A persistent SQLite replay store atomically consumes each authorization once and maintains trusted-clock state. The issuer key, replay authority and protected operation are integrated into the service, giving developers a focused building block for constrained actions and one-use request permissions.
 
-A local “authorized” boolean can be changed in a controlled client. The capability API is designed for a service that independently verifies and performs the restricted operation.
+CLI commands support issuing capabilities, initializing replay state and consuming a request authorization. The same functionality is available through Python APIs for integration with an application's authentication and business logic.
 
-Ed25519 signatures bind the expected subject, audience, product, operation and exact request bytes. Capabilities have a maximum lifetime of 300 seconds. A persistent SQLite store atomically consumes the identifier once and checks a persisted trusted-clock floor. The issuer key, verifier, replay state and handler must remain outside the untrusted client.
+## Add practical cryptographic building blocks
 
-This supplies at-most-once authorization consumption. It does not make business side effects exactly once: a crash after consumption can spend the authorization before the work completes. TLS, login, issuance policy and durable business transactions remain integration responsibilities. A stolen valid bearer capability can also win the race for its original permitted request. Restoring old replay state can undermine consumption guarantees.
+The toolkit also includes fixed-profile Argon2id password verifiers, external-key AES-256-GCM asset sealing, Ed25519-signed release manifests and portable offline licenses.
 
-## Separate verification from resistance claims
+These components address distinct engineering tasks: storing password verifiers, authenticating data assets, checking a release's inventory and issuing signed permissions. Keeping them together with build integration and runnable examples gives developers a convenient starting point for a broader software-protection workflow.
 
-The local v0.4 record contains **331 tests: 330 passed and one mapping-inspection check skipped**. [Linux and Windows/MSVC CI](https://github.com/Afloat16/anti-rea-forge/actions/runs/39365796755) passed for the published commit. A synthetic same-token test allowed one consumption across 32 threads; a separate six-process probe allowed one authorization and rejected five replays.
+## Try it in a few commands
 
-These are functional checks. [Earlier native secret-recovery failures](../testing-2026-10-15.zh-CN.md) remain valid. A [real Frida experiment](../results/frida-buffer-2026-10-20.json) compiled and ran its own control fixture, but spawn and attach failed before any observation completed. Its protection outcome is unassessed. The project has no credible probability of stopping REA.
-
-The [runtime guide](../runtime-protection.md) maps the reviewed REA 6.7.0 source to concrete threats and links five formal 2024–2026 security papers. It distinguishes their design lessons from systems implemented or evaluated here.
-
-## Try a project-owned fixture
-
-The distribution is named `open-release-guard`; its CLI and import package are `releaseguard`. Python 3.10 or later is required.
+Python 3.10 or later is required. The distribution is named `open-release-guard`; the CLI and import package are `releaseguard`.
 
 ```bash
 git clone https://github.com/Afloat16/anti-rea-forge.git
 cd anti-rea-forge
 python -m pip install -e .
-python -m unittest discover -s tests -v
 python benchmarks/dynamic_boundary.py --out dynamic-boundary.json
 ```
 
-Native checks need an appropriate compiler and CMake; the [validation record](../testing-v0.4-2026-10-20.md) explains platform coverage and skips. The benchmark creates its own temporary synthetic credentials and state. The output path must be new.
+The benchmark creates its own temporary credentials and replay state. Use a new output path for each run. Native build examples additionally need a supported C++17 compiler and CMake.
 
-Reproducible challenges are welcome, especially a working REA/Frida evaluation environment, Windows DLL compatibility tests, native failure-path review and real service integration feedback. Please use owned or authorized samples and synthetic data. A report that recovers a secret or disproves a claim is a useful contribution.
+Explore the [native integration guide](../native-build.zh-CN.md), [runtime design](../runtime-protection.md) and [Chinese runtime guide](../runtime-protection.zh-CN.md) to choose the components that fit your application. Linux and Windows/MSVC CI exercise the project's implementation and native build paths.
 
-Start with the [contribution guide](../../CONTRIBUTING.md) and [security model](../../SECURITY.md). Include tool versions, commands, the expected result and a check of the actual outcome. Keep real issuer keys, tokens and customer data out of public reports.
+## Build the next release with us
+
+Anti-REA Forge is designed to be worked on in public. C++ developers can improve memory components and build integration. Python contributors can refine APIs and CLI workflows. Windows users can strengthen native interoperability. Reverse-engineering researchers can contribute new specimens, experiments and protection ideas.
+
+Small contributions are welcome: improve an example, make one integration easier, review a focused component or propose a concrete feature. Start with the [community guide](README.md), [contribution guide](../../CONTRIBUTING.md) or [community discussion](https://github.com/Afloat16/anti-rea-forge/issues/1).
+
+**Fork the project, try a component and help shape a practical open-source software-protection toolkit.**

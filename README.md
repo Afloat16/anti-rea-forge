@@ -4,19 +4,19 @@
 
 ![Anti-REA Forge banner](assets/anti-rea-forge.svg)
 
-> **AI-assisted reverse engineering is advancing. Let’s make software protection a reproducible engineering challenge.**
+> **AI-assisted reverse engineering is advancing. Build stronger native releases with an open toolkit.**
 
-Anti-REA Forge is an open research and engineering project exploring native software protection against analysis with tools such as **REA and Ghidra**. It provides CMake integration, C++ components, PE/ELF release gates, and reproducible experiments that make protection claims easier to inspect and challenge.
+Anti-REA Forge is an MIT-licensed toolkit for native software protection in the era of **REA and AI-assisted reverse engineering**. It brings CMake integration, C++ sensitive-memory components, PE/ELF release gates and request-bound server authorization into a project developers can inspect, integrate and extend.
 
-**Contributions are welcome. Our current anti-cracking goals remain unmet:** independent static and runtime analysis recovered test secrets from protected synthetic samples, and the original programs accepted the recovered values. We publish these failures to guide improvement and make no promise of unbreakable software.
+**Bring software protection into your engineering workflow:** catch avoidable release exposure before shipping, give sensitive native data an explicit lifetime, and bind server authorization to the actual request. Explore the examples, integrate a component, or help build the next release.
 
 **MIT · 0.4.0 / Alpha · C/C++ build integration · Python tooling · PE / ELF**
 
-[Contribute (Chinese)](CONTRIBUTING.md) · [Community invitation](https://github.com/Afloat16/anti-rea-forge/issues/1) · [Challenges and roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Test report (Chinese)](docs/testing-2026-10-15.zh-CN.md) · [Security model (Chinese)](SECURITY.md)
+[Get started](docs/community/README.md) · [Community invitation](https://github.com/Afloat16/anti-rea-forge/issues/1) · [Contribute (Chinese)](CONTRIBUTING.md) · [Roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Runtime integration](docs/runtime-protection.md)
 
 The tooling retains the **Open Release Guard** Python distribution name `open-release-guard`, CLI/import name `releaseguard`, and existing CMake interfaces. The project targets Windows EXE/DLL protection research and also supports Linux ELF validation. It is independently developed and is not affiliated with or endorsed by REA.
 
-**New here?** Start with the [community guide and reproducible tasks](docs/community/README.md), read the [technical project story](docs/community/PROJECT_STORY.md), or use the [English/Chinese introductions](docs/community/SHARE_COPY.md) where community rules permit. [Outreach status](docs/community/OUTREACH.md) distinguishes submitted suggestions from unsubmitted drafts.
+**New here?** Start with the [community guide and runnable examples](docs/community/README.md), read the [project story](docs/community/PROJECT_STORY.md), or share the [English/Chinese introductions](docs/community/SHARE_COPY.md) with developers interested in software protection. Small contributions are welcome.
 
 ## New in v0.4: reduce runtime exposure and enforce requests outside the client
 

@@ -6,11 +6,11 @@
 
 > **逆向有 AI，防护也要进化。**
 
-面向 **REA 等 AI 辅助逆向工具**的开源软件保护实验工程。我们想把“防反编译、防破解”从一句宣传语，变成有样本、有复现、有失败记录的工程挑战。**欢迎开发者与逆向研究者一起造防护、做分析、公开证据，再一起改进。**
+面向 **AI 辅助逆向时代**的开源软件保护工具箱，关注 REA 等工具的分析流程。通过 CMake 构建接入、PE/ELF 发布门禁、C++ 敏感内存和请求绑定授权，帮助开发者把保护措施融入日常工程流程。**MIT 开源、中英文指南、可运行示例，欢迎开发者与逆向研究者一起扩展，让软件保护更实用。**
 
 **MIT · 0.4.0 / Alpha · C/C++ 构建接入 · Python 工具链 · PE / ELF**
 
-[加入共建](CONTRIBUTING.md) · [共建招募 Issue](https://github.com/Afloat16/anti-rea-forge/issues/1) · [公开挑战与路线图](docs/ROADMAP.zh-CN.md) · [实际测试报告](docs/testing-2026-10-15.zh-CN.md) · [安全模型](SECURITY.md)
+[快速开始](docs/community/README.md) · [共建招募 Issue](https://github.com/Afloat16/anti-rea-forge/issues/1) · [加入共建](CONTRIBUTING.md) · [路线图](docs/ROADMAP.zh-CN.md) · [运行时接入](docs/runtime-protection.zh-CN.md)
 
 底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口，避免品牌调整影响现有代码。目标面向 Windows EXE/DLL；Linux 与 Windows/MSVC 的构建验证结果见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
 
