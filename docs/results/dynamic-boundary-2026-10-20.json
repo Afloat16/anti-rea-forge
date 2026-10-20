@@ -1,0 +1,75 @@
+{
+  "all_functional_checks_passed": true,
+  "cases": {
+    "active_delegated_rights_remain_usable": {
+      "accepted": true,
+      "client_authorized_boolean": false,
+      "handler_calls_added": 1
+    },
+    "concurrent_replay": {
+      "accepted": 1,
+      "attempts": 32,
+      "handler_calls_added": 1,
+      "independent_store_instances": 32,
+      "rejected": 31
+    },
+    "patched_boolean_forged_capability": {
+      "accepted": false,
+      "client_authorized_boolean": true,
+      "handler_calls_added": 0
+    },
+    "patched_boolean_missing_capability": {
+      "accepted": false,
+      "client_authorized_boolean": true,
+      "handler_calls_added": 0
+    },
+    "persistent_replay_after_concurrent_use": {
+      "accepted": false,
+      "client_authorized_boolean": true,
+      "handler_calls_added": 0
+    },
+    "persistent_replay_after_reopen": {
+      "accepted": false,
+      "client_authorized_boolean": true,
+      "handler_calls_added": 0
+    },
+    "swapped_request": {
+      "accepted": false,
+      "client_authorized_boolean": true,
+      "handler_calls_added": 0
+    },
+    "valid_bound_request_after_rejected_swap": {
+      "accepted": true,
+      "client_authorized_boolean": true,
+      "handler_calls_added": 1
+    }
+  },
+  "client_boolean_patch_is_simulated": true,
+  "elapsed_ms": 194.315,
+  "environment": {
+    "python": "3.12.14",
+    "system": "Linux"
+  },
+  "experiment_completed": true,
+  "format": "open-release-guard-dynamic-boundary/v1",
+  "frida_evaluated": false,
+  "handler_calls_total": 3,
+  "native_instrumentation_evaluated": false,
+  "network_tls_deployment_evaluated": false,
+  "notes": [
+    "These are synthetic functional boundary tests, NOT a REA or Frida run or a decompilation-resistance score.",
+    "The client boolean is forced in Python; no native hooks or arbitrary binaries are used.",
+    "The trusted server is a local fixture. No network, TLS, TEE, authentication session or production deployment is tested.",
+    "A client-controlled active authorized session can still use its valid delegated rights; one successful use is demonstrated.",
+    "Signing keys and replay state must live on a trusted service, not a client the adversary controls.",
+    "Consumption precedes the handler. A crash between them burns authorization without completing work; this does not prove exactly-once business effects.",
+    "Multiple production service instances need shared durable replay state; database rollback, failover, clock trust and recovery are not tested.",
+    "The exact immutable request bytes checked by consumption are passed to the handler.",
+    "Fresh private keys, token documents, request bodies, signatures and token identifiers are not exported.",
+    "Exit 0 means the stated functional controls passed, not that general software protection passed."
+  ],
+  "rea_evaluated": false,
+  "releaseguard_version": "0.4.0",
+  "scope": "synthetic_server_authorization_functional_controls_only",
+  "tee_evaluated": false
+}

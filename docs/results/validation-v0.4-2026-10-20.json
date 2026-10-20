@@ -1,0 +1,41 @@
+{
+  "format": "open-release-guard-v04-validation/v1",
+  "date_utc": "2026-10-20",
+  "releaseguard_version": "0.4.0",
+  "environment": {
+    "python": "3.12.14",
+    "system": "Linux",
+    "machine": "x86_64",
+    "cryptography": "50.0.2",
+    "sqlite": "3.53.1",
+    "gcc": "13.3.0",
+    "cmake": "4.4.4"
+  },
+  "unittest": {
+    "run": 331,
+    "passed": 330,
+    "skipped": 1,
+    "failed": 0,
+    "errors": 0,
+    "seconds": 24.244,
+    "skip_reason": "/proc/self/smaps unavailable; independent OS mapping-flag observation skipped"
+  },
+  "wheel": {
+    "filename": "open_release_guard-0.4.0-py3-none-any.whl",
+    "sha256": "d043140e7ae640b3a9eff981ebe1516ec0e5a44535539d5b188e2abf9c6bd3e2",
+    "new_module_and_packaged_headers_match_source": true
+  },
+  "dynamic_boundary_report": "dynamic-boundary-2026-10-20.json",
+  "frida_report": "frida-buffer-2026-10-20.json",
+  "rea_source_review": {
+    "repository": "morluto/rea",
+    "commit": "d72021b0dabedcc6fbc7bc6e0286fd359c604271",
+    "source_version": "6.7.0",
+    "optional_frida_version": "17.23.2"
+  },
+  "rea_pipeline_evaluated": false,
+  "frida_instrumentation_completed": false,
+  "tee_evaluated": false,
+  "protection_probability_measured": false,
+  "ci": "See GitHub Actions for the exact published commit; local results are separate."
+}

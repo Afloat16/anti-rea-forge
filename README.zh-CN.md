@@ -8,11 +8,19 @@
 
 面向 **REA 等 AI 辅助逆向工具**的开源软件保护实验工程。我们想把“防反编译、防破解”从一句宣传语，变成有样本、有复现、有失败记录的工程挑战。**欢迎开发者与逆向研究者一起造防护、做分析、公开证据，再一起改进。**
 
-**MIT · 0.3.0 / Alpha · C/C++ 构建接入 · Python 工具链 · PE / ELF**
+**MIT · 0.4.0 / Alpha · C/C++ 构建接入 · Python 工具链 · PE / ELF**
 
 [加入共建](CONTRIBUTING.md) · [共建招募 Issue](https://github.com/Afloat16/anti-rea-forge/issues/1) · [公开挑战与路线图](docs/ROADMAP.zh-CN.md) · [实际测试报告](docs/testing-2026-10-15.zh-CN.md) · [安全模型](SECURITY.md)
 
 底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口，避免品牌调整影响现有代码。目标面向 Windows EXE/DLL；Linux 与 Windows/MSVC 的构建验证结果见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
+
+## v0.4：减少动态暴露，把请求授权放到可信服务端
+
+- **原生敏感缓冲区：** C++17 `releaseguard::secure_buffer` 独占带守卫页的不可执行内存，检查锁页结果，在释放前清理自身分配并报告实际保护状态。Linux 可排除这些页的 core dump；本版 Windows 如实报告不提供 dump 排除。使用期间的进程内 hook 仍能观察明文。
+- **绑定请求的服务端能力凭证：** 使用独立签名域的 Ed25519，绑定已认证主体、audience、产品、操作与实际请求字节，有效期最多 300 秒。持久 SQLite 状态原子消费一次性标识，并拒绝可信时钟回拨。签发私钥、验证、重放状态与受限操作必须放在可信服务端。
+- **针对 REA 的威胁映射：** 固定核查 REA 6.7.0 源码及 Frida 脚本桥接，分别处理内存快照、实时 hook、本地分支替换和凭证重放；参考正式发表于 2024–2026 安全顶会的研究和成熟开源内存方案，区分借鉴原则与已经实现的功能。
+
+见[中文运行时接入](docs/runtime-protection.zh-CN.md)、[English](docs/runtime-protection.md)与[v0.4 验证记录](docs/testing-v0.4-2026-10-20.md)。这些组件需要业务接入；Python 密码学 API 仍返回托管 `bytes`，本版不自动部署服务端、TLS、身份认证或 TEE。授权只消费一次不等于业务恰好执行一次；被窃取的有效 bearer 凭证仍可能被抢先用于其原请求。
 
 ## v0.3：移除可逆参考口令，检查整个发布目录
 
@@ -30,6 +38,7 @@
 
 | 已经做了什么 | 当前结果 |
 | --- | --- |
+| v0.4 本地功能与原生集成测试 | 2026-10-20，331 项中 330 项通过、1 项因 `/proc/self/smaps` 不可用跳过；[详细范围与 Frida 受阻记录](docs/testing-v0.4-2026-10-20.md) |
 | 本地功能与真实 CMake 集成测试 | 2026-10-15，176 项通过，无跳过，含 Windows 时间信息兼容与 PE 条目分类回归 |
 | 选中文字静态掩码、发布门禁、签名清单与离线授权工具 | 已实现，边界见下文 |
 | 独立 Ghidra 静态分析、独立运行时观察 | 均恢复了自有样本的测试口令，原程序接受恢复值；当前防破解目标未达到 |
@@ -55,6 +64,8 @@
 | --- | --- |
 | `native-init` + `releaseguard_protect(target POLICY ...)` | 生成 CMake/C++ 构建组件，启用 Release 优化与 LTO，并在产物违反策略时使构建失败 |
 | `RG_TEXT("...")` | 对选择的 C++17 字符串做编译期可逆掩码，使用时恢复到作用域对象；不同构建种子改变静态载荷 |
+| `releaseguard::secure_buffer` | 独占原生页，守卫页、受检锁页、清理与实际平台 dump 状态 |
+| `capability-issue / capability-consume / replay-store-init` | 服务端短期授权，绑定精确请求，持久原子防重放 |
 | `gate` | 扫描五种编码的声明文字、检查调试/符号元数据、禁发旁文件和所需 PE 静态证据 |
 | v0.3 `gate --root` | 精确文件清单、源码/备份路径、旧制品哈希拒绝与有界全目录文字扫描 |
 | `password-create / password-check` | 固定成本的加盐 Argon2id 单向口令校验，在 KDF 前限制参数 |

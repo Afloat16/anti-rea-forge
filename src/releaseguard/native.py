@@ -37,7 +37,8 @@ _ROOT_POLICY_FIELDS = {
     "max_release_scan_bytes", "allowed_release_files",
 }
 _ENCODINGS = ("utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be")
-_ASSET_PATHS = ("cmake/ReleaseGuard.cmake", "include/releaseguard/literal.hpp")
+_ASSET_PATHS = ("cmake/ReleaseGuard.cmake", "include/releaseguard/literal.hpp",
+                "include/releaseguard/secure_buffer.hpp")
 _CHUNK_BYTES = 1024 * 1024
 
 

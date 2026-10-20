@@ -1,0 +1,90 @@
+{
+  "elapsed_seconds": 0.557,
+  "environment": {
+    "compiler": "g++",
+    "compiler_version": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+    "frida_version": "17.23.2",
+    "machine": "x86_64",
+    "python": "3.12.14",
+    "system": "Linux"
+  },
+  "fixture": {
+    "binary_sha256": "5711ad450c8e67e27abaea4fe525494c7f2850af7facdc7a16113e341a9d2fa0",
+    "byte_count": 32,
+    "compiler_exit_code": 0,
+    "header_sha256": "680f370230aed32da09a8041c3574aaba51f634a398bcd0f0e4faf9ae6d9cde3",
+    "observer_sha256": "0dcc0e4f2d4958292d6254ddf344541a37f674ce6b7b029e866ae5522cd93f7e",
+    "optimization": "O2",
+    "owned_source_only": true,
+    "public_synthetic_pattern": true,
+    "requested_dump_exclusion_required": false,
+    "requested_lock_required": false,
+    "source_sha256": "78984e5f3272117c2020cac94dbf9dda86667c2ce10be16e915d2ab33e835cbb",
+    "unobserved_control_exit_code": 0,
+    "unobserved_control_no_output": true
+  },
+  "format": "open-release-guard-frida-buffer-observe/v1",
+  "frida_attempts": [
+    {
+      "cleanup": {
+        "errors": []
+      },
+      "completed_expected_observations": false,
+      "detached_reasons": [],
+      "errors": [
+        {
+          "message": "target exited with status 1",
+          "stage": "spawn_owned_fixture",
+          "type": "NotSupportedError"
+        }
+      ],
+      "mode": "spawn",
+      "observations": [],
+      "owned_pid_acquired": false,
+      "owned_process_alive_before_attach": null,
+      "owned_process_exit_code": null,
+      "ready_observed": false
+    },
+    {
+      "cleanup": {
+        "errors": [],
+        "owned_target_kill_attempted": true
+      },
+      "completed_expected_observations": false,
+      "detached_reasons": [],
+      "errors": [
+        {
+          "message": "unable to find process with pid 27",
+          "stage": "attach_owned_fixture",
+          "type": "ProcessNotFoundError"
+        }
+      ],
+      "mode": "attach",
+      "observations": [],
+      "owned_pid_acquired": true,
+      "owned_process_alive_before_attach": true,
+      "owned_process_exit_code": null,
+      "ready_observed": false
+    }
+  ],
+  "limitations": [
+    "Checkpoint exports are explicit observation aids in our synthetic fixture.",
+    "Live public-pattern visibility is the expected limit, not an anti-Frida protection pass.",
+    "After-clear reads cover only 32 bytes of the same still-owned allocation.",
+    "No assertion covers copies, registers, whole-process dumps, real secrets or real applications.",
+    "Memory-lock/dump-exclusion flags report this run only; they do not prevent in-process reads."
+  ],
+  "protection_outcome": "not_evaluated",
+  "scope": {
+    "freed_memory_read": false,
+    "rea_agent_model_pipeline": false,
+    "rea_cli": false,
+    "rea_provider": false,
+    "real_frida": true,
+    "real_frida_instrumentation_completed": false,
+    "third_party_target": false,
+    "whole_process_dump": false
+  },
+  "status": "environment_or_instrumentation_failure",
+  "timestamp_utc": "2026-10-20T03:30:39.542702+00:00"
+}

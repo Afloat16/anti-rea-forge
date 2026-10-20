@@ -1,6 +1,6 @@
 # 安全政策
 
-Anti-REA Forge（底层工具名 Open Release Guard）v0.3 是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF 发布检查、签名清单、离线授权、单向口令校验和外部密钥资产封装，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
+Anti-REA Forge（底层工具名 Open Release Guard）v0.4 是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF 发布检查、签名清单、离线授权、单向口令校验、外部密钥资产封装、原生敏感缓冲区和服务端请求能力凭证，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
 
 ## 构建保护的范围
 
@@ -54,3 +54,15 @@ Sealed assets require a separately held 32-byte master key and trusted product/r
 Release-root scans require a trusted, stable build directory and trusted ancestors. They detect configured names, hashes, file sets and literal bytes, not all secrets or archive contents. Ordinary identity/inventory changes fail closed; this does not guarantee safety against hostile parent-directory races or replacement after inspection. Continue to use trusted installation/loading/update controls.
 
 Details: [crypto integration](docs/crypto-protection.md). Functional crypto checks and earlier native recovery evidence are separate from a complete REA/provider/model evaluation.
+
+## v0.4 runtime boundaries
+
+The native `secure_buffer` reduces accidental exposure through swapping, owned-memory residue and (on Linux when enabled) core dumps. It does not block a debugger or in-process instrumenter, clear registers or caller/library copies, enforce object bounds inside page padding, or provide a TEE. Windows reports no dump exclusion. Required locking or dump protections fail closed; optional protections report their actual state. This buffer does not change the memory behavior of Python/pyca `bytes` or automatically move decrypted assets into native protected memory.
+
+Capabilities are bearer credentials for one exact request and a bounded lifetime. The issuer must authenticate and authorize before signing; expected subject, audience, product, operation and executed request must come from trusted server state. A client-supplied expected value or public key does not establish authorization. Signing keys stay outside clients. Network authentication, TLS, rate limits, issuance policy and the business handler are application responsibilities, not provided services.
+
+The replay database and its parent directory must remain trusted and stable. All instances of the same authority must share the same authoritative state. A missing or invalid database fails closed and is never silently recreated. Explicitly initializing a replacement, restoring an old snapshot, cloning independent stores or rolling back the server clock/state can invalidate replay guarantees. The persisted clock floor detects time moving backwards relative to that database; it is not trusted hardware time or a rollback-proof database.
+
+Successful consumption is committed before authorization is returned. A subsequent handler failure or crash burns the capability. This is at-most-once authorization consumption, not exactly-once business execution; stronger semantics require a shared business transaction/outbox and idempotency design. An attacker who steals an unused valid capability and controls its authenticated subject can race to consume the same permitted request first. An actively controlled authorized client can still use its delegated rights.
+
+See [runtime integration and sources](docs/runtime-protection.md) and [v0.4 validation](docs/testing-v0.4-2026-10-20.md). No completed REA resistance rate, comprehensive side-channel defense or remote-attestation deployment is claimed.

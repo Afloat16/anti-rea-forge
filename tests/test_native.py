@@ -95,6 +95,7 @@ class NativeTests(unittest.TestCase):
         expected = {
             "releaseguard_build.hpp", "cmake/ReleaseGuard.cmake",
             "include/releaseguard/literal.hpp",
+            "include/releaseguard/secure_buffer.hpp",
         }
         self.assertEqual(set(metadata["assets"]), expected)
         for relative, digest in metadata["assets"].items():

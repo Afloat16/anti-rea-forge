@@ -1,0 +1,35 @@
+{
+  "business_handler_evaluated": false,
+  "cross_process_replay_race": {
+    "authorized": 1,
+    "completed": true,
+    "fixed_trusted_test_clock": true,
+    "persisted_nonce_count": 1,
+    "processes": 6,
+    "rejected_replay": 5,
+    "start_method": "spawn"
+  },
+  "database_rollback_evaluated": false,
+  "elapsed_seconds": 2.157052,
+  "experiment_completed": true,
+  "format": "open-release-guard-capability-process-boundary/v1",
+  "frida_evaluated": false,
+  "network_evaluated": false,
+  "package_version": "0.4.0",
+  "platform": "Linux",
+  "python_version": "3.12.14",
+  "rea_evaluated": false,
+  "real_sqlite_lock_expiry": {
+    "completed": true,
+    "connection_observation_only": true,
+    "expired_rejected": true,
+    "last_seen_after": 0,
+    "nonce_count_after": 0,
+    "real_write_lock_wait_observed": true,
+    "ttl_seconds": 2
+  },
+  "retrieved_at_utc": "2026-10-20T03:36:39.393698+00:00",
+  "scope": "own synthetic requests, ephemeral keys and local SQLite stores only",
+  "sqlite_version": "3.53.1",
+  "tee_evaluated": false
+}

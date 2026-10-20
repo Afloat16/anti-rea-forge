@@ -40,7 +40,7 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: Test C++ masking with MSVC
+      - name: Test C++ components with MSVC
         if: runner.os == 'Windows'
         shell: cmd
         run: |
@@ -48,7 +48,7 @@ jobs:
           where cl
           if errorlevel 1 exit /b 1
           set CXX=cl
-          python -m unittest tests.test_native_literal -v
+          python -m unittest tests.test_native_literal tests.test_secure_buffer -v
 
       - name: Configure MSVC example
         if: runner.os == 'Windows'
@@ -78,6 +78,9 @@ jobs:
 
       - name: Exercise cryptographic boundary controls (not a REA evaluation)
         run: python benchmarks/crypto_boundary.py --out crypto-boundary.json
+
+      - name: Exercise server authorization boundary (not a REA evaluation)
+        run: python benchmarks/dynamic_boundary.py --out dynamic-boundary.json
 
       - name: Build Python distribution
         run: python -m pip wheel . --no-deps --wheel-dir dist
@@ -114,5 +117,14 @@ jobs:
         with:
           name: crypto-boundary-${{ matrix.os }}-python-${{ matrix.python }}
           path: crypto-boundary.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Keep server authorization observations
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: dynamic-boundary-${{ matrix.os }}-python-${{ matrix.python }}
+          path: dynamic-boundary.json
           if-no-files-found: ignore
           retention-days: 14

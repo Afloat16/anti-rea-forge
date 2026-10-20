@@ -20,12 +20,13 @@ from .pe import audit_pe
 from .native import gate, init_native
 from .passwords import create_password_verifier, verify_password
 from .sealed import generate_asset_key, load_asset_key, seal_asset, open_asset, MAX_ASSET_BYTES
+from .capabilities import issue_capability, consume_capability, ReplayStore, MAX_REQUEST_BYTES
 
 
 def parser() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser(
-        description="Open Release Guard: release authenticity and PE audits. "
-                    "Does not prevent decompilation or patched-client bypass."
+        description="Open Release Guard: release authenticity, native hardening and server authorization. "
+                    "Local checks do not prevent decompilation or patched-client bypass."
     )
     cli.add_argument("--version", action="version", version=__version__)
     commands = cli.add_subparsers(dest="command", required=True)
@@ -90,6 +91,22 @@ def parser() -> argparse.ArgumentParser:
         for name in ("product", "release", "purpose", "asset-id"):
             asset.add_argument("--" + name, required=True, help="Expected context from trusted application configuration")
         asset.add_argument("--out", type=Path, required=True, help="New output file; existing files are never replaced")
+    replay_init = commands.add_parser("replay-store-init", help="Initialize a NEW persistent replay database in the trusted server environment")
+    replay_init.add_argument("--out", type=Path, required=True)
+    for command, description in (("capability-issue", "Issuer only: sign a short-lived capability for exact request bytes"),
+                                 ("capability-consume", "Server only: verify and irrevocably consume one request authorization")):
+        capability = commands.add_parser(command, help=description)
+        if command == "capability-issue":
+            capability.add_argument("--private", type=Path, required=True)
+            capability.add_argument("--ttl", type=int, default=60, help="Validity in seconds, 1..300 (default: 60)")
+            capability.add_argument("--out", type=Path, required=True)
+        else:
+            capability.add_argument("capability", type=Path)
+            capability.add_argument("--public", type=Path, required=True, help="Previously trusted issuer public key")
+            capability.add_argument("--store", type=Path, required=True, help="Existing trusted server replay database; never a client cache")
+        for name in ("subject", "audience", "product", "operation"):
+            capability.add_argument("--" + name, required=True, help="Expected value from authenticated server context or trusted issuer policy")
+        capability.add_argument("--request", type=Path, required=True, help="Exact immutable request bytes the server will execute (maximum 1 MiB)")
     return cli
 
 
@@ -152,6 +169,22 @@ def _crypto_input(path: Path, limit: int) -> bytes:
 
 
 def _run(args: argparse.Namespace) -> tuple[dict, int]:
+    if args.command == "replay-store-init":
+        ReplayStore.create(args.out)
+        return {"ok": True, "replay_store": str(args.out)}, 0
+    if args.command in {"capability-issue", "capability-consume"}:
+        request = _crypto_input(args.request, MAX_REQUEST_BYTES)
+        expected = {name: getattr(args, name) for name in ("subject", "audience", "product", "operation")}
+        if args.command == "capability-issue":
+            private = load_private_key(args.private, _passphrase())
+            document = issue_capability(private, **expected, request=request, ttl_seconds=args.ttl)
+            # Bearer capabilities are credentials, even though their claims are readable.
+            write_new(args.out, canonical(document) + b"\n", secret=True)
+            return {"ok": True, "capability": str(args.out), "ttl_seconds": args.ttl}, 0
+        document = parse_json(_crypto_input(args.capability, 16384))
+        consume_capability(document, load_public_key(args.public), ReplayStore(args.store),
+                           **expected, request=request)
+        return {"ok": True, "capability_consumed": True}, 0
     if args.command == "password-create":
         document = create_password_verifier(_user_password(confirm=True))
         write_new(args.out, canonical(document) + b"\n", secret=True)

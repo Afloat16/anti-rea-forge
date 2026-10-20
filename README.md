@@ -10,13 +10,21 @@ Anti-REA Forge is an open research and engineering project exploring native soft
 
 **Contributions are welcome. Our current anti-cracking goals remain unmet:** independent static and runtime analysis recovered test secrets from protected synthetic samples, and the original programs accepted the recovered values. We publish these failures to guide improvement and make no promise of unbreakable software.
 
-**MIT · 0.3.0 / Alpha · C/C++ build integration · Python tooling · PE / ELF**
+**MIT · 0.4.0 / Alpha · C/C++ build integration · Python tooling · PE / ELF**
 
 [Contribute (Chinese)](CONTRIBUTING.md) · [Community invitation](https://github.com/Afloat16/anti-rea-forge/issues/1) · [Challenges and roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Test report (Chinese)](docs/testing-2026-10-15.zh-CN.md) · [Security model (Chinese)](SECURITY.md)
 
 The tooling retains the **Open Release Guard** Python distribution name `open-release-guard`, CLI/import name `releaseguard`, and existing CMake interfaces. The project targets Windows EXE/DLL protection research and also supports Linux ELF validation. It is independently developed and is not affiliated with or endorsed by REA.
 
-## New in v0.3: remove recoverable secrets and check the whole release
+## New in v0.4: reduce runtime exposure and enforce requests outside the client
+
+- **Native sensitive buffers:** the C++17 `releaseguard::secure_buffer` owns guarded, non-executable pages, checks memory locking, clears its allocation before release, and reports actual protection status. Linux can exclude these pages from core dumps. Windows reports no dump exclusion in this version. None of these measures stop a hook from observing data while it is used.
+- **Request-bound server capabilities:** separate-domain Ed25519 signatures bind the authenticated subject, audience, product, operation and exact request bytes, with a maximum lifetime of 300 seconds. A persistent SQLite replay store atomically permits one consumption and rejects trusted-clock rollback. Issuer keys, verification, replay state and the protected operation belong in the trusted service.
+- **REA-specific threat mapping:** we inspect REA's pinned 6.7.0 source and its Frida script bridge, and distinguish memory snapshots, live hooks, local branch replacement and replay. The research notes cover formal 2024–2026 security papers and mature secure-memory projects, with explicit limits on what has been implemented.
+
+Read the [runtime integration guide](docs/runtime-protection.md), [中文说明](docs/runtime-protection.zh-CN.md) and [v0.4 validation](docs/testing-v0.4-2026-10-20.md). These components require application integration; the Python cryptographic APIs still return managed `bytes`, and this release does not deploy a hosted authorization service, TLS, authentication or a TEE. Single-use authorization is not exactly-once business execution. A stolen valid bearer capability can still be used first for its original request.
+
+## v0.3: remove recoverable secrets and check the whole release
 
 The supplied REA case study motivates three implemented improvements:
 
@@ -32,6 +40,7 @@ See the [English integration and threat mapping](docs/crypto-protection.md), [�
 
 | Evaluation | Observed result |
 | --- | --- |
+| v0.4 local functional/native integration | **331 run: 330 passed, 1 skipped**, on 2026-10-20; the skip is unavailable `/proc/self/smaps` inspection. [Detailed scope and Frida failure](docs/testing-v0.4-2026-10-20.md) |
 | Local functional and real CMake integration tests | **176 passed, none skipped**, on 2026-10-15, including Windows timestamp compatibility and PE debug-entry classification regressions; see the [validation record (Chinese)](docs/validation.zh-CN.md) |
 | GitHub CI | Linux and Windows/MSVC jobs have passed; see the [run history](https://github.com/Afloat16/anti-rea-forge/actions). These runs are separate from the local test count; Windows DLL ABI compatibility remains untested |
 | Selected literal masking, release gates, signed manifests, offline license tools | Implemented within the boundaries described below |
@@ -56,6 +65,8 @@ Use **Issues → New issue** for a bug, experiment, or proposal, or submit a PR.
 | --- | --- |
 | `native-init` + `releaseguard_protect(target POLICY ...)` | Generate CMake/C++ build assets, enable Release optimization and LTO, and fail the build when its artifact violates the policy |
 | `RG_TEXT("...")` | Apply reversible compile-time masking to selected C++17 literals; decode into an object with a defined lifetime. Build seeds diversify the static payload |
+| `releaseguard::secure_buffer` | Explicitly owned native pages with guards, checked locking, clearing and platform-specific dump status |
+| `capability-issue / capability-consume / replay-store-init` | Server-side, short-lived, exact-request authorization with persistent atomic replay rejection |
 | `gate` | Scan declared literals in five encodings, inspect debug/symbol metadata, reject forbidden sidecars, and require configured PE structural evidence |
 | `gate --root` in v0.3 | Optional exact file allowlist, source/backup path rules, old artifact hash denylist, and bounded whole-release literal scans |
 | `password-create / password-check` | Fixed-profile, salted Argon2id one-way verifiers with pre-KDF resource validation |

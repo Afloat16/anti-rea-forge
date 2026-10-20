@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ReleaseGuardExample VERSION 0.2.0 LANGUAGES CXX)
+project(ReleaseGuardExample VERSION 0.4.0 LANGUAGES CXX)
 
 # Single-configuration generators otherwise default to an unoptimized build.
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -17,6 +17,10 @@ releaseguard_protect(releaseguard-example POLICY "${CMAKE_CURRENT_LIST_DIR}/poli
 add_executable(releaseguard-example-plain main.cpp)
 target_compile_features(releaseguard-example-plain PRIVATE cxx_std_17)
 
+add_executable(releaseguard-secure-buffer secure_buffer.cpp)
+target_compile_features(releaseguard-secure-buffer PRIVATE cxx_std_17)
+releaseguard_protect(releaseguard-secure-buffer POLICY "${CMAKE_CURRENT_LIST_DIR}/policy.json")
+
 enable_testing()
 add_test(NAME releaseguard-example-smoke COMMAND releaseguard-example)
 set_tests_properties(releaseguard-example-smoke PROPERTIES
@@ -26,3 +30,4 @@ add_test(NAME releaseguard-example-plain-smoke COMMAND releaseguard-example-plai
 set_tests_properties(releaseguard-example-plain-smoke PROPERTIES
     PASS_REGULAR_EXPRESSION "ReleaseGuard example: build mitigations enabled\\."
 )
+add_test(NAME releaseguard-secure-buffer-smoke COMMAND releaseguard-secure-buffer)
