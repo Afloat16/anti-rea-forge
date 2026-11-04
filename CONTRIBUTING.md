@@ -1,10 +1,21 @@
 # 参与 Anti-REA Forge / 反逆向共建计划
 
-欢迎 C/C++、Python、Windows 测试、构建工程、文档和逆向研究贡献者。项目希望把软件发布加固做成可以审查、复现和改进的共同工作。
+[English](CONTRIBUTING.en.md) · [简体中文](CONTRIBUTING.md)
+
+欢迎 Python、JavaScript、TypeScript、C/C++、Windows 测试、构建工程、文档和逆向研究贡献者。项目希望把软件发布加固做成可以审查、复现和改进的共同工作。
+
+**只会 Python 或 JavaScript 也能直接贡献。** 通用扫描规则使用 Python；Node.js 接入使用可直接运行的 JavaScript ESM，配套 TypeScript 类型声明，无 npm 运行依赖或编译步骤。C++ 仅用于原生内存与构建组件。JSON 策略、中文/英文文档也都是独立贡献入口。
 
 当前版本的自有 Linux 样本已被静态分析和运行时观察恢复测试口令，防破解目标尚未达到。我们公开这些失败，欢迎复现、提出反例和验证改进；门禁通过、明文搜索未命中或一次未能恢复，都不等于“无法破解”。先阅读 [实际测试报告](docs/testing-2026-10-15.zh-CN.md)、[威胁模型](docs/rea-threat-model.zh-CN.md) 和 [安全政策](SECURITY.md)。
 
 ## 从哪里开始
+
+| 你熟悉的语言/方向 | 优先阅读 | 最小贡献示例 |
+| --- | --- | --- |
+| Python | `src/releaseguard/distribution.py`、`tests/test_distribution.py` | 增加一个压缩包边界条件或发布泄露规则的回归用例 |
+| JavaScript / TypeScript | `packages/releaseguard/` | 改善 CLI 接入、类型提示、错误处理或示例 |
+| JSON / 文档 | `examples/policy-portable-release.json`、`docs/portable-release.md` | 给自己的发布格式写一个可复现策略与说明 |
+| C/C++ / CMake | `src/releaseguard/data/` | 验证内存生命周期、编译接入或 DLL 兼容性 |
 
 适合第一次贡献的工作包括：
 
@@ -30,6 +41,16 @@ python -m unittest discover -s tests -v
 ```
 
 Windows PowerShell 的激活命令是 `.\.venv\Scripts\Activate.ps1`。Linux 真实 CMake 集成测试还需要 GCC/G++、CMake 和 CTest；CMake 不在 PATH 时，将 `RELEASEGUARD_CMAKE` 设置为可执行文件的完整路径。工具缺失可能导致部分测试跳过，请在提交中保留跳过数量和原因。
+
+如果只修改通用发布检查，可以先运行这组不依赖 C++ 编译器、REA 或模型 API 的测试：
+
+```bash
+python -m unittest tests.test_distribution tests.test_distribution_cli -v
+```
+
+JavaScript 贡献者使用 Node.js 22+，在仓库根目录运行 `npm test --prefix packages/releaseguard`。真实接入需要先安装上面的 Python 核心，再把 `RELEASEGUARD_PYTHON` 设置为虚拟环境 Python 的绝对路径。SDK 使用 Python 隔离模式，避免待检查目录中的同名模块替换验证器；详细方法见 [SDK 接入文档](packages/releaseguard/README.md)。当前 npm 包仅供本地安装，未声明已发布到 registry。
+
+扫描规则与安全判定集中在 Python 实现，JavaScript 层负责安全调用和类型友好的接入。不要在两个语言中分别维护密码学协议；修改共享核心后仍需运行完整测试集。
 
 Windows/MSVC 自有示例可用以下命令验证：
 

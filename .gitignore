@@ -16,5 +16,6 @@ dist/
 !*-public.pem
 .env
 .env.*
+node_modules/
 issuer-private*
 *.license.json

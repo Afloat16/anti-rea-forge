@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "forbid_literals": [],
+  "forbid_extensions": [".pdb", ".ilk", ".map"],
+  "forbid_path_components": [".git", ".svn", ".hg", ".env"],
+  "check_private_keys": true,
+  "check_source_maps": true,
+  "scan_zip_archives": true,
+  "max_file_bytes": 67108864,
+  "max_total_bytes": 268435456,
+  "max_archive_depth": 2,
+  "max_archive_entries": 10000,
+  "max_files": 20000
+}

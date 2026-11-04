@@ -9,6 +9,56 @@ permissions:
   contents: read
 
 jobs:
+  javascript:
+    name: JavaScript / ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: '22'
+          - os: windows-latest
+            node: '24'
+          - os: macos-latest
+            node: '24'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+
+      - name: Install the shared Python core
+        run: python -m pip install -e .
+
+      - name: Select the installed interpreter for isolated SDK calls
+        run: python -c "import os, sys; open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8').write('RELEASEGUARD_PYTHON=' + sys.executable + '\n')"
+
+      - name: Test the dependency-free JavaScript bridge
+        run: npm test --prefix packages/releaseguard
+
+      - name: Test against the installed Python CLI
+        run: npm run test:integration --prefix packages/releaseguard
+
+      - name: Check TypeScript declarations
+        if: runner.os == 'Linux'
+        run: npm exec --yes --package=typescript@7.0.2 -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 packages/releaseguard/test/types-smoke.ts
+
+      - name: Exercise portable checks without a native toolchain
+        run: python -m unittest tests.test_distribution tests.test_distribution_cli -v
+
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}

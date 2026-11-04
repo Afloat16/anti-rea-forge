@@ -18,6 +18,7 @@ from .core import (
 )
 from .pe import audit_pe
 from .native import gate, init_native
+from .distribution import scan_release
 from .passwords import create_password_verifier, verify_password
 from .sealed import generate_asset_key, load_asset_key, seal_asset, open_asset, MAX_ASSET_BYTES
 from .capabilities import issue_capability, consume_capability, ReplayStore, MAX_REQUEST_BYTES
@@ -76,6 +77,12 @@ def parser() -> argparse.ArgumentParser:
     release_gate.add_argument("artifact", type=Path)
     release_gate.add_argument("--policy", type=Path, required=True)
     release_gate.add_argument("--root", type=Path, help="Check forbidden sidecar extensions throughout this release directory")
+
+    distribution = commands.add_parser(
+        "scan-release", help="Check any language's release directory for configured disclosure risks"
+    )
+    distribution.add_argument("--root", type=Path, required=True, help="Trusted, immutable release staging directory")
+    distribution.add_argument("--policy", type=Path, required=True, help="Portable release-scan JSON policy")
 
     password_create = commands.add_parser("password-create", help="Create a salted, one-way Argon2id password verifier")
     password_create.add_argument("--out", type=Path, required=True)
@@ -214,6 +221,9 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
         return init_native(args.out, args.seed), 0
     if args.command == "gate":
         result = gate(args.artifact, args.policy, args.root)
+        return result, 0 if result["ok"] else 3
+    if args.command == "scan-release":
+        result = scan_release(args.root, args.policy)
         return result, 0 if result["ok"] else 3
     if args.command == "audit":
         report = audit_pe(args.path)

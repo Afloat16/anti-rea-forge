@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — 2026-11-04
+
+- Add `scan-release` and the Python `scan_release` API for release directories from any language, without requiring a PE/ELF entry artifact. Preserve existing native gates and cryptographic formats.
+- Check configured literals in five encodings, private-key PEM markers, source-map markers, forbidden paths/extensions, denied hashes and optional exact file inventories. Reports identify rules without echoing matched contents.
+- Inspect ZIP-family package members without extraction, with bounded input/expanded bytes, nesting and entry counts. Reject malformed, encrypted, unsupported or unsafe ZIP content instead of reporting a partial pass.
+- Add a dependency-free JavaScript ESM bridge with TypeScript declarations, isolated Python invocation, bounded subprocess output, cancellation and timeouts. It reuses the Python core and is not a new cryptographic implementation or a published npm release.
+- Add English/Chinese contribution paths, portable integration examples, regression tests and JavaScript CI. Review REA source at pinned commit `89317a39fab23df81efa4331311d09d2110377bd` (source version 6.8.0).
+
+See [portable release integration](docs/portable-release.md), [REA source review](docs/rea-source-review-2026-11-04.zh-CN.md) and [validation](docs/testing-v0.5-2026-11-04.md). These are release-exposure checks and integration improvements, not an end-to-end REA resistance result.
+
 ## 0.4.0 — 2026-10-20
 
 - Add a C++17 sensitive buffer with guarded non-executable pages, checked page locking, full owned-page clearing and explicit dump-exclusion status. Linux supports `MADV_DONTDUMP`; Windows does not claim dump exclusion.
