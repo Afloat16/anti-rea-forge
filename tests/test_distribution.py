@@ -266,7 +266,20 @@ class PortableReleaseTests(unittest.TestCase):
     def test_archive_symlinks_special_entries_and_unsafe_names_are_rejected(self):
         for name in ("../escape", "/absolute", "dir\\escape", "CON", "file:ads", "dir/./file", "name."):
             with self.subTest(name=name):
-                self.put("bad.zip", archive([(name, b"x")]))
+                # ZipInfo normalizes backslashes when writing on Windows. Set
+                # both raw header names after writing a same-length safe name.
+                raw_name = name.encode("utf-8")
+                data = bytearray(archive([("x" * len(raw_name), b"x")]))
+                for signature, length_offset, name_offset in (
+                    (b"PK\x03\x04", 26, 30), (b"PK\x01\x02", 28, 46)
+                ):
+                    header = data.index(signature)
+                    length = struct.unpack_from("<H", data, header + length_offset)[0]
+                    self.assertEqual(length, len(raw_name))
+                    start = header + name_offset
+                    data[start:start + length] = raw_name
+                    self.assertEqual(data[start:start + length], raw_name)
+                self.put("bad.zip", data)
                 with self.assertRaises(GuardError):
                     self.scan()
         for mode in (stat.S_IFLNK, stat.S_IFIFO, stat.S_IFSOCK):

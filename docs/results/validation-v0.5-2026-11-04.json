@@ -26,12 +26,14 @@
       "run": 377,
       "passed": 376,
       "skipped": 1,
-      "failed": 0
+      "failed": 0,
+      "tested_commit_before_fixture_adjustment": "3cdd3e2e35507d681d629afc72e1c538dbfa59ad"
     },
     "portable_subset": {
       "run": 46,
       "passed": 46,
-      "included_in_python_final": true
+      "included_in_python_final": true,
+      "rerun_after_windows_fixture_adjustment": true
     },
     "javascript_unit": {
       "run": 44,
@@ -54,7 +56,11 @@
     "version": "5.9.3",
     "strict_declarations_passed": true,
     "version_7_0_2_local_status": "environment_blocked: native compiler requires /proc/self/exe",
-    "version_7_0_2_ci": "configured; see exact-commit Actions result"
+    "version_7_0_2_ci": {
+      "status": "passed",
+      "commit": "3cdd3e2e35507d681d629afc72e1c538dbfa59ad",
+      "run_url": "https://github.com/Afloat16/anti-rea-forge/actions/runs/41840647254"
+    }
   },
   "package_smoke": {
     "wheel_version": "0.5.0",
@@ -71,7 +77,7 @@
     "src/releaseguard/distribution.py": "98b71a9addf426541d062d367218386eafcb51fc6391ff66888e7cb7ae0bc0f9",
     "src/releaseguard/cli.py": "b6dd3958650d6d5a9027052a4bd837683838345f74d09909e87c8db30125b24a",
     "src/releaseguard/__init__.py": "cc6573422089b913f166ac5bc39e095deaa009a71fe66645b223db819b39a146",
-    "tests/test_distribution.py": "e87c246b727a820be031f6fca6fcbf4d58e225c4ff0ec5f78487bb849f741283",
+    "tests/test_distribution.py": "d456250ab13de6ffe45cf03fd266e821b7610eb8fdc592c4e96f40dc369e9f5c",
     "tests/test_distribution_cli.py": "5ea4031bdfb9b16cee7263596b6d0d963eb7e7ffe9764e6c58eb989b2dcb945a",
     "packages/releaseguard/index.d.ts": "d516f876cda6cc59aa483b7c43365f95764a216786cf43e56a6ae4153b5bf9a7",
     "packages/releaseguard/src/client.js": "a5a21ede63c499c65d1a2addc9e292ba4c5e94eaf3ba9c0b43bafa308cf6a82f",
@@ -91,5 +97,19 @@
   "notes": [
     "Functional and packaging checks are not a REA/cracking resistance measurement.",
     "CI status must be read for the exact PR commit separately."
-  ]
+  ],
+  "ci_followup": {
+    "initial_commit": "3cdd3e2e35507d681d629afc72e1c538dbfa59ad",
+    "initial_run_url": "https://github.com/Afloat16/anti-rea-forge/actions/runs/41840647254",
+    "linux_python_jobs": "passed",
+    "linux_and_macos_javascript_jobs": "passed",
+    "windows_failure": "ZIP test writer normalized backslash input before storage; scanner implementation unchanged",
+    "fix": "Write and assert raw unsafe name bytes in both ZIP headers on every platform",
+    "followup_local_portable_tests": {
+      "run": 46,
+      "passed": 46,
+      "skipped": 0
+    },
+    "subsequent_ci": "See latest exact-commit PR checks"
+  }
 }

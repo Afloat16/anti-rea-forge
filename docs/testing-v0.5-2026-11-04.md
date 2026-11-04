@@ -47,6 +47,20 @@ the host lacks `/proc/self/exe` (`vfs: failed to get executable path`). The Java
 5.9.3 compiler completed the declaration check. CI includes a pinned TypeScript 7.0.2
 check on its Linux runner; this local report does not claim that CI result in advance.
 
+### CI follow-up
+
+The first CI run on commit `3cdd3e2e35507d681d629afc72e1c538dbfa59ad` passed both Linux
+Python jobs, the Linux/macOS JavaScript jobs, and the TypeScript 7.0.2 declaration step.
+Windows exposed a test-fixture problem: its ZIP writer normalized a requested backslash
+name into a safe slash-separated name before writing the archive, so that particular
+negative test did not contain the intended malformed input.
+
+The regression now writes the same literal backslash bytes into both local and central
+ZIP headers on every platform and verifies those bytes before scanning. The scanner's
+existing original-name validation is retained; the check is not disabled or skipped.
+The 46 portable/CLI tests were rerun locally after the fixture correction. The subsequent
+exact-commit CI results remain available from [PR #2](https://github.com/Afloat16/anti-rea-forge/pull/2/checks).
+
 ## Commands
 
 Run from the repository root after installing the Python core into `.venv`:
