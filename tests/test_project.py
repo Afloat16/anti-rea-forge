@@ -105,7 +105,7 @@ class ProjectTests(unittest.TestCase):
         self.directory.rename(moved / self.directory.name)
         report = check_project(moved / self.directory.name / "project.json")
         self.assertTrue(report["ok"])
-        self.assertEqual(Path(report["root"]), moved / self.release.name)
+        self.assertEqual(Path(report["root"]), (moved / self.release.name).resolve())
 
     def test_findings_do_not_create_signed_material(self):
         self.initialize()

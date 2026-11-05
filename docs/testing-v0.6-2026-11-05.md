@@ -76,3 +76,7 @@ Build/gateway work still consumes CPU and I/O. The gateway must control its actu
 handler, caller identity, trusted key and immutable snapshot; direct tool calls,
 later file replacement, online revocation and legal ownership are outside this
 implementation. Expiry prevents new admission, not termination of a running handler.
+
+## First remote run and fixture correction
+
+[Run 41992566631](https://github.com/Afloat16/anti-rea-forge/actions/runs/41992566631) tested the reconstructed tree. All three JS unit/process and real Python integration steps passed, as did TypeScript 7.0.2 on Linux. The macOS and Windows portable subsets exposed one test expectation comparing an unresolved temporary path with the scanner's resolved path. macOS `/var` and Windows short path names refer to the same canonical directories. The follow-up resolves the expected path in that assertion, retaining the moved-project check and leaving scanner behavior unchanged. This initial run is not recorded as a successful full matrix.
