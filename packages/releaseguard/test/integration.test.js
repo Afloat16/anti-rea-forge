@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,6 +46,21 @@ test("invalid policy and missing files remain errors, never policy passes", asyn
   await assert.rejects(client.audit(join(root, "missing.exe")), cliError);
 });
 
+test("one project configuration runs the same release gate through JavaScript", async (t) => {
+  const { base, root } = await release(t);
+  const configDir = join(base, ".releaseguard");
+  await execute(python, ["-I", "-m", "releaseguard", "project-init", "--root=" + root,
+    "--product=--Demo 产品", "--out=" + configDir], { timeout: 10_000, maxBuffer: 4096 });
+  const config = join(configDir, "project.json");
+  const clean = await client.checkProject({ config });
+  assert.equal(clean.ok, true);
+  assert.equal(clean.files[0].path, "app.js");
+  await writeFile(join(root, "app.js.map"), "{}");
+  const rejected = await client.checkProject({ config });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.exitCode, 3);
+});
+
 test("manifest verification transports trusted product/version and detects mutation", async (t) => {
   const { base, root } = await release(t);
   await execute(python, ["-I", join(fixtures, "materials.py"), base], { timeout: 10_000, maxBuffer: 4096 });
@@ -65,6 +80,84 @@ test("license verification transports the subject and feature requirements", asy
   assert.equal((await client.verifyLicense(options)).claims.subject, "-customer");
   await assert.rejects(client.verifyLicense({ ...options, subject: "other" }), cliError);
   await assert.rejects(client.verifyLicense({ ...options, requiredFeatures: ["admin"] }), cliError);
+});
+
+test("real signed analysis grants admit one callback and all denied conditions admit none", async (t) => {
+  const { base, root } = await release(t);
+  await execute(python, ["-I", join(fixtures, "materials.py"), base], { timeout: 10_000, maxBuffer: 4096 });
+  const options = { manifest: join(base, "manifest.json"), root, publicKey: join(base, "public.pem"),
+    product: "--Demo 产品", release: "2.0", subject: "-customer", audience: "analysis-service",
+    operation: "inspect", grant: join(base, "analysis-grant.json") };
+  let invoked = 0;
+  const handler = () => { invoked += 1; return "owned analysis ran"; };
+  const allowed = await client.checkAnalysis(options);
+  assert.equal(allowed.authorized, true);
+  assert.equal(typeof allowed.validity.expires_at, "string");
+  assert.equal(await client.withAnalysisAuthorization(options, handler), "owned analysis ran");
+  assert.equal(invoked, 1);
+  const { grant, ...withoutGrant } = options;
+  const cases = [
+    [withoutGrant, "grant_required"],
+    [{ ...options, operation: "decompile" }, "operation_not_granted"],
+    [{ ...options, subject: "another-reviewer" }, "context_mismatch"],
+    [{ ...options, audience: "another-service" }, "context_mismatch"],
+    [{ ...options, grant: join(base, "expired-grant.json") }, "grant_expired"],
+  ];
+  for (const [rejected, reason] of cases) {
+    const decision = await client.checkAnalysis(rejected);
+    assert.equal(decision.reason, reason);
+    assert.equal(decision.authorized, false);
+    assert.equal(decision.validity === null, reason === "grant_required");
+    await assert.rejects(client.withAnalysisAuthorization(rejected, handler),
+      (error) => error instanceof ReleaseGuardError && error.code === "AUTHORIZATION_DENIED");
+  }
+  await writeFile(join(root, "app.js"), "changed after grant\n");
+  assert.equal((await client.checkAnalysis(options)).reason, "release_mismatch");
+  await assert.rejects(client.withAnalysisAuthorization(options, handler),
+    (error) => error.code === "AUTHORIZATION_DENIED");
+  assert.equal(invoked, 1);
+});
+
+test("a forged grant and an unreadable grant cannot reach the handler", async (t) => {
+  const { base, root } = await release(t);
+  await execute(python, ["-I", join(fixtures, "materials.py"), base], { timeout: 10_000, maxBuffer: 4096 });
+  const grant = join(base, "analysis-grant.json");
+  const document = JSON.parse(await readFile(grant, "utf8"));
+  document.signature = Buffer.alloc(64).toString("base64");
+  await writeFile(grant, JSON.stringify(document));
+  const options = { manifest: join(base, "manifest.json"), root, publicKey: join(base, "public.pem"),
+    product: "--Demo 产品", release: "2.0", subject: "-customer", audience: "analysis-service",
+    operation: "inspect", grant };
+  let invoked = 0;
+  const handler = () => { invoked += 1; };
+  const denied = await client.checkAnalysis(options);
+  assert.equal(denied.reason, "grant_invalid");
+  assert.equal(denied.validity, null);
+  await assert.rejects(client.withAnalysisAuthorization(options, handler),
+    (error) => error.code === "AUTHORIZATION_DENIED");
+  await assert.rejects(client.withAnalysisAuthorization({ ...options, grant: join(base, "missing.json") }, handler), cliError);
+  assert.equal(invoked, 0);
+});
+
+test("the runnable gateway example lists only an authorized release and otherwise exits before tool output", async (t) => {
+  const { base, root } = await release(t);
+  await execute(python, ["-I", join(fixtures, "materials.py"), base], { timeout: 10_000, maxBuffer: 4096 });
+  const example = fileURLToPath(new URL("../../../examples/javascript/authorized-analysis.mjs", import.meta.url));
+  const args = [example, "--python=" + python, "--manifest=" + join(base, "manifest.json"),
+    "--root=" + root, "--public=" + join(base, "public.pem"), "--product=--Demo 产品", "--release=2.0",
+    "--subject=-customer", "--audience=analysis-service"];
+  const allowed = await execute(process.execPath, [...args, "--grant=" + join(base, "analysis-grant.json")], {
+    timeout: 10_000, maxBuffer: 4096,
+  });
+  assert.deepEqual(JSON.parse(allowed.stdout), {
+    ok: true, tool: "list_release_entries", operation: "inspect", entries: ["app.js"],
+  });
+  await assert.rejects(execute(process.execPath, args, { timeout: 10_000, maxBuffer: 4096 }), (error) => {
+    assert.equal(error.code, 3);
+    assert.equal(error.stdout, "");
+    assert.equal(JSON.parse(error.stderr).code, "AUTHORIZATION_DENIED");
+    return true;
+  });
 });
 
 test("isolated Python ignores a cwd module and a module on PYTHONPATH", async (t) => {

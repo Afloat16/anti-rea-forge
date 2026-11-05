@@ -4,6 +4,34 @@ const record = (value) => value !== null && typeof value === "object" && !Array.
 const strings = (value) => Array.isArray(value) && value.every((item) => typeof item === "string");
 const nonempty = (value) => typeof value === "string" && value.length > 0;
 const count = (value) => Number.isSafeInteger(value) && value >= 0;
+const sha256 = (value) => typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
+const authorizationChecks = ["grant_signature", "grant_scope", "grant_time", "release_integrity"];
+const denialReasons = ["grant_required", "grant_invalid", "grant_expired", "grant_not_yet_valid",
+  "context_mismatch", "operation_not_granted", "manifest_invalid", "release_mismatch"];
+
+function fields(value, names) {
+  return record(value) && Object.keys(value).length === names.length
+    && names.every((name) => Object.hasOwn(value, name));
+}
+
+function utcMilliseconds(value) {
+  if (typeof value !== "string" || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/u.test(value)
+      || value.startsWith("0000")) return null;
+  const milliseconds = Date.parse(value);
+  // Date.parse can normalize invalid calendar dates. Require an exact roundtrip.
+  if (!Number.isFinite(milliseconds)
+      || new Date(milliseconds).toISOString() !== value.slice(0, -1) + ".000Z") return null;
+  return milliseconds;
+}
+
+/** Internal protocol helper; not a second signature or grant implementation. */
+export function analysisValidityWindow(value) {
+  if (!fields(value, ["not_before", "expires_at"])) return null;
+  const start = utcMilliseconds(value.not_before);
+  const end = utcMilliseconds(value.expires_at);
+  if (start === null || end === null || end - start < 1000 || end - start > 86_400_000) return null;
+  return { start, end };
+}
 const invalid = () => new ReleaseGuardError("PROTOCOL_ERROR", "Release Guard returned an invalid or inconsistent report.");
 
 /** Reject duplicate members and excessive nesting, as well as invalid JSON. */
@@ -86,6 +114,7 @@ export function decodeReport(command, result, expected) {
 
   let valid = false;
   switch (command) {
+    case "check":
     case "scan-release":
       valid = findingsReport(document) && nonempty(document.root)
         && Array.isArray(document.files) && document.files.length > 0
@@ -94,6 +123,32 @@ export function decodeReport(command, result, expected) {
         && new Set(document.files.map((file) => file.path)).size === document.files.length
         && document.checks.files_scanned === document.files.length;
       break;
+    case "analysis-check": {
+      const window = analysisValidityWindow(document.validity);
+      const shape = fields(document, ["ok", "authorized", "decision", "reason", "product", "release", "subject",
+        "audience", "operation", "manifest_sha256", "issuer_key_sha256", "checks", "validity", "limitations"])
+        && fields(document.checks, authorizationChecks)
+        && authorizationChecks.every((name) => typeof document.checks[name] === "boolean")
+        && ["product", "release", "subject", "audience", "operation"]
+          .every((name) => document[name] === expected[name])
+        && sha256(document.issuer_key_sha256)
+        && (document.manifest_sha256 === null || sha256(document.manifest_sha256))
+        && (document.validity === null || window !== null)
+        && (document.checks.grant_signature ? window !== null : document.validity === null)
+        && strings(document.limitations);
+      const complete = shape && authorizationChecks.every((name) => document.checks[name]);
+      valid = shape && document.authorized === document.ok
+        && (document.ok
+          ? document.decision === "allow" && document.reason === "authorized"
+            && complete && sha256(document.manifest_sha256) && window !== null
+          : document.decision === "deny" && denialReasons.includes(document.reason) && !complete);
+      if (valid) {
+        Object.freeze(document.checks);
+        if (document.validity !== null) Object.freeze(document.validity);
+        Object.freeze(document.limitations);
+      }
+      break;
+    }
     case "gate":
       valid = findingsReport(document) && record(document.artifact)
         && nonempty(document.artifact.path) && count(document.artifact.size)

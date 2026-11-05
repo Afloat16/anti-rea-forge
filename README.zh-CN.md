@@ -8,13 +8,30 @@
 
 面向 **AI 辅助逆向时代**的开源软件发布检查与保护研究工具箱，关注 REA 等工具的分析流程。通过 Python 跨语言发布扫描、JavaScript/TypeScript 构建接口、CMake 接入、PE/ELF 门禁、C++ 敏感内存和请求绑定授权，帮助开发者把可验证的保护措施融入工程流程。**MIT 开源、中英文指南、可运行示例，欢迎开发者与逆向研究者一起扩展。**
 
-**MIT · 0.5.0 / Alpha · Python 核心 · JavaScript + TypeScript 类型 · C/C++ 接入**
+**MIT · 0.6.0 / Alpha · Python 核心 · JavaScript + TypeScript 类型 · C/C++ 接入**
 
 [跨语言接入](docs/portable-release.md) · [加入共建](CONTRIBUTING.md) · [English contributions](CONTRIBUTING.en.md) · [路线图](docs/ROADMAP.zh-CN.md) · [运行时接入](docs/runtime-protection.zh-CN.md)
 
 底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口。通用扫描不要求原生入口文件，原生结构检查继续覆盖 Windows PE 与 Linux ELF。构建验证见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
 
 从[共建入口与可复现任务](docs/community/README.md)开始，或阅读[技术故事](docs/community/PROJECT_STORY.md)、[中英文介绍](docs/community/SHARE_COPY.md)与[推广投递记录](docs/community/OUTREACH.md)。介绍稿仅适用于允许该类内容的社区；已提交建议与尚未投递的草稿分开记录。
+
+## v0.6：简化构建接入，在协作分析入口检查授权
+
+初始化一次可编辑配置，再在每次正常构建完成后检查发布目录：
+
+```bash
+python -m pip install -e .
+python -m releaseguard project-init --root ./dist --product MyApp
+python -m releaseguard check
+```
+
+- **新增功能不进入原软件运行路径。** `project-init`、`check`、`prepare` 在构建/发布环境执行；`prepare` 扫描并签名同一文件清单，将说明、报告和清单输出到发布目录外，不改写原程序、二进制签名或业务代码。配置按自身位置解析路径，已有输出不会被覆盖。
+- **让已接入的分析工具在操作前明确检查权限。** 新增签名 analysis grant，绑定完整 signed manifest、产品/版本、已认证主体、网关 audience、三个独立 scope 和最长一天的有效期。每次重新核对完整发行文件及可信时钟，不缓存旧的允许结果。
+- **JavaScript / TypeScript 直接接入。** `withAnalysisAuthorization` 只有在检查全部通过时才调用固定 handler；授权拒绝、进程/协议错误、准入前过期或取消都不会调用。另有 `checkProject`、`checkAnalysis` 和类型声明，统一调用 Python 验证器。
+- **根据 REA 实际源码界定能力。** REA 明确将目标字符串和反编译代码视为不可信数据。[2026-11-05 源码研究](docs/rea-agent-authorization-2026-11-05.zh-CN.md)解释了为何目标里的说明不能可靠强制第三方 AI 拒绝，以及协作网关应如何实施检查。
+
+详见[完整接入步骤](docs/analysis-authorization.md)、[可运行的固定 handler 示例](examples/javascript/authorized-analysis.mjs)与[v0.6 验证记录](docs/testing-v0.6-2026-11-05.md)。公开说明不会替换原软件许可证、证明法律权属或自动建立公钥信任。直接启动的 REA 仍在这个网关控制之外。扫描和验签有构建/分析成本；“原程序字节不变”不等于所有应用性能都经过验证。
 
 ## v0.5：跨语言发布检查，让贡献更直接
 

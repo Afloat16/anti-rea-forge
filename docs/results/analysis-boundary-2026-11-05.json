@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "schema": "analysis-boundary-observation/v1",
+  "recorded_at": "2026-11-05T07:56:15.724626+00:00",
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.39"
+  },
+  "sample": {
+    "files": 2,
+    "bytes": 4194469,
+    "payload_mib": 4,
+    "repeats": 3
+  },
+  "controls": {
+    "matching_grant_allowed": true,
+    "missing_grant_denied": true,
+    "missing_grant_skips_release_hash": true,
+    "independent_scope_denied": true,
+    "wrong_subject_denied": true,
+    "expired_grant_denied": true,
+    "changed_release_denied": true,
+    "target_bytes_size_mtime_mode_unchanged_by_readonly_workflow": true,
+    "target_execution_marker_absent": true,
+    "sidecars_outside_release": true
+  },
+  "timings": {
+    "project_init_ms": 1.219846002641134,
+    "check_ms": 42.808521997358184,
+    "prepare_including_scan_and_sign_ms": 43.02374699909706,
+    "authorized_preflight": {
+      "min_ms": 6.559332003234886,
+      "median_ms": 6.694905998301692,
+      "max_ms": 8.28919600462541
+    },
+    "missing_grant_preflight": {
+      "min_ms": 0.5539300036616623,
+      "median_ms": 0.6009560020174831,
+      "max_ms": 1.2417670004651882
+    }
+  },
+  "limitations": [
+    "Synthetic functional controls, not a REA/model refusal or cracking-resistance evaluation.",
+    "Timings are observations on this host; no application workload or overhead ratio was measured.",
+    "The workflow does not rewrite target files or add application startup/runtime hooks.",
+    "Build and analysis checks still consume CPU and I/O; run them outside the application workload.",
+    "The SDK handler boundary is tested separately; direct tool calls and check-to-use replacement remain outside it."
+  ],
+  "provenance_note": "Recorded before the local execution environment disconnected and before the final validity-report/SDK timing refinements. Recovered from the completed tool output; final GitHub CI results are recorded separately."
+}

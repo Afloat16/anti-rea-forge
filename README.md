@@ -10,7 +10,7 @@ Anti-REA Forge is an MIT-licensed toolkit for software release checks and protec
 
 **Bring software protection into your engineering workflow:** catch avoidable release exposure before shipping, give sensitive native data an explicit lifetime, and bind server authorization to the actual request. Explore the examples, integrate a component, or help build the next release.
 
-**MIT · 0.5.0 / Alpha · Python core · JavaScript + TypeScript types · C/C++ integration**
+**MIT · 0.6.0 / Alpha · Python core · JavaScript + TypeScript types · C/C++ integration**
 
 [Portable quick start](docs/portable-release.md) · [Contribute](CONTRIBUTING.en.md) · [贡献指南](CONTRIBUTING.md) · [Roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Runtime integration](docs/runtime-protection.md)
 
@@ -18,7 +18,24 @@ The tooling retains the **Open Release Guard** Python distribution name `open-re
 
 **New here?** Start with the [community guide and runnable examples](docs/community/README.md), read the [project story](docs/community/PROJECT_STORY.md), or share the [English/Chinese introductions](docs/community/SHARE_COPY.md) with developers interested in software protection. Small contributions are welcome.
 
-## New in v0.5: portable checks and easier contributions
+## New in v0.6: build-only setup and scoped analysis authorization
+
+Initialize an editable configuration once, then check the completed release after each build:
+
+```bash
+python -m pip install -e .
+python -m releaseguard project-init --root ./dist --product MyApp
+python -m releaseguard check
+```
+
+- **No new application runtime integration.** `project-init`, `check` and `prepare` run in the build/release environment. `prepare` scans and signs the same inventory into external sidecars without rewriting the application, its binary signatures or runtime code. Configuration paths are relative to the config file; existing outputs are never overwritten.
+- **Deterministic checks before cooperating analysis tools run.** Signed analysis grants bind the exact signed manifest, product/release, authenticated subject, gateway audience, independent `inspect` / `decompile` / `instrument` scopes and a validity period of at most 24 hours. The verifier rechecks the whole release and the clock without caching allow decisions.
+- **A direct JavaScript/TypeScript enforcement point.** `withAnalysisAuthorization` calls a fixed handler only after authorization succeeds. Denial, protocol/process failure, expiry or cancellation before admission prevents that call. `checkProject` and `checkAnalysis` expose typed reports for build and gateway integration.
+- **Evidence-based AI boundary.** REA explicitly marks target strings and code as untrusted data. The [new source review](docs/rea-agent-authorization-2026-11-05.zh-CN.md) explains why target notices cannot reliably force a third-party model to refuse, and where operator-controlled enforcement can work.
+
+Read the [step-by-step integration guide](docs/analysis-authorization.md), [runnable handler example](examples/javascript/authorized-analysis.mjs) and [v0.6 validation](docs/testing-v0.6-2026-11-05.md). Public notices explain a workflow; they do not override software licenses, prove legal ownership or supply their own trusted public key. Direct REA calls outside the gateway remain outside this control. Build scanning and preflight verification still consume resources; unchanged application bytes are not a universal runtime benchmark.
+
+## v0.5: portable checks and easier contributions
 
 - **Use the same release check from any build system.** `scan-release` inspects the whole staging directory, so Python, JavaScript/TypeScript, Java and other projects no longer need a PE/ELF entry artifact. Keep using `gate` when native structural checks are needed.
 - **Catch avoidable source and key exposure.** Check source-map markers, private-key PEM markers, explicit literals in five encodings, path rules, known file hashes and optional exact file inventories. ZIP-family packages are inspected under byte, entry and nesting limits without extraction; unsupported or incomplete checks cannot produce a passing result.
@@ -83,6 +100,9 @@ Use **Issues → New issue** for a bug, experiment, or proposal, or submit a PR.
 
 | Component | Behavior |
 | --- | --- |
+| `project-init / check / prepare` | Saved build configuration, portable scan and signed external sidecars without rewriting the release |
+| `analysis-grant-issue / analysis-check` | Manifest-bound, scoped and time-limited authorization for a cooperating analysis gateway |
+| `withAnalysisAuthorization` | Invoke a fixed JavaScript handler once only after a complete allow decision; no callback on preflight failure |
 | `scan-release` / Python `scan_release` | Portable whole-directory disclosure checks and bounded ZIP member inspection without a PE/ELF entry file |
 | JavaScript ESM + TypeScript declarations | Read-only build integration using the installed Python core, with isolated invocation, typed APIs, timeouts and bounded output |
 | `native-init` + `releaseguard_protect(target POLICY ...)` | Generate CMake/C++ build assets, enable Release optimization and LTO, and fail the build when its artifact violates the policy |

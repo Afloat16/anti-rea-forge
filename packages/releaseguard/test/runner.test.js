@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import { createClient } from "../src/client.js";
 import { mkdtemp, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -74,4 +76,35 @@ test("spawn failures are actionable errors", async () => {
 
 test("abnormal termination cannot masquerade as a report", { skip: process.platform === "win32" }, async () => {
   await assert.rejects(run("signal"), (error) => error.code === "PROCESS_ERROR" && error.signal === "SIGTERM");
+});
+
+test("spawn failures with absent stdio reject clearly and cannot admit an authorization callback", async () => {
+  // Reliable cross-platform model of Node's EMFILE/ENFILE spawn failure shape.
+  // The real async error is emitted after spawn returns a child without pipes.
+  for (const errno of ["EMFILE", "ENFILE"]) {
+    let invoked = 0;
+    let killed = 0;
+    let drained = false;
+    const spawnWithoutPipes = () => {
+      const child = new EventEmitter();
+      child.stdout = errno === "EMFILE" ? undefined : null;
+      child.stderr = null;
+      child.kill = () => { killed += 1; return false; };
+      child.unref = () => {};
+      queueMicrotask(() => {
+        child.emit("error", Object.assign(new Error("spawn fd exhaustion"), { code: errno }));
+        drained = true;
+        child.emit("close", -1, null);
+      });
+      return child;
+    };
+    const client = createClient({}, (...args) => runCommand(...args, spawnWithoutPipes));
+    await assert.rejects(client.withAnalysisAuthorization({
+      manifest: "manifest.json", root: "dist", publicKey: "public.pem",
+      product: "Demo", release: "1.0", subject: "reviewer", audience: "analysis-service", operation: "inspect",
+    }, () => { invoked += 1; }), hasCode("SPAWN_FAILED"));
+    assert.equal(invoked, 0);
+    assert.equal(killed, 1);
+    assert.equal(drained, true);
+  }
 });

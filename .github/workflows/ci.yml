@@ -57,7 +57,7 @@ jobs:
         run: npm exec --yes --package=typescript@7.0.2 -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 packages/releaseguard/test/types-smoke.ts
 
       - name: Exercise portable checks without a native toolchain
-        run: python -m unittest tests.test_distribution tests.test_distribution_cli -v
+        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_analysis tests.test_analysis_cli -v
 
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
@@ -132,6 +132,9 @@ jobs:
       - name: Exercise server authorization boundary (not a REA evaluation)
         run: python benchmarks/dynamic_boundary.py --out dynamic-boundary.json
 
+      - name: Check build-only analysis authorization and unchanged target files
+        run: python benchmarks/analysis_boundary.py --out analysis-boundary.json
+
       - name: Build Python distribution
         run: python -m pip wheel . --no-deps --wheel-dir dist
 
@@ -178,3 +181,11 @@ jobs:
           path: dynamic-boundary.json
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Keep analysis authorization observations
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: analysis-boundary-${{ matrix.os }}-${{ matrix.python }}
+          path: analysis-boundary.json
+          if-no-files-found: ignore

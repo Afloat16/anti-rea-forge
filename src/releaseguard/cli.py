@@ -19,6 +19,11 @@ from .core import (
 from .pe import audit_pe
 from .native import gate, init_native
 from .distribution import scan_release
+from .project import DEFAULT_CONFIG, init_project, check_project, load_project, prepare_release, outside_release
+from .analysis import (
+    ANALYSIS_OPERATIONS, MAX_ANALYSIS_GRANT_BYTES,
+    issue_analysis_grant, check_analysis_authorization,
+)
 from .passwords import create_password_verifier, verify_password
 from .sealed import generate_asset_key, load_asset_key, seal_asset, open_asset, MAX_ASSET_BYTES
 from .capabilities import issue_capability, consume_capability, ReplayStore, MAX_REQUEST_BYTES
@@ -83,6 +88,39 @@ def parser() -> argparse.ArgumentParser:
     )
     distribution.add_argument("--root", type=Path, required=True, help="Trusted, immutable release staging directory")
     distribution.add_argument("--policy", type=Path, required=True, help="Portable release-scan JSON policy")
+
+    project = commands.add_parser("project-init", help="Create editable build-only configuration outside your release")
+    project.add_argument("--root", type=Path, required=True, help="Release directory; it may be built later")
+    project.add_argument("--product", required=True)
+    project.add_argument("--out", type=Path, default=Path(".releaseguard"), help="Fresh configuration directory (default: .releaseguard)")
+
+    project_check = commands.add_parser("check", help="Run portable release checks using saved project configuration")
+    project_check.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+
+    prepare = commands.add_parser("prepare", help="Scan and sign an immutable release; write external sidecars without rewriting the app")
+    prepare.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    prepare.add_argument("--private", type=Path, required=True, help="Issuer key OUTSIDE the release directory")
+    prepare.add_argument("--release", required=True)
+    prepare.add_argument("--out", type=Path, required=True, help="Fresh sidecar directory OUTSIDE the release")
+
+    for command, description in (
+        ("analysis-grant-issue", "Issuer only: grant scoped analysis of one signed manifest for at most 24 hours"),
+        ("analysis-check", "Cooperating gateway: check authorization before an analysis tool is called"),
+    ):
+        analysis = commands.add_parser(command, help=description)
+        analysis.add_argument("--manifest", type=Path, required=True)
+        for name in ("product", "release", "subject", "audience"):
+            analysis.add_argument("--" + name, required=True, help="Expected context from trusted operator configuration")
+        if command == "analysis-grant-issue":
+            analysis.add_argument("--private", type=Path, required=True)
+            analysis.add_argument("--operation", action="append", required=True, choices=ANALYSIS_OPERATIONS)
+            analysis.add_argument("--ttl", type=int, default=3600, help="Validity in seconds, 1..86400 (default: 3600)")
+            analysis.add_argument("--out", type=Path, required=True, help="New grant file; do not put analyst grants in public releases")
+        else:
+            analysis.add_argument("--root", type=Path, required=True, help="Trusted immutable copy of the entire release")
+            analysis.add_argument("--public", type=Path, required=True, help="Previously trusted issuer key; never selected by the target")
+            analysis.add_argument("--grant", type=Path, help="Signed grant; omission produces a deny decision")
+            analysis.add_argument("--operation", required=True, choices=ANALYSIS_OPERATIONS)
 
     password_create = commands.add_parser("password-create", help="Create a salted, one-way Argon2id password verifier")
     password_create.add_argument("--out", type=Path, required=True)
@@ -176,6 +214,33 @@ def _crypto_input(path: Path, limit: int) -> bytes:
 
 
 def _run(args: argparse.Namespace) -> tuple[dict, int]:
+    if args.command == "project-init":
+        return init_project(args.root, args.product, args.out), 0
+    if args.command == "check":
+        result = check_project(args.config)
+        return result, 0 if result["ok"] else 3
+    if args.command == "prepare":
+        project = load_project(args.config)
+        outside_release(args.private, project["root"], "Issuer private key")
+        outside_release(args.out, project["root"], "Prepared release sidecars")
+        result = prepare_release(args.config, load_private_key(args.private, _passphrase()), args.release, args.out)
+        return result, 0 if result["ok"] else 3
+    if args.command in {"analysis-grant-issue", "analysis-check"}:
+        manifest = parse_json(_crypto_input(args.manifest, 8 * 1024 * 1024))
+        expected = {name: getattr(args, name) for name in ("product", "release", "subject", "audience")}
+        if args.command == "analysis-grant-issue":
+            private = load_private_key(args.private, _passphrase())
+            grant = issue_analysis_grant(private, manifest, **expected,
+                                         operations=args.operation, ttl_seconds=args.ttl)
+            write_new(args.out, canonical(grant) + b"\n", secret=True)
+            return {"ok": True, "grant": str(args.out), "ttl_seconds": args.ttl,
+                    "issuer_key_sha256": key_id(private.public_key())}, 0
+        grant = None if args.grant is None else parse_json(_crypto_input(args.grant, MAX_ANALYSIS_GRANT_BYTES))
+        result = check_analysis_authorization(
+            manifest, args.root, load_public_key(args.public), **expected,
+            operation=args.operation, grant=grant,
+        )
+        return result, 0 if result["ok"] else 3
     if args.command == "replay-store-init":
         ReplayStore.create(args.out)
         return {"ok": True, "replay_store": str(args.out)}, 0
