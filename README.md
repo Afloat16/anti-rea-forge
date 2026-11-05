@@ -4,21 +4,38 @@
 
 ![Anti-REA Forge banner](assets/anti-rea-forge.svg)
 
-> **AI-assisted reverse engineering is advancing. Build stronger native releases with an open toolkit.**
+> **Reduce release exposure. Keep authorization in a trusted service. Contribute in Python or JavaScript.**
 
-Anti-REA Forge is an MIT-licensed toolkit for native software protection in the era of **REA and AI-assisted reverse engineering**. It brings CMake integration, C++ sensitive-memory components, PE/ELF release gates and request-bound server authorization into a project developers can inspect, integrate and extend.
+Anti-REA Forge is an MIT-licensed toolkit for software release checks and protection research in the era of **REA and AI-assisted reverse engineering**. It combines portable Python release scanning, a JavaScript/TypeScript build interface, CMake integration, C++ sensitive-memory components, PE/ELF gates and request-bound server authorization.
 
 **Bring software protection into your engineering workflow:** catch avoidable release exposure before shipping, give sensitive native data an explicit lifetime, and bind server authorization to the actual request. Explore the examples, integrate a component, or help build the next release.
 
-**MIT · 0.4.0 / Alpha · C/C++ build integration · Python tooling · PE / ELF**
+**MIT · 0.5.0 / Alpha · Python core · JavaScript + TypeScript types · C/C++ integration**
 
-[Get started](docs/community/README.md) · [Community invitation](https://github.com/Afloat16/anti-rea-forge/issues/1) · [Contribute (Chinese)](CONTRIBUTING.md) · [Roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Runtime integration](docs/runtime-protection.md)
+[Portable quick start](docs/portable-release.md) · [Contribute](CONTRIBUTING.en.md) · [贡献指南](CONTRIBUTING.md) · [Roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Runtime integration](docs/runtime-protection.md)
 
-The tooling retains the **Open Release Guard** Python distribution name `open-release-guard`, CLI/import name `releaseguard`, and existing CMake interfaces. The project targets Windows EXE/DLL protection research and also supports Linux ELF validation. It is independently developed and is not affiliated with or endorsed by REA.
+The tooling retains the **Open Release Guard** Python distribution name `open-release-guard`, CLI/import name `releaseguard`, and existing CMake interfaces. Portable scanning works on release directories without a native entry file; native structural checks target Windows PE and Linux ELF. It is independently developed and is not affiliated with or endorsed by REA.
 
 **New here?** Start with the [community guide and runnable examples](docs/community/README.md), read the [project story](docs/community/PROJECT_STORY.md), or share the [English/Chinese introductions](docs/community/SHARE_COPY.md) with developers interested in software protection. Small contributions are welcome.
 
-## New in v0.4: reduce runtime exposure and enforce requests outside the client
+## New in v0.5: portable checks and easier contributions
+
+- **Use the same release check from any build system.** `scan-release` inspects the whole staging directory, so Python, JavaScript/TypeScript, Java and other projects no longer need a PE/ELF entry artifact. Keep using `gate` when native structural checks are needed.
+- **Catch avoidable source and key exposure.** Check source-map markers, private-key PEM markers, explicit literals in five encodings, path rules, known file hashes and optional exact file inventories. ZIP-family packages are inspected under byte, entry and nesting limits without extraction; unsupported or incomplete checks cannot produce a passing result.
+- **Contribute with Python, JavaScript or TypeScript types.** The [Node.js package](packages/releaseguard/README.md) is plain ESM JavaScript with `.d.ts` declarations, no npm runtime dependencies and no build step. It safely calls the installed Python core; no second cryptographic implementation is introduced. It is a local package, not a published npm release.
+- **Ground changes in current REA code.** The [2026-11-04 source review](docs/rea-source-review-2026-11-04.zh-CN.md) pins REA source version 6.8.0, follows source-map, ZIP, Ghidra and Frida paths, and records the limits of each defense.
+
+After creating a Python virtual environment and installing this checkout with `python -m pip install -e .`, scan your completed release directory:
+
+```bash
+python -m releaseguard scan-release --root ./dist --policy examples/policy-portable-release.json
+```
+
+Exit **0** means configured checks passed, **3** means findings block release, and **2** means the check could not complete. Edit the [portable policy](examples/policy-portable-release.json) for your application. It permits intentionally distributed source code; it is not a universal secret detector. Read the [integration guide](docs/portable-release.md), [contribution guide](CONTRIBUTING.en.md) and [validation record](docs/testing-v0.5-2026-11-04.md).
+
+These changes reduce accidental disclosure and integration friction. They do not establish resistance to decompilation, a live memory hook or client-side patching. No new end-to-end REA protection result is claimed.
+
+## v0.4: reduce runtime exposure and enforce requests outside the client
 
 - **Native sensitive buffers:** the C++17 `releaseguard::secure_buffer` owns guarded, non-executable pages, checks memory locking, clears its allocation before release, and reports actual protection status. Linux can exclude these pages from core dumps. Windows reports no dump exclusion in this version. None of these measures stop a hook from observing data while it is used.
 - **Request-bound server capabilities:** separate-domain Ed25519 signatures bind the authenticated subject, audience, product, operation and exact request bytes, with a maximum lifetime of 300 seconds. A persistent SQLite replay store atomically permits one consumption and rejects trusted-clock rollback. Issuer keys, verification, replay state and the protected operation belong in the trusted service.
@@ -42,6 +59,7 @@ See the [English integration and threat mapping](docs/crypto-protection.md), [�
 
 | Evaluation | Observed result |
 | --- | --- |
+| v0.5 local portable/native integration | **377 Python tests: 376 passed, 1 skipped; 44 JS tests and 5 real CLI integration tests passed**, on 2026-11-04. [Scope, package checks and limits](docs/testing-v0.5-2026-11-04.md) |
 | v0.4 local functional/native integration | **331 run: 330 passed, 1 skipped**, on 2026-10-20; the skip is unavailable `/proc/self/smaps` inspection. [Detailed scope and Frida failure](docs/testing-v0.4-2026-10-20.md) |
 | Local functional and real CMake integration tests | **176 passed, none skipped**, on 2026-10-15, including Windows timestamp compatibility and PE debug-entry classification regressions; see the [validation record (Chinese)](docs/validation.zh-CN.md) |
 | GitHub CI | Linux and Windows/MSVC jobs have passed; see the [run history](https://github.com/Afloat16/anti-rea-forge/actions). These runs are separate from the local test count; Windows DLL ABI compatibility remains untested |
@@ -65,6 +83,8 @@ Use **Issues → New issue** for a bug, experiment, or proposal, or submit a PR.
 
 | Component | Behavior |
 | --- | --- |
+| `scan-release` / Python `scan_release` | Portable whole-directory disclosure checks and bounded ZIP member inspection without a PE/ELF entry file |
+| JavaScript ESM + TypeScript declarations | Read-only build integration using the installed Python core, with isolated invocation, typed APIs, timeouts and bounded output |
 | `native-init` + `releaseguard_protect(target POLICY ...)` | Generate CMake/C++ build assets, enable Release optimization and LTO, and fail the build when its artifact violates the policy |
 | `RG_TEXT("...")` | Apply reversible compile-time masking to selected C++17 literals; decode into an object with a defined lifetime. Build seeds diversify the static payload |
 | `releaseguard::secure_buffer` | Explicitly owned native pages with guards, checked locking, clearing and platform-specific dump status |

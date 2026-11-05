@@ -4,17 +4,34 @@
 
 ![Anti-REA Forge banner](assets/anti-rea-forge.svg)
 
-> **逆向有 AI，防护也要进化。**
+> **减少发布泄露，把授权放在可信边界，让 Python 和 JavaScript 开发者都能直接贡献。**
 
-面向 **AI 辅助逆向时代**的开源软件保护工具箱，关注 REA 等工具的分析流程。通过 CMake 构建接入、PE/ELF 发布门禁、C++ 敏感内存和请求绑定授权，帮助开发者把保护措施融入日常工程流程。**MIT 开源、中英文指南、可运行示例，欢迎开发者与逆向研究者一起扩展，让软件保护更实用。**
+面向 **AI 辅助逆向时代**的开源软件发布检查与保护研究工具箱，关注 REA 等工具的分析流程。通过 Python 跨语言发布扫描、JavaScript/TypeScript 构建接口、CMake 接入、PE/ELF 门禁、C++ 敏感内存和请求绑定授权，帮助开发者把可验证的保护措施融入工程流程。**MIT 开源、中英文指南、可运行示例，欢迎开发者与逆向研究者一起扩展。**
 
-**MIT · 0.4.0 / Alpha · C/C++ 构建接入 · Python 工具链 · PE / ELF**
+**MIT · 0.5.0 / Alpha · Python 核心 · JavaScript + TypeScript 类型 · C/C++ 接入**
 
-[快速开始](docs/community/README.md) · [共建招募 Issue](https://github.com/Afloat16/anti-rea-forge/issues/1) · [加入共建](CONTRIBUTING.md) · [路线图](docs/ROADMAP.zh-CN.md) · [运行时接入](docs/runtime-protection.zh-CN.md)
+[跨语言接入](docs/portable-release.md) · [加入共建](CONTRIBUTING.md) · [English contributions](CONTRIBUTING.en.md) · [路线图](docs/ROADMAP.zh-CN.md) · [运行时接入](docs/runtime-protection.zh-CN.md)
 
-底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口，避免品牌调整影响现有代码。目标面向 Windows EXE/DLL；Linux 与 Windows/MSVC 的构建验证结果见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
+底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口。通用扫描不要求原生入口文件，原生结构检查继续覆盖 Windows PE 与 Linux ELF。构建验证见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
 
 从[共建入口与可复现任务](docs/community/README.md)开始，或阅读[技术故事](docs/community/PROJECT_STORY.md)、[中英文介绍](docs/community/SHARE_COPY.md)与[推广投递记录](docs/community/OUTREACH.md)。介绍稿仅适用于允许该类内容的社区；已提交建议与尚未投递的草稿分开记录。
+
+## v0.5：跨语言发布检查，让贡献更直接
+
+- **所有构建流程都能接入同一个扫描器：** 新增 `scan-release`，直接检查发布目录，不必先指定 PE/ELF。Python、JavaScript/TypeScript、Java 及其他语言项目可以共用；原生结构证据仍由已有 `gate` 检查。
+- **拦截可避免的源码和密钥暴露：** 检测 source map 标记、私钥 PEM 标记、五种编码的声明文字、禁发路径、已知文件哈希和可选精确文件清单。ZIP 系发行包在字节、成员数与嵌套预算内检查内容，不落地解包；不支持或未完成的检查不会给出通过结论。
+- **降低开发和贡献门槛：** 核心规则继续使用 Python；新增可直接运行的 [JavaScript ESM 接口与 TypeScript 类型声明](packages/releaseguard/README.zh-CN.md)，无 npm 运行依赖或编译步骤。接口安全调用已安装的 Python 核心，统一维护安全判定。当前仅提供本地包，尚未发布到 npm。
+- **更新 REA 源码依据：** [2026-11-04 审阅](docs/rea-source-review-2026-11-04.zh-CN.md)固定到 REA 6.8.0 源码，追踪 source map、ZIP、Ghidra 与 Frida 路径，并说明哪些风险仍然成立。
+
+创建 Python 虚拟环境并用 `python -m pip install -e .` 安装当前仓库后，检查实际发布目录：
+
+```bash
+python -m releaseguard scan-release --root ./dist --policy examples/policy-portable-release.json
+```
+
+退出码 **0** 表示配置的检查通过，**3** 表示有违规项，**2** 表示检查出错或未完成。[默认策略](examples/policy-portable-release.json)允许有意发布的普通源码，并非通用秘密扫描器；请按项目调整。详见[接入指南](docs/portable-release.md)、[贡献指南](CONTRIBUTING.md)与[验证记录](docs/testing-v0.5-2026-11-04.md)。
+
+本轮改进减少误发布和接入障碍，不保证无法反编译、无法 Hook 或无法修改客户端。没有将功能测试写成 REA 对抗成功率。
 
 ## v0.4：减少动态暴露，把请求授权放到可信服务端
 
@@ -40,6 +57,7 @@
 
 | 已经做了什么 | 当前结果 |
 | --- | --- |
+| v0.5 本地跨语言与原生集成测试 | 2026-11-04，Python 377 项中 376 项通过、1 项跳过；JavaScript 44 项及真实 CLI 接入 5 项全部通过，见[范围与打包验证](docs/testing-v0.5-2026-11-04.md) |
 | v0.4 本地功能与原生集成测试 | 2026-10-20，331 项中 330 项通过、1 项因 `/proc/self/smaps` 不可用跳过；[详细范围与 Frida 受阻记录](docs/testing-v0.4-2026-10-20.md) |
 | 本地功能与真实 CMake 集成测试 | 2026-10-15，176 项通过，无跳过，含 Windows 时间信息兼容与 PE 条目分类回归 |
 | 选中文字静态掩码、发布门禁、签名清单与离线授权工具 | 已实现，边界见下文 |
@@ -64,6 +82,8 @@
 
 | 功能 | 能做什么 |
 | --- | --- |
+| `scan-release` / Python `scan_release` | 不要求 PE/ELF 的全目录发布泄露检查与有界 ZIP 成员检查 |
+| JavaScript ESM + TypeScript 类型 | 基于已安装 Python 核心的只读构建接入，隔离调用、类型提示、超时和输出限额 |
 | `native-init` + `releaseguard_protect(target POLICY ...)` | 生成 CMake/C++ 构建组件，启用 Release 优化与 LTO，并在产物违反策略时使构建失败 |
 | `RG_TEXT("...")` | 对选择的 C++17 字符串做编译期可逆掩码，使用时恢复到作用域对象；不同构建种子改变静态载荷 |
 | `releaseguard::secure_buffer` | 独占原生页，守卫页、受检锁页、清理与实际平台 dump 状态 |

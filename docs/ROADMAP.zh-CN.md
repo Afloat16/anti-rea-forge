@@ -4,6 +4,8 @@
 
 ## 当前起点
 
+v0.5 增加不依赖主 PE/ELF 的跨语言发布扫描、source map/私钥误发布检查、有界 ZIP 包内容扫描，以及 JavaScript/TypeScript 接入层。见[接入指南](portable-release.md)与[固定 REA 6.8.0 源码审阅](rea-source-review-2026-11-04.zh-CN.md)。通用规则继续使用 Python，原生内存组件继续使用 C++，无需为贡献规则先学习原生工具链。
+
 v0.4 新增原生敏感缓冲区、服务端请求绑定的一次性能力凭证与持久原子防重放，见 [运行时接入与研究依据](runtime-protection.zh-CN.md)、[本轮验证](testing-v0.4-2026-10-20.md)。v0.3 的单向口令、外部密钥资产和全发布目录检查见 [crypto-protection.zh-CN.md](crypto-protection.zh-CN.md)。下方 176 项是 2026-10-15 的历史测试快照。
 
 - [x] Python 签名发布清单与离线许可证工具。
@@ -14,6 +16,11 @@ v0.4 新增原生敏感缓冲区、服务端请求绑定的一次性能力凭证
 - [x] C++17 独占原生敏感页、守卫页、受检锁页、清理与实际 dump 排除状态。
 - [x] 服务端短期 Ed25519 能力凭证，绑定可信主体、audience、产品、操作与实际请求。
 - [x] SQLite 原子一次性消费、持久重放拒绝、可信时钟回拨检查与容量限制。
+- [x] 面向任意语言发布目录的独立 `scan-release`，不再要求 PE/ELF 主文件。
+- [x] source map 与私钥 PEM 标记检查、有界 ZIP/JAR/WHL 递归内容扫描。
+- [x] 无 npm 运行依赖的 JavaScript ESM 接口与 TypeScript 类型声明。
+- [ ] 对 ASAR、tar、gzip、7z 等其他容器增加有界内容扫描；当前不能从外层检查推断内部安全。
+- [ ] 在真实部署环境检查 HTTP SourceMap 响应头、私有调试产物访问权限及 CDN 发布策略。
 - [ ] 在真实部署中接入服务端身份认证、签发策略、TLS 与业务事务，并完成独立审计。
 - [ ] 用完整 REA/Frida/model 流程评估内存读取、hook、授权替换与重放任务。
 - [x] 本地 176 项功能与集成测试，包含真实 Linux CMake、共享库调用、Windows 时间信息兼容和 PE 条目分类回归。

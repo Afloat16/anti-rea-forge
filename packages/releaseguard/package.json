@@ -1,0 +1,34 @@
+{
+  "name": "@anti-rea-forge/releaseguard",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Dependency-free JavaScript/TypeScript bridge to the Anti-REA Forge Python CLI",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "types": "./index.d.ts",
+  "files": [
+    "src",
+    "index.d.ts",
+    "LICENSE",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "scripts": {
+    "test": "node --test test/client.test.js test/runner.test.js",
+    "test:integration": "node --test test/integration.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Afloat16/anti-rea-forge.git",
+    "directory": "packages/releaseguard"
+  }
+}
