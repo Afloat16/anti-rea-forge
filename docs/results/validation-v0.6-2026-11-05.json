@@ -1,0 +1,418 @@
+{
+  "schema": "anti-rea-forge-validation/v0.6",
+  "recorded_on": "2026-11-05",
+  "project_base": "32c7fefd6ae492d86de391875512c6d4870866dd",
+  "verified_code_commit": "dcb021b0817c20dfbb10465af9b5de0fee2a5576",
+  "rea_source_commit": "92f332652d352e60b550567adf2399d83d8ebe78",
+  "ci": {
+    "url": "https://github.com/Afloat16/anti-rea-forge/actions/runs/41992848631",
+    "run_id": 41992848631,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 127128941210,
+        "name": "ubuntu-latest / Python 3.10",
+        "conclusion": "success",
+        "python_test_summaries": [
+          {
+            "run": "Ran 432 tests in 28.194s",
+            "result": "OK"
+          }
+        ],
+        "node_test_summaries": []
+      },
+      {
+        "id": 127128941451,
+        "name": "ubuntu-latest / Python 3.13",
+        "conclusion": "success",
+        "python_test_summaries": [
+          {
+            "run": "Ran 432 tests in 40.654s",
+            "result": "OK"
+          }
+        ],
+        "node_test_summaries": []
+      },
+      {
+        "id": 127128941558,
+        "name": "JavaScript / ubuntu-latest / Node 22",
+        "conclusion": "success",
+        "python_test_summaries": [
+          {
+            "run": "Ran 101 tests in 3.016s",
+            "result": "OK"
+          }
+        ],
+        "node_test_summaries": [
+          "# tests 63",
+          "# pass 63",
+          "# fail 0",
+          "# skipped 0",
+          "# tests 9",
+          "# pass 9",
+          "# fail 0",
+          "# skipped 0"
+        ]
+      },
+      {
+        "id": 127128941594,
+        "name": "JavaScript / windows-latest / Node 24",
+        "conclusion": "success",
+        "python_test_summaries": [
+          {
+            "run": "Ran 101 tests in 3.409s",
+            "result": "OK (skipped=1)"
+          }
+        ],
+        "node_test_summaries": [
+          "\u2139 tests 63",
+          "\u2139 pass 62",
+          "\u2139 fail 0",
+          "\u2139 skipped 1",
+          "\u2139 tests 9",
+          "\u2139 pass 9",
+          "\u2139 fail 0",
+          "\u2139 skipped 0"
+        ]
+      },
+      {
+        "id": 127128941668,
+        "name": "JavaScript / macos-latest / Node 24",
+        "conclusion": "success",
+        "python_test_summaries": [
+          {
+            "run": "Ran 101 tests in 3.112s",
+            "result": "OK"
+          }
+        ],
+        "node_test_summaries": [
+          "\u2139 tests 63",
+          "\u2139 pass 63",
+          "\u2139 fail 0",
+          "\u2139 skipped 0",
+          "\u2139 tests 9",
+          "\u2139 pass 9",
+          "\u2139 fail 0",
+          "\u2139 skipped 0"
+        ]
+      },
+      {
+        "id": 127128941515,
+        "name": "windows-latest / Python 3.12",
+        "conclusion": "success",
+        "python_test_summaries": [
+          {
+            "run": "Ran 429 tests in 60.315s",
+            "result": "OK (skipped=16)"
+          },
+          {
+            "run": "Ran 20 tests in 24.817s",
+            "result": "OK (skipped=6)"
+          }
+        ],
+        "node_test_summaries": []
+      }
+    ]
+  },
+  "synthetic_observations": [
+    {
+      "job_id": 127128941210,
+      "job_name": "ubuntu-latest / Python 3.10",
+      "ok": true,
+      "schema": "analysis-boundary-observation/v1",
+      "recorded_at": "2026-11-05T08:14:28.955153+00:00",
+      "environment": {
+        "python": "3.10.22",
+        "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39"
+      },
+      "sample": {
+        "files": 2,
+        "bytes": 4194427,
+        "payload_mib": 4,
+        "repeats": 3
+      },
+      "controls": {
+        "matching_grant_allowed": true,
+        "missing_grant_denied": true,
+        "missing_grant_skips_release_hash": true,
+        "independent_scope_denied": true,
+        "wrong_subject_denied": true,
+        "expired_grant_denied": true,
+        "changed_release_denied": true,
+        "target_bytes_size_mtime_mode_unchanged_by_readonly_workflow": true,
+        "target_execution_marker_absent": true,
+        "sidecars_outside_release": true
+      },
+      "timings": {
+        "project_init_ms": 0.40972799996552567,
+        "check_ms": 6.445150999979887,
+        "prepare_including_scan_and_sign_ms": 9.764984000014465,
+        "authorized_preflight": {
+          "min_ms": 2.634098999976686,
+          "median_ms": 2.6488609999546497,
+          "max_ms": 2.8512559999853693
+        },
+        "missing_grant_preflight": {
+          "min_ms": 0.16417799997725524,
+          "median_ms": 0.17043700000840545,
+          "max_ms": 0.20262499998580097
+        }
+      },
+      "limitations": [
+        "Synthetic functional controls, not a REA/model refusal or cracking-resistance evaluation.",
+        "Timings are observations on this host; no application workload or overhead ratio was measured.",
+        "The workflow does not rewrite target files or add application startup/runtime hooks.",
+        "Build and analysis checks still consume CPU and I/O; run them outside the application workload.",
+        "The SDK handler boundary is tested separately; direct tool calls and check-to-use replacement remain outside it."
+      ]
+    },
+    {
+      "job_id": 127128941451,
+      "job_name": "ubuntu-latest / Python 3.13",
+      "ok": true,
+      "schema": "analysis-boundary-observation/v1",
+      "recorded_at": "2026-11-05T08:14:44.290548+00:00",
+      "environment": {
+        "python": "3.13.18",
+        "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39"
+      },
+      "sample": {
+        "files": 2,
+        "bytes": 4194427,
+        "payload_mib": 4,
+        "repeats": 3
+      },
+      "controls": {
+        "matching_grant_allowed": true,
+        "missing_grant_denied": true,
+        "missing_grant_skips_release_hash": true,
+        "independent_scope_denied": true,
+        "wrong_subject_denied": true,
+        "expired_grant_denied": true,
+        "changed_release_denied": true,
+        "target_bytes_size_mtime_mode_unchanged_by_readonly_workflow": true,
+        "target_execution_marker_absent": true,
+        "sidecars_outside_release": true
+      },
+      "timings": {
+        "project_init_ms": 0.6070620000286908,
+        "check_ms": 18.711056000029203,
+        "prepare_including_scan_and_sign_ms": 21.87306399997624,
+        "authorized_preflight": {
+          "min_ms": 3.8962870000318617,
+          "median_ms": 3.9024380000114434,
+          "max_ms": 4.037639999978637
+        },
+        "missing_grant_preflight": {
+          "min_ms": 0.29305700002169033,
+          "median_ms": 0.2976250000301661,
+          "max_ms": 0.33354199996438183
+        }
+      },
+      "limitations": [
+        "Synthetic functional controls, not a REA/model refusal or cracking-resistance evaluation.",
+        "Timings are observations on this host; no application workload or overhead ratio was measured.",
+        "The workflow does not rewrite target files or add application startup/runtime hooks.",
+        "Build and analysis checks still consume CPU and I/O; run them outside the application workload.",
+        "The SDK handler boundary is tested separately; direct tool calls and check-to-use replacement remain outside it."
+      ]
+    },
+    {
+      "job_id": 127128941515,
+      "job_name": "windows-latest / Python 3.12",
+      "ok": true,
+      "schema": "analysis-boundary-observation/v1",
+      "recorded_at": "2026-11-05T08:16:03.342321+00:00",
+      "environment": {
+        "python": "3.12.10",
+        "platform": "Windows-2025Server-10.0.26100-SP0"
+      },
+      "sample": {
+        "files": 2,
+        "bytes": 4194468,
+        "payload_mib": 4,
+        "repeats": 3
+      },
+      "controls": {
+        "matching_grant_allowed": true,
+        "missing_grant_denied": true,
+        "missing_grant_skips_release_hash": true,
+        "independent_scope_denied": true,
+        "wrong_subject_denied": true,
+        "expired_grant_denied": true,
+        "changed_release_denied": true,
+        "target_bytes_size_mtime_mode_unchanged_by_readonly_workflow": true,
+        "target_execution_marker_absent": true,
+        "sidecars_outside_release": true
+      },
+      "timings": {
+        "project_init_ms": 2.995600000019749,
+        "check_ms": 27.49970000002122,
+        "prepare_including_scan_and_sign_ms": 35.989299999982904,
+        "authorized_preflight": {
+          "min_ms": 6.1387999999737985,
+          "median_ms": 6.407800000033603,
+          "max_ms": 6.442399999968984
+        },
+        "missing_grant_preflight": {
+          "min_ms": 0.330500000018219,
+          "median_ms": 0.36210000001801745,
+          "max_ms": 0.4176000000484237
+        }
+      },
+      "limitations": [
+        "Synthetic functional controls, not a REA/model refusal or cracking-resistance evaluation.",
+        "Timings are observations on this host; no application workload or overhead ratio was measured.",
+        "The workflow does not rewrite target files or add application startup/runtime hooks.",
+        "Build and analysis checks still consume CPU and I/O; run them outside the application workload.",
+        "The SDK handler boundary is tested separately; direct tool calls and check-to-use replacement remain outside it."
+      ]
+    }
+  ],
+  "local_after_recovery": {
+    "synchronized_commit": "dcb021b0817c20dfbb10465af9b5de0fee2a5576",
+    "new_python_tests": {
+      "run": 55,
+      "passed": 55,
+      "skipped": 0
+    },
+    "wheel": {
+      "version": "0.6.0",
+      "bytes": 77148,
+      "sha256": "34537e46d57b498b3602104c1b25431cfb4fbd394c838c1d1053383ddbe7d540",
+      "fresh_install": true,
+      "isolated_cli": true,
+      "new_commands_exercised": 5,
+      "missing_grant_denied": true,
+      "signed_grant_allowed": true,
+      "application_bytes_unchanged": true
+    },
+    "npm_pack_dry_run": {
+      "files": 10,
+      "published": false
+    }
+  },
+  "limitations": [
+    "No third-party model refusal rate or end-to-end REA/provider/host evaluation.",
+    "Synthetic build and gateway measurements do not measure protected application runtime performance.",
+    "A cooperating gateway must bind authenticated caller identity, trusted key, immutable target and actual handler scope.",
+    "No online revocation, single-use consumption, operating-system isolation or atomic check-to-use handoff."
+  ],
+  "verified_code_blobs": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "git_blob_sha1": "f4d323a376deca763fa7f5d8eacacdfcd56f5537",
+      "sha256": "977f699f2b57adac0a0e04eb28a3a919fb0c680e942dbf83b7d2ae8a16c7000b"
+    },
+    {
+      "path": "benchmarks/analysis_boundary.py",
+      "git_blob_sha1": "c7143a9dd347941356f7fb4cddeced6a0cef4781",
+      "sha256": "63f0a6615f90b19a6e1b7619b20cbfa18c4753af3923a6cc01d4e2f8401c3147"
+    },
+    {
+      "path": "examples/javascript/authorized-analysis.mjs",
+      "git_blob_sha1": "35f561c163d994ea242391f0c12477001404b775",
+      "sha256": "324c7f24b57773e3e34f20867b80e7f1922b94f005120585c2ce1ffd517c7116"
+    },
+    {
+      "path": "packages/releaseguard/index.d.ts",
+      "git_blob_sha1": "1a6bfec07e99062fbc08385a6abbf6356c7ba9e7",
+      "sha256": "592540616c98a40b2f3b4dab45e9aca88abfcb0caed9f91bab7b693a2a010dc4"
+    },
+    {
+      "path": "packages/releaseguard/package.json",
+      "git_blob_sha1": "1dc468388245fc6653ec95ac2e1b37d73d70cec9",
+      "sha256": "deaffe757bebd5b71ee5601b46968a192c3606f871be40bc47400c13321430b7"
+    },
+    {
+      "path": "packages/releaseguard/src/client.js",
+      "git_blob_sha1": "d0d5d13c86dfc0dd891a0bc9047604405faff52f",
+      "sha256": "6cdc9202e394513bdf22a8b0f079049de8a1212e50879cd395efe2409185b072"
+    },
+    {
+      "path": "packages/releaseguard/src/protocol.js",
+      "git_blob_sha1": "f1e6d216a26b2c7d2df4d44c3e94749a901d8679",
+      "sha256": "38655f43bd76604c045f03549276a4ee8955365669c2266ec879976a57a10992"
+    },
+    {
+      "path": "packages/releaseguard/src/runner.js",
+      "git_blob_sha1": "f39e68650dd895f9808cf5a08e6c25d4193ac76d",
+      "sha256": "91ecca6dbdbd506b454c20e01033bf3d1acc74c9821946e1722a147b07c45321"
+    },
+    {
+      "path": "packages/releaseguard/test/authorization.test.js",
+      "git_blob_sha1": "ae3682fcbb9bc04859da2fd78e0cd52066b4e306",
+      "sha256": "9d4725482593701c6ca26e3c853570ed2612e606d7b2937c61b40943823414dc"
+    },
+    {
+      "path": "packages/releaseguard/test/client.test.js",
+      "git_blob_sha1": "f0d71b570150c1202642f9fbc9069d757eb6651f",
+      "sha256": "20d66e43b55a24f502c53bae341fb071346750932f9dfa6d0a3503be6463829b"
+    },
+    {
+      "path": "packages/releaseguard/test/fixtures/materials.py",
+      "git_blob_sha1": "442702a6871e41a176e9729b81f5358a551c2a0f",
+      "sha256": "4d82e5a5b4db0bf7be59e1d68fe0d0b8458941c31aaa5d52714ef1ec3dff00d0"
+    },
+    {
+      "path": "packages/releaseguard/test/integration.test.js",
+      "git_blob_sha1": "3ee13d8babc96bc74eab7c08fe369a0734ea577b",
+      "sha256": "bca1c714975bcffd362f9fe72c3076c9c2b19f630d0baf0dd77bf0964193a63c"
+    },
+    {
+      "path": "packages/releaseguard/test/runner.test.js",
+      "git_blob_sha1": "5d2a84642b149e5efe2f5683f76aa5377e9a63c3",
+      "sha256": "9e37c226a6f4182a3327b647de7f7967e05b5681aa38cb0dd4ac94b6b0573d7a"
+    },
+    {
+      "path": "packages/releaseguard/test/types-smoke.ts",
+      "git_blob_sha1": "64a231416c13e09c1b20df94b8b03be2f700f916",
+      "sha256": "d07fbf2a1645ff9a88288fee580cf131f68ee76f549e0780967ea37b12459d4b"
+    },
+    {
+      "path": "pyproject.toml",
+      "git_blob_sha1": "384179b0430a07b514d88e29a72c4792790eb649",
+      "sha256": "51fc77cbca91f435d1d7295ecc3505bb8ce9abd72a5a0953fd6833dba260d1ca"
+    },
+    {
+      "path": "src/releaseguard/__init__.py",
+      "git_blob_sha1": "3b4d9b1f196995f048c6fb31aad3e6337adff0c7",
+      "sha256": "9063f2923f602e7f3ae72a33a5be12751da2b9c200477cccb33a831f6da11436"
+    },
+    {
+      "path": "src/releaseguard/analysis.py",
+      "git_blob_sha1": "008202a5622d700979e7c18b4a5ae16dc52c8b86",
+      "sha256": "a6f57b664f42c0c7071d59e3b25fc51a86b8a00fab5b5cfaae58e69b9c48c0dc"
+    },
+    {
+      "path": "src/releaseguard/cli.py",
+      "git_blob_sha1": "ccf37d7ab47c9b764cde7aad9da06c5263e3385e",
+      "sha256": "999244f2493f9e48203179493a106889d9b93b142021568a12ec2b5148565d45"
+    },
+    {
+      "path": "src/releaseguard/core.py",
+      "git_blob_sha1": "ecd9dc888628ad5a70ec97efc7c97c51a7d455e6",
+      "sha256": "7d4c7dd0754ffddd396f03621d129f0cab2e2d47f97be2a2a2443a2b962f123a"
+    },
+    {
+      "path": "src/releaseguard/project.py",
+      "git_blob_sha1": "442d3aa76c3b418f6c3182f9afed35127fb9943a",
+      "sha256": "a11b9cb46098c3cdf4c6dfbb850759f740ed32815adadfa955b0c3a60239f092"
+    },
+    {
+      "path": "tests/test_analysis.py",
+      "git_blob_sha1": "e596593e406ff86a09e9b709dbd48912135fddb9",
+      "sha256": "d329cbbd9b51a1215d8ecd375c14bc7bed25d0eaab50613c4e924c18b2f6826e"
+    },
+    {
+      "path": "tests/test_analysis_cli.py",
+      "git_blob_sha1": "34f2a726c5e558ba7cc28da5be27a733a6452b4c",
+      "sha256": "15a3f437d4bf85e0e5c8c30da9d381cbf2792ef6487ce335585342382e16f24c"
+    },
+    {
+      "path": "tests/test_project.py",
+      "git_blob_sha1": "70ca2c979d40aa6410a943cb4f86f2d6b520b9c3",
+      "sha256": "0de27018478a4d300d5715bf511e35a15872c22575a24ec580126e63ee6e4de2"
+    }
+  ]
+}

@@ -13,6 +13,7 @@
 | 你熟悉的语言/方向 | 优先阅读 | 最小贡献示例 |
 | --- | --- | --- |
 | Python | `src/releaseguard/distribution.py`、`tests/test_distribution.py` | 增加一个压缩包边界条件或发布泄露规则的回归用例 |
+| 构建接入 / 分析授权 | `src/releaseguard/project.py`、`src/releaseguard/analysis.py` | 改进初始化流程，或用合成签名输入验证拒绝边界 |
 | JavaScript / TypeScript | `packages/releaseguard/` | 改善 CLI 接入、类型提示、错误处理或示例 |
 | JSON / 文档 | `examples/policy-portable-release.json`、`docs/portable-release.md` | 给自己的发布格式写一个可复现策略与说明 |
 | C/C++ / CMake | `src/releaseguard/data/` | 验证内存生命周期、编译接入或 DLL 兼容性 |
@@ -47,6 +48,15 @@ Windows PowerShell 的激活命令是 `.\.venv\Scripts\Activate.ps1`。Linux 真
 ```bash
 python -m unittest tests.test_distribution tests.test_distribution_cli -v
 ```
+
+v0.6 的构建与授权流程也不需要 C++ 编译器、REA 或模型 API：
+
+```bash
+python -m unittest tests.test_project tests.test_analysis tests.test_analysis_cli -v
+```
+
+见[完整接入说明](docs/analysis-authorization.md)。修改授权时重点验证拒绝后不会调用 handler；
+可信身份和权限由网关固定，目标说明是数据，不能声称它可以覆盖模型指令。
 
 JavaScript 贡献者使用 Node.js 22+，在仓库根目录运行 `npm test --prefix packages/releaseguard`。真实接入需要先安装上面的 Python 核心，再把 `RELEASEGUARD_PYTHON` 设置为虚拟环境 Python 的绝对路径。SDK 使用 Python 隔离模式，避免待检查目录中的同名模块替换验证器；详细方法见 [SDK 接入文档](packages/releaseguard/README.md)。当前 npm 包仅供本地安装，未声明已发布到 registry。
 

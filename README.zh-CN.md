@@ -74,6 +74,7 @@ python -m releaseguard scan-release --root ./dist --policy examples/policy-porta
 
 | 已经做了什么 | 当前结果 |
 | --- | --- |
+| v0.6 最终提交的跨平台验证 | **六项 CI 全部通过**；两套 Linux Python 各 432 项通过，Linux/macOS 的 JS 各 63 项通过、Windows 62 项通过及 1 项 POSIX 跳过；三平台各 9 项真实接入通过。Windows/MSVC、跳过原因与目标文件不变证据见[验证记录](docs/testing-v0.6-2026-11-05.md) |
 | v0.5 本地跨语言与原生集成测试 | 2026-11-04，Python 377 项中 376 项通过、1 项跳过；JavaScript 44 项及真实 CLI 接入 5 项全部通过，见[范围与打包验证](docs/testing-v0.5-2026-11-04.md) |
 | v0.4 本地功能与原生集成测试 | 2026-10-20，331 项中 330 项通过、1 项因 `/proc/self/smaps` 不可用跳过；[详细范围与 Frida 受阻记录](docs/testing-v0.4-2026-10-20.md) |
 | 本地功能与真实 CMake 集成测试 | 2026-10-15，176 项通过，无跳过，含 Windows 时间信息兼容与 PE 条目分类回归 |

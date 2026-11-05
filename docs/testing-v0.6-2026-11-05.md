@@ -1,5 +1,23 @@
 # v0.6 validation — 2026-11-05
 
+## Verified committed version
+
+**All six jobs passed** in [GitHub Actions run 41992848631](https://github.com/Afloat16/anti-rea-forge/actions/runs/41992848631), testing commit [`dcb021b0817c20dfbb10465af9b5de0fee2a5576`](https://github.com/Afloat16/anti-rea-forge/commit/dcb021b0817c20dfbb10465af9b5de0fee2a5576). The evidence-recording follow-up changes documentation only; the implementation and test blob identities are included in the [machine-readable record](results/validation-v0.6-2026-11-05.json).
+
+| Final committed check | Result |
+| --- | --- |
+| Ubuntu / Python 3.10 | 432 tests passed; native/CMake examples, boundary controls and wheel build passed |
+| Ubuntu / Python 3.13 | 432 tests passed; native/CMake examples, boundary controls and wheel build passed |
+| Windows / Python 3.12 | 429 run: 413 passed, 16 platform-specific skips; explicit MSVC step: 20 run, 14 passed, 6 skips; example build and remaining controls passed |
+| JavaScript / Ubuntu Node 22 | 63 unit/process + 9 real integration tests passed; Python portable subset 101 passed |
+| JavaScript / macOS Node 24 | 63 unit/process + 9 real integration tests passed; Python portable subset 101 passed |
+| JavaScript / Windows Node 24 | 63 unit/process tests: 62 passed, 1 POSIX-signal skip; 9 integration tests passed; Python subset: 100 passed, 1 FIFO skip |
+| TypeScript | 7.0.2 strict NodeNext declaration check passed on the Linux JS job |
+
+Windows skips cover POSIX-only permissions, FIFO/resource-limit tests, Linux ELF/CMake/VmFlags/syscall-wrapper checks, case-sensitive paths and open-file replacement. The explicit MSVC step tests the Windows components; its O3 fixture is skipped because MSVC uses /O2, which has its own passing test. Skips are not counted as passes.
+
+After the local environment recovered, the synchronized committed tree also passed all **55 new Python tests**, a fresh wheel install with all five new commands and isolated module loading, and `npm pack --dry-run` (10 package files, including declarations and MIT license). The local wheel SHA-256 is `34537e46d57b498b3602104c1b25431cfb4fbd394c838c1d1053383ddbe7d540`. Packaging checks do not publish to PyPI or npm.
+
 ## Scope
 
 This version adds build-only project preparation and explicit authorization for
@@ -26,12 +44,14 @@ edit contents and GitHub's fixed base through the Git Data API. **The local
 counts do not validate the reconstructed final tree.** Additional changes include
 root-link rejection tests, authenticated validity metadata, an immediate JS clock
 check before the handler and failed-spawn handling without stdio. Their complete
-validation is the final GitHub Actions run recorded in the pull request.
+validation is the successful GitHub Actions run recorded above. The recovered local
+environment was synchronized to that committed tree before the additional 55-test
+and installed-wheel checks.
 
 No skipped local native inspection is represented as a passing memory-hardening
 result. No local TypeScript 7 result is claimed; its pinned 7.0.2 check runs in CI.
 
-## Required final remote checks
+## Remote check coverage
 
 The existing CI runs the actual committed files on:
 
@@ -41,7 +61,7 @@ The existing CI runs the actual committed files on:
 - TypeScript 7.0.2 strict declaration checking on the Linux JS job.
 - The new authorization/build-only tests and synthetic observation.
 
-The pull request records the exact successful commit and run URL after completion.
+The pull request records the final branch head and corresponding successful run.
 Workflow artifacts named `analysis-boundary-<os>-<python>` retain synthetic
 observations only; no private keys or grants are uploaded.
 
@@ -62,6 +82,21 @@ could silently pin an old version. The new workflow validates identifiers early
 and rejects linked roots.
 
 ## Performance observation and limits
+
+The final committed benchmark also passed all 10 functional controls in both Linux
+jobs and on Windows. These are observations of a 4 MiB synthetic payload plus one
+script (never executed), with three preflight repetitions:
+
+| Host | Scan | Scan + sign preparation | Allowed preflight median | Missing-grant preflight median |
+| --- | ---: | ---: | ---: | ---: |
+| Ubuntu / Python 3.10 | 6.45 ms | 9.76 ms | 2.65 ms | 0.17 ms |
+| Ubuntu / Python 3.13 | 18.71 ms | 21.87 ms | 3.90 ms | 0.30 ms |
+| Windows / Python 3.12 | 27.50 ms | 35.99 ms | 6.41 ms | 0.36 ms |
+
+The [machine-readable record](results/validation-v0.6-2026-11-05.json) preserves each
+environment, byte count, control result and timing. These runners differ, and cache
+state is uncontrolled; do not rank Python versions or promise throughput from this
+small sample. No protected application runtime performance was measured.
 
 The [recorded synthetic run](results/analysis-boundary-2026-11-05.json) used two
 files totaling 4,194,469 bytes (a 4 MiB payload plus a synthetic script), with three

@@ -76,6 +76,7 @@ See the [English integration and threat mapping](docs/crypto-protection.md), [ä¸
 
 | Evaluation | Observed result |
 | --- | --- |
+| v0.6 committed cross-platform validation | **All six CI jobs passed**; both Linux Python versions passed 432 tests, JS passed 63 unit/process tests on Linux/macOS and 62 with 1 POSIX skip on Windows, with 9 real bridge integrations on every platform. Windows/MSVC, skip counts and unchanged-target controls are recorded in [validation](docs/testing-v0.6-2026-11-05.md) |
 | v0.5 local portable/native integration | **377 Python tests: 376 passed, 1 skipped; 44 JS tests and 5 real CLI integration tests passed**, on 2026-11-04. [Scope, package checks and limits](docs/testing-v0.5-2026-11-04.md) |
 | v0.4 local functional/native integration | **331 run: 330 passed, 1 skipped**, on 2026-10-20; the skip is unavailable `/proc/self/smaps` inspection. [Detailed scope and Frida failure](docs/testing-v0.4-2026-10-20.md) |
 | Local functional and real CMake integration tests | **176 passed, none skipped**, on 2026-10-15, including Windows timestamp compatibility and PE debug-entry classification regressions; see the [validation record (Chinese)](docs/validation.zh-CN.md) |
