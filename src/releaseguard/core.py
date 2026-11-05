@@ -202,7 +202,7 @@ def key_id(public: Ed25519PublicKey) -> str:
 
 
 def _domain(kind: str) -> bytes:
-    if kind not in {"manifest", "license"}:
+    if kind not in {"manifest", "license", "analysis-grant"}:
         raise GuardError("Unsupported document kind")
     return b"OpenReleaseGuard\x00" + kind.encode("ascii") + b"\x00v1\x00"
 

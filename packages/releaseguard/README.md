@@ -84,13 +84,106 @@ can use the bridge directly, without installing the local npm package:
 node examples/javascript/scan-release.mjs --root dist --policy examples/policy-portable-release.json
 ```
 
+## Configure once, check each build
+
+The v0.6 project workflow stores editable configuration outside the application:
+
+```sh
+python -m releaseguard project-init --root dist --product Demo --out .releaseguard
+python -m releaseguard check --config .releaseguard/project.json
+```
+
+Use the selected virtual-environment interpreter in place of `python` when needed.
+Review `.releaseguard/policy.json` for your release. The release directory can be
+built after initialization; checks require it to contain files. In a Node build
+script the same check becomes:
+
+```js
+const report = await guard.checkProject({ config: ".releaseguard/project.json" });
+process.exitCode = report.exitCode;
+```
+
+Run these checks in the build/release process. The workflow does not add imports,
+runtime hooks, startup scans or background work to the protected application.
+Scanning and hashing still cost time in the build or analysis service.
+
+## Require authorization before an analysis tool runs
+
+For a **cooperating, trusted analysis gateway**, `withAnalysisAuthorization()`
+checks a signed, scoped grant and the exact signed release before invoking one
+handler. Missing authorization stops the handler in ordinary code; it does not
+depend on a language model deciding to obey a notice.
+
+```js
+// These values belong to trusted service configuration and an authenticated
+// session. The model and analyzed target must not choose them.
+const expected = Object.freeze({
+  manifest: "/srv/releases/demo-1.0-evidence/manifest.json",
+  root: "/srv/releases/demo-1.0",
+  publicKey: "/srv/trust/demo-issuer.pem",
+  product: "Demo",
+  release: "1.0",
+  subject: authenticatedSession.subject,
+  audience: "internal-analysis-gateway",
+  operation: "inspect",
+  grant: submittedGrantPath,
+});
+
+const result = await guard.withAnalysisAuthorization(expected, async (verified) => {
+  // The service fixes this handler-to-scope mapping and uses the SAME captured
+  // configuration. Keep the entire release immutable until the tool finishes.
+  return analysisTools.inspect(expected.root);
+});
+```
+
+`authenticatedSession`, `submittedGrantPath` and `analysisTools` above are
+application-provided service objects. A standalone operator-run example that
+protects a fixed directory-listing tool is in
+[authorized-analysis.mjs](../../examples/javascript/authorized-analysis.mjs);
+its [setup guide](../../examples/javascript/README.md) includes grant issuance.
+
+The three scopes are `inspect`, `decompile` and `instrument`; none implies another.
+Every call verifies afresh, with no positive-result cache. A denied decision
+throws `AUTHORIZATION_DENIED`. A worker/protocol error or cancellation before
+admission also leaves the handler uncalled. An allowed handler runs once and its
+result or exception propagates without a retry.
+
+Python checks time before and after hashing. The wrapper additionally checks the
+verified `validity.not_before` / `validity.expires_at` interval using the trusted
+gateway's `Date.now()` immediately before callback admission. A delayed verifier
+allow cannot admit work after expiry or before validity starts. Both clocks must
+be trusted. Verification and callback execution remain separate operations; this
+does not provide an atomic handoff or interrupt a handler already running when a
+grant expires. The service owns cancellation, effects and any execution-time lease.
+
+The handler must use the captured, immutable configuration and the same release
+that was verified. The wrapper cannot inspect or rewrite tool arguments chosen
+inside the handler; passing a different target inside the callback bypasses the
+intended integration.
+
+`checkAnalysis()` exposes the verifier's read-only decision for integrations that
+already implement their own dispatch. A returned report alone does not stop a
+tool. All tool paths must be mediated by the trusted gateway; an unmediated REA,
+shell or filesystem tool can bypass this integration. This SDK does not modify
+REA, control another person's agent, or make artifact text a system instruction.
+
+The issuer key must be pinned through a trusted channel, the subject obtained
+from authenticated context, and the operation fixed by the tool mapping. Grants
+are reusable within their validity period (default one hour, maximum 24 hours),
+have no online revocation check, and do not authenticate the analyst themselves.
+The service owns those controls. A signature binds content to the pinned issuer;
+it does not establish legal ownership or permissions beyond this workflow.
+
 ## API
 
-`createReleaseGuard(options?)` returns five asynchronous methods:
+`createReleaseGuard(options?)` returns eight asynchronous methods:
 
 | Method | Required options | Optional options | Python command |
 | --- | --- | --- | --- |
 | `scanRelease(options, controls?)` | `root`, `policy` | — | `scan-release` |
+| `checkProject(options, controls?)` | `config` | — | `check` |
+| `checkAnalysis(options, controls?)` | `manifest`, `root`, `publicKey`, `product`, `release`, `subject`, `audience`, `operation` | `grant` | `analysis-check` |
+| `withAnalysisAuthorization(options, handler, controls?)` | Same options as `checkAnalysis`, plus a callback | `grant` | `analysis-check`, then one callback if allowed |
 | `audit(path, options?)` | PE file path | `strict`, `signal` | `audit` |
 | `gate(options, controls?)` | `artifact`, `policy` | `root` | `gate` |
 | `verifyManifest(options, controls?)` | `manifest`, `root`, `publicKey`, `product` | `release` | `manifest-verify` |
@@ -116,12 +209,21 @@ invalid controls are rejected before starting Python.
 ## Results and errors
 
 Successful checks return the Python JSON report plus `exitCode: 0`. Configured
-policy failures from `scanRelease`, `gate`, or strict `audit` return
+policy failures from `scanRelease`, `checkProject`, `gate`, or strict `audit` return
 `ok: false` and `exitCode: 3`; they do not throw. A non-strict PE audit can have
 `ok: true` and `policy_passed: false`, so use `{ strict: true }` to enforce its
-warnings as failures.
+warnings as failures. `checkAnalysis` returns a discriminated allow/deny report:
+`authorized: true`, `decision: "allow"`, `reason: "authorized"`, `exitCode: 0`, or
+`authorized: false`, `decision: "deny"`, one documented denial reason, `exitCode: 3`.
+Its mandatory `validity` is null until the grant signature/schema are verified,
+then an immutable object containing exact UTC `not_before` and `expires_at`.
+The interval is bounded to 1..86400 seconds. `withAnalysisAuthorization` turns a
+denial or a failed gateway time recheck into an exception before the callback.
 
-Invalid signatures, missing files, invalid policies and other CLI errors throw
+For manifest/license methods, invalid signatures are CLI errors. Analysis grant
+signature, scope, time or release-integrity failures are explicit denied
+decisions. Missing/unreadable files, malformed CLI inputs, invalid policies and
+other incomplete checks throw
 `ReleaseGuardError` with `code: "CLI_ERROR"` and the Python `exitCode` (normally
 2). Verification methods never return a successful result for these failures.
 The bridge also rejects malformed, duplicate-key, incomplete or contradictory
@@ -130,6 +232,7 @@ reports, unexpected diagnostic output, and output that exceeds its budget.
 | Error code | Meaning |
 | --- | --- |
 | `INVALID_ARGUMENT` | Unsupported option or invalid local argument |
+| `AUTHORIZATION_DENIED` | Authorization refused or is no longer current; the protected callback was not called |
 | `SPAWN_FAILED` | The selected interpreter could not be started |
 | `CLI_ERROR` | Python reported an error; inspect `exitCode` |
 | `PROTOCOL_ERROR` | Invalid UTF-8/JSON or an inconsistent report |
@@ -154,8 +257,10 @@ selected interpreter; setting only `PYTHONPATH=src` will not work. Interpreter
 selection, installed packages and the inherited process environment must remain
 under trusted build/service control.
 
-The API provides local read-only checks. It does not run inspected application
-code or expose key generation, signing, password input or capability-consumption
+The check methods provide local read-only inspection. The authorization wrapper
+additionally invokes only the handler supplied by the trusted service after a
+successful check; it does not select or launch an arbitrary command. The SDK
+does not expose key generation, signing, password input or capability-consumption
 methods. Manifest/license verification requires a previously trusted public key
 and trusted expected product/version/subject values. A local verifier can be
 patched by someone controlling its runtime; keep final authorization in the
@@ -167,7 +272,9 @@ score. The Python [security model](../../SECURITY.md) still applies.
 Edit the plain JavaScript files in `src/`, keep `index.d.ts` consistent, and run
 `npm test`. Process tests use controlled Node.js child fixtures; integration
 tests exercise the installed Python CLI, signature verification, rejection
-behavior and module-shadowing isolation. `test/types-smoke.ts` is a declaration
+behavior, callback admission and module-shadowing isolation. Authorization tests
+cover rejection, delayed admission after expiry, cancellation, immutable context
+and child spawn failures without stdio. `test/types-smoke.ts` is a declaration
 fixture for TypeScript checks. Feature work should preserve the shared Python
 implementation and the distinction between a completed policy rejection and an
 incomplete check.

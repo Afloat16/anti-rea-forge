@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { ReleaseGuardError } from "./error.js";
-import { decodeReport } from "./protocol.js";
+import { decodeReport, analysisValidityWindow } from "./protocol.js";
 import { runCommand } from "./runner.js";
 
 function input(message) {
@@ -41,6 +41,30 @@ function runOptions(options = {}) {
   return { signal: options.signal };
 }
 
+function notAborted(signal) {
+  if (signal?.aborted) throw new ReleaseGuardError("ABORTED", "Release Guard was cancelled.");
+}
+
+function requireCurrentAuthorization(report) {
+  // Python verifies its clock before returning. Recheck the validity window on
+  // the gateway clock immediately before invoking the handler, since scheduling
+  // or worker shutdown can delay admission after the verifier has finished.
+  const window = analysisValidityWindow(report.validity);
+  if (window === null) throw new ReleaseGuardError("PROTOCOL_ERROR", "Missing analysis validity window.");
+  const current = Date.now();
+  if (!Number.isFinite(current)) {
+    throw new ReleaseGuardError("AUTHORIZATION_DENIED", "Analysis authorization denied: invalid_gateway_clock.", {
+      exitCode: 3,
+    });
+  }
+  if (current < window.start || current >= window.end) {
+    const reason = current < window.start ? "grant_not_yet_valid" : "grant_expired";
+    throw new ReleaseGuardError("AUTHORIZATION_DENIED", "Analysis authorization denied: " + reason + ".", {
+      exitCode: 3,
+    });
+  }
+}
+
 /** Internal runner injection keeps process tests independent of a Python install. */
 export function createClient(options = {}, runner = runCommand) {
   object(options, ["python", "timeoutMs", "maxOutputBytes"], "Client options");
@@ -53,6 +77,7 @@ export function createClient(options = {}, runner = runCommand) {
 
   async function call(command, args, expected, options) {
     const controls = runOptions(options);
+    notAborted(controls.signal);
     // Isolated mode excludes cwd and PYTHONPATH from Python module resolution.
     // The selected interpreter must have the core installed (editable is fine).
     const result = await runner(config.python, ["-I", "-m", "releaseguard", command, ...args], {
@@ -60,10 +85,57 @@ export function createClient(options = {}, runner = runCommand) {
       maxOutputBytes: config.maxOutputBytes,
       ...controls,
     });
+    notAborted(controls.signal);
     return decodeReport(command, result, expected);
   }
 
+  async function checkAnalysis(options, controls) {
+    object(options, ["manifest", "root", "publicKey", "product", "release", "subject", "audience", "operation", "grant"],
+      "checkAnalysis options");
+    // Capture all expected values before awaiting Python. Callers cannot change
+    // the requested identity or scope by mutating their options in flight.
+    const expected = Object.fromEntries(["product", "release", "subject", "audience"]
+      .map((name) => [name, text(options[name], name)]));
+    const operation = options.operation;
+    if (!["inspect", "decompile", "instrument"].includes(operation)) {
+      input("operation must be inspect, decompile, or instrument.");
+    }
+    expected.operation = operation;
+    const grant = options.grant;
+    return call("analysis-check", [
+      "--manifest=" + path(options.manifest, "manifest"),
+      "--root=" + path(options.root, "root"),
+      "--public=" + path(options.publicKey, "publicKey"),
+      ...Object.entries(expected).map(([name, value]) => "--" + name + "=" + value),
+      ...(grant === undefined ? [] : ["--grant=" + path(grant, "grant")]),
+    ], expected, controls);
+  }
+
   return Object.freeze({
+    async checkProject(options, controls) {
+      object(options, ["config"], "checkProject options");
+      return call("check", ["--config=" + path(options.config, "config")], {}, controls);
+    },
+
+    checkAnalysis,
+
+    async withAnalysisAuthorization(options, handler, controls) {
+      if (typeof handler !== "function") input("handler must be a function.");
+      const run = runOptions(controls);
+      const report = await checkAnalysis(options, run);
+      notAborted(run.signal);
+      if (!report.authorized) {
+        throw new ReleaseGuardError("AUTHORIZATION_DENIED", "Analysis authorization denied: " + report.reason + ".", {
+          exitCode: report.exitCode,
+        });
+      }
+      requireCurrentAuthorization(report);
+      // No retry, command dispatch, or report cache. The caller must capture
+      // immutable tool configuration; this wrapper cannot inspect or replace
+      // arguments selected inside the handler.
+      return handler(report);
+    },
+
     async scanRelease(options, controls) {
       object(options, ["root", "policy"], "scanRelease options");
       return call("scan-release", [

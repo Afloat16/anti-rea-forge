@@ -21,9 +21,10 @@ function fake(document = scan(), options = {}) {
 
 const hasCode = (code) => (error) => error instanceof ReleaseGuardError && error.code === code;
 
-test("public API is a frozen read-only check surface", () => {
+test("public API is a frozen check and authorized-callback surface", () => {
   const client = createReleaseGuard();
-  assert.deepEqual(Object.keys(client).sort(), ["audit", "gate", "scanRelease", "verifyLicense", "verifyManifest"]);
+  assert.deepEqual(Object.keys(client).sort(), ["audit", "checkAnalysis", "checkProject", "gate", "scanRelease",
+    "verifyLicense", "verifyManifest", "withAnalysisAuthorization"]);
   assert.ok(Object.isFrozen(client));
 });
 
@@ -38,6 +39,16 @@ test("scan uses isolated Python and exact absolute argv for spaces, Unicode and 
   assert.equal(calls[0][0], "trusted Python");
   assert.equal(calls[0][2].timeoutMs, 10_000);
   assert.ok(Object.isFrozen(result));
+});
+
+test("project checks resolve one configuration path and preserve scanner outcomes", async () => {
+  for (const passed of [true, false]) {
+    const { client, calls } = fake(scan(passed));
+    const result = await client.checkProject({ config: "project with spaces/releaseguard.json" });
+    assert.equal(result.ok, passed);
+    assert.deepEqual(calls[0][1], ["-I", "-m", "releaseguard", "check",
+      "--config=" + resolve("project with spaces/releaseguard.json")]);
+  }
 });
 
 test("policy failures return exitCode 3 without throwing", async () => {
@@ -177,6 +188,8 @@ test("call arguments reject typoed, empty, control and invalid feature inputs", 
   await check(client.scanRelease({ root: "bad\ud800path", policy: "rules.json" }));
   await check(client.scanRelease({ root: "x".repeat(32_769), policy: "rules.json" }));
   await check(client.scanRelease({ root: "dist", policy: "rules.json" }, { signal: {} }));
+  await check(client.checkProject({ config: "" }));
+  await check(client.checkProject({ config: "x", root: "ignored" }));
   await check(client.audit("app.exe", { strict: "yes" }));
   await check(client.verifyLicense({ license: "x", publicKey: "x", product: "x", requiredFeatures: ["x", "x"] }));
   await check(client.verifyLicense({ license: "x", publicKey: "x", product: "x", requiredFeatures: "export" }));

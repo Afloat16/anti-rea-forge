@@ -11,6 +11,7 @@ observable behavior and include a small, synthetic example that demonstrates it.
 | Area | Start here | Useful contributions |
 | --- | --- | --- |
 | Python release checks | `src/releaseguard/distribution.py`, `tests/test_distribution.py` | Add a bounded disclosure check or a regression for a packaging edge case |
+| Build setup and analysis authorization | `src/releaseguard/project.py`, `src/releaseguard/analysis.py` | Improve setup or verify an authorization boundary using synthetic signed inputs |
 | JavaScript / TypeScript | `packages/releaseguard/` | Improve the CLI bridge, types, subprocess handling or examples |
 | JSON policies | `examples/policy-portable-release.json` | Document a real packaging workflow and its expected files |
 | Native integration | `src/releaseguard/data/`, `tests/test_cmake_integration.py` | Test CMake, C++ lifetimes and compatibility |
@@ -34,6 +35,16 @@ python -m unittest tests.test_distribution tests.test_distribution_cli -v
 
 In Windows PowerShell, activate with `.\.venv\Scripts\Activate.ps1`. These portable
 scanner tests do not need a C/C++ compiler, REA, a model API key or a native decompiler.
+
+The new build/authorization path is also compiler-free:
+
+```bash
+python -m unittest tests.test_project tests.test_analysis tests.test_analysis_cli -v
+```
+
+See [integration](docs/analysis-authorization.md). Keep authority in trusted code;
+test that a denied request never reaches the handler. Target notices are data and
+must not be presented as a way to override model instructions.
 
 Run the complete Python suite when changing shared code:
 

@@ -1,6 +1,6 @@
 {
   "name": "@anti-rea-forge/releaseguard",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "Dependency-free JavaScript/TypeScript bridge to the Anti-REA Forge Python CLI",
   "type": "module",
@@ -23,7 +23,7 @@
     "README.zh-CN.md"
   ],
   "scripts": {
-    "test": "node --test test/client.test.js test/runner.test.js",
+    "test": "node --test test/client.test.js test/authorization.test.js test/runner.test.js",
     "test:integration": "node --test test/integration.test.js"
   },
   "repository": {

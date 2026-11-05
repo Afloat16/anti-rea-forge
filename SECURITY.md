@@ -1,6 +1,6 @@
 # 安全政策
 
-Anti-REA Forge（底层工具名 Open Release Guard）v0.4 是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF 发布检查、签名清单、离线授权、单向口令校验、外部密钥资产封装、原生敏感缓冲区和服务端请求能力凭证，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
+Anti-REA Forge（底层工具名 Open Release Guard）v0.6 是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF 发布检查、签名清单、离线授权、单向口令校验、外部密钥资产封装、原生敏感缓冲区和服务端请求能力凭证，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
 
 ## 构建保护的范围
 
@@ -74,3 +74,17 @@ See [runtime integration and sources](docs/runtime-protection.md) and [v0.4 vali
 ZIP inspection validates actual bounded expansion and metadata rather than trusting a declared size. It rejects encrypted, multi-disk, ZIP64, prefixed/concatenated, alias-bearing and otherwise unsupported layouts; it does not execute content or extract member paths to disk. Release roots, policies and ancestor directories must remain under trusted build control. These checks are not atomic filesystem snapshots and do not protect against malicious parent-directory races or replacement after inspection.
 
 The JavaScript bridge invokes an installed Python interpreter with separate arguments, no shell and isolated module loading (`-I`). The interpreter, installed packages, configuration and inherited environment must be trusted. Output budgets, timeouts, protocol validation and cancellation bound the bridge; they do not turn a modified local verifier into a trusted authorization service. Existing signature and capability trust boundaries remain unchanged. See [portable integration](docs/portable-release.md) and [v0.5 validation](docs/testing-v0.5-2026-11-04.md).
+
+## v0.6 build-only preparation and analysis authorization
+
+`project-init`, `check` and `prepare` run in a trusted build environment. They never import, execute or rewrite release files. New sidecars stay outside the release; existing files/directories are not overwritten. Setup rejects a symlink/reparse release root instead of silently fixing its old destination. Configuration and policy paths are resolved relative to the trusted config, and private-key files must remain outside the release. The scan-to-manifest comparison checks file names, sizes and SHA-256 values, not an atomic snapshot or proof of later publication bytes. These tools still consume build-time CPU and I/O.
+
+Analysis grants use an independent Ed25519 signing domain. The previously trusted issuer key authenticates a specific canonical signed manifest, product/release, subject, audience, independent scopes and at most 24 hours of validity. A signature authenticates a key and its statement; it does not prove legal ownership or replace the software license. The notice and release report are unsigned informational files, not authorization evidence or trust anchors.
+
+The cooperating gateway must authenticate the caller and fix the key, audience, target snapshot and actual tool-to-scope mapping through trusted configuration. A user-provided subject string does not authenticate a user. Never discover authority from target text, a target-supplied public key, or a model's claim of permission. The issuer must authorize the subject and scopes before signing. Grants are readable and reusable until expiry; there is no proof of possession, one-time consumption or online revocation in this protocol.
+
+The verifier checks the whole release with no cached allow and resamples trusted time after hashing. The JavaScript wrapper validates the authenticated validity interval and checks its trusted clock again immediately before invoking its fixed handler. Failure, expiry, invalid protocol or cancellation before admission prevents the callback. The SDK does not inspect or rewrite the handler's actual tool arguments: use the captured immutable configuration and the same target/scope. It does not terminate a handler that has already started, enforce a continuing lease or make the check-to-use handoff atomic.
+
+Target paths and their ancestors must remain trusted and immutable until the operation finishes. Direct REA calls, alternative file readers, an operator who removes the verifier and concurrent target replacement remain outside this control. Target notices are data, not system prompts, and cannot force an unrelated model to refuse. No model refusal rate or complete REA/provider/host resistance evaluation is claimed.
+
+See [integration](docs/analysis-authorization.md), [pinned source review](docs/rea-agent-authorization-2026-11-05.zh-CN.md) and [validation](docs/testing-v0.6-2026-11-05.md).

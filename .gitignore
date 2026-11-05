@@ -19,3 +19,4 @@ dist/
 node_modules/
 issuer-private*
 *.license.json
+*.analysis-grant.json

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — 2026-11-05
+
+- Add `project-init`, `check` and `prepare` for editable build configuration and scan-then-sign release sidecars. Resolve paths relative to configuration, refuse overwrites, reject output/private keys in the release, and compare scanned and signed inventories before publication. Never rewrite or execute release files.
+- Add separate-domain Ed25519 analysis grants bound to one complete signed manifest, product/release, authenticated subject, gateway audience, independent `inspect` / `decompile` / `instrument` scopes and a validity interval of at most 24 hours. Denied grants skip target hashing; allowed grants recheck the release and clock without caching an allow result.
+- Add JavaScript/TypeScript `checkProject`, `checkAnalysis` and `withAnalysisAuthorization`. The last invokes a fixed handler only after a consistent allow report and a final validity/cancellation check. Denials, subprocess/protocol errors and expired reports prevent the call.
+- Handle failed subprocess starts without stdout/stderr streams as classified failures, retaining the spawn error listener.
+- Generate public English/Chinese analysis notices, document trusted deployment inputs and provide a runnable fixed-handler example. Notices are unsigned information and do not override licenses or model instructions.
+- Review REA's existing untrusted-target-content handling at `92f332652d352e60b550567adf2399d83d8ebe78` (source version 6.8.0); record synthetic unchanged-file, authorization and build-cost evidence.
+
+See [integration](docs/analysis-authorization.md), [source research](docs/rea-agent-authorization-2026-11-05.zh-CN.md) and [validation](docs/testing-v0.6-2026-11-05.md). The new functionality runs outside the protected application's execution path. It does not control independent REA instances, force model refusals, authenticate callers, provide online revocation or prevent check-to-use replacement.
+
 ## 0.5.0 — 2026-11-04
 
 - Add `scan-release` and the Python `scan_release` API for release directories from any language, without requiring a PE/ELF entry artifact. Preserve existing native gates and cryptographic formats.
