@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0 — 2026-11-09
+
+- Add the build-only `split-source-maps` command. Create an unchanged public JavaScript release and a separate private external-map directory, failing on recognized residual disclosure or unsupported inputs. The local JavaScript SDK API remains unchanged.
+- Add paired, version-pinned experiments with Craft Anything, REA and trace-mapping on one project-owned Terser build. See the [integration guide and precise evidence boundary](docs/private-source-maps.md).
+
 ## 0.6.0 — 2026-11-05
 
 - Add `project-init`, `check` and `prepare` for editable build configuration and scan-then-sign release sidecars. Resolve paths relative to configuration, refuse overwrites, reject output/private keys in the release, and compare scanned and signed inventories before publication. Never rewrite or execute release files.

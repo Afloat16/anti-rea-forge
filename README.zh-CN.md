@@ -8,13 +8,25 @@
 
 面向 **AI 辅助逆向时代**的开源软件发布检查与保护研究工具箱，关注 REA 等工具的分析流程。通过 Python 跨语言发布扫描、JavaScript/TypeScript 构建接口、CMake 接入、PE/ELF 门禁、C++ 敏感内存和请求绑定授权，帮助开发者把可验证的保护措施融入工程流程。**MIT 开源、中英文指南、可运行示例，欢迎开发者与逆向研究者一起扩展。**
 
-**MIT · 0.6.0 / Alpha · Python 核心 · JavaScript + TypeScript 类型 · C/C++ 接入**
+**MIT · 0.7.0 / Alpha · Python 核心 · JavaScript + TypeScript 类型 · C/C++ 接入**
 
 [跨语言接入](docs/portable-release.md) · [加入共建](CONTRIBUTING.md) · [English contributions](CONTRIBUTING.en.md) · [路线图](docs/ROADMAP.zh-CN.md) · [运行时接入](docs/runtime-protection.zh-CN.md)
 
 底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口。通用扫描不要求原生入口文件，原生结构检查继续覆盖 Windows PE 与 Linux ELF。构建验证见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
 
 从[共建入口与可复现任务](docs/community/README.md)开始，或阅读[技术故事](docs/community/PROJECT_STORY.md)、[中英文介绍](docs/community/SHARE_COPY.md)与[推广投递记录](docs/community/OUTREACH.md)。介绍稿仅适用于允许该类内容的社区；已提交建议与尚未投递的草稿分开记录。
+
+## v0.7：阻断用随包 source map 原样恢复源码
+
+实测官方 **Craft Anything v0.5.0**：普通发布包中，即使 JS 没有写映射地址，工具仍从同目录的 `app.js.map` 恢复出与原文哈希一致的源码。只提供分离后的公开目录时，同一工具仍正常完成、仍能格式化同一份 JS，但返回 **0 份原始源码**。重新提供私有图，又恢复了同一份原文。[三组原始结果](docs/results/craft-source-map-2026-11-09.json) · [REA 与 Craft 源码依据](docs/research-source-maps-2026-11-09.md)。
+
+**REA 6.8.0** 官方 CLI 的目录分析也完整解析了两侧同一份 JS：普通包中有 1 个来自 map、内容摘要与原文一致的源码节点，公开包中为 **0 个**；两侧都没有截断或跳过 JS。[实际 CLI 记录](docs/results/source-map-recovery-2026-11-09.json)。
+
+```bash
+python -m releaseguard split-source-maps --root build --public release-web --private debug-symbols
+```
+
+先让构建器生成不带公开引用的外部 map，在压缩前运行这条命令；**只发布 `release-web/`**，将 `debug-symbols/` 保存在站点之外。公开 JS 字节不变，不增加应用运行时检查。此处验证的是通过 map 取回源码原文这一条路径，发布的 JS 逻辑仍可分析。[接入步骤、适用范围与复现](docs/private-source-maps.md)。
 
 ## v0.6：简化构建接入，在协作分析入口检查授权
 

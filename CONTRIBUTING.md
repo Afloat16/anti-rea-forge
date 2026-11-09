@@ -13,6 +13,7 @@
 | 你熟悉的语言/方向 | 优先阅读 | 最小贡献示例 |
 | --- | --- | --- |
 | Python | `src/releaseguard/distribution.py`、`tests/test_distribution.py` | 增加一个压缩包边界条件或发布泄露规则的回归用例 |
+| 私有 source map | `src/releaseguard/split_maps.py`、`tests/test_split_maps.py` | 带上一个真实打包反例，或复现[同工具、同 JS 的公开/私有对照](docs/private-source-maps.md) |
 | 构建接入 / 分析授权 | `src/releaseguard/project.py`、`src/releaseguard/analysis.py` | 改进初始化流程，或用合成签名输入验证拒绝边界 |
 | JavaScript / TypeScript | `packages/releaseguard/` | 改善 CLI 接入、类型提示、错误处理或示例 |
 | JSON / 文档 | `examples/policy-portable-release.json`、`docs/portable-release.md` | 给自己的发布格式写一个可复现策略与说明 |

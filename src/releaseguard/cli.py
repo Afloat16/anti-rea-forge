@@ -89,6 +89,13 @@ def parser() -> argparse.ArgumentParser:
     distribution.add_argument("--root", type=Path, required=True, help="Trusted, immutable release staging directory")
     distribution.add_argument("--policy", type=Path, required=True, help="Portable release-scan JSON policy")
 
+    split = commands.add_parser(
+        "split-source-maps", help="Separate external source maps from a public release without rewriting bundles"
+    )
+    split.add_argument("--root", required=True, type=Path, help="Unpacked, immutable build with hidden external .map files")
+    split.add_argument("--public", required=True, type=Path, help="New public release directory; deploy only this output")
+    split.add_argument("--private", required=True, type=Path, help="New private debug directory outside the served tree")
+
     project = commands.add_parser("project-init", help="Create editable build-only configuration outside your release")
     project.add_argument("--root", type=Path, required=True, help="Release directory; it may be built later")
     project.add_argument("--product", required=True)
@@ -214,6 +221,10 @@ def _crypto_input(path: Path, limit: int) -> bytes:
 
 
 def _run(args: argparse.Namespace) -> tuple[dict, int]:
+    if args.command == "split-source-maps":
+        from .split_maps import split_source_maps
+        result = split_source_maps(args.root, args.public, args.private)
+        return result, 0 if result["ok"] else 3
     if args.command == "project-init":
         return init_project(args.root, args.product, args.out), 0
     if args.command == "check":

@@ -11,6 +11,7 @@ observable behavior and include a small, synthetic example that demonstrates it.
 | Area | Start here | Useful contributions |
 | --- | --- | --- |
 | Python release checks | `src/releaseguard/distribution.py`, `tests/test_distribution.py` | Add a bounded disclosure check or a regression for a packaging edge case |
+| Private source maps | `src/releaseguard/split_maps.py`, `tests/test_split_maps.py` | Add a real packaging counterexample; reproduce the [paired recovery controls](docs/private-source-maps.md) |
 | Build setup and analysis authorization | `src/releaseguard/project.py`, `src/releaseguard/analysis.py` | Improve setup or verify an authorization boundary using synthetic signed inputs |
 | JavaScript / TypeScript | `packages/releaseguard/` | Improve the CLI bridge, types, subprocess handling or examples |
 | JSON policies | `examples/policy-portable-release.json` | Document a real packaging workflow and its expected files |

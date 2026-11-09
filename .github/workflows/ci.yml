@@ -9,6 +9,51 @@ permissions:
   contents: read
 
 jobs:
+  source-map-recovery:
+    name: Real source-map recovery controls / Linux
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.22.1'
+          package-manager-cache: false
+      - name: Install releaseguard and locked experiment-only tools
+        run: |
+          python -m pip install .
+          npm ci --prefix benchmarks/recovery-tools --omit=optional --ignore-scripts --no-audit --no-fund
+      - name: Analyze ordinary and public builds with the published REA CLI
+        run: node benchmarks/source_map_recovery.mjs --work "$RUNNER_TEMP/recovery-fixture" --python "$(command -v python)" --out "$RUNNER_TEMP/source-map-recovery.json"
+      - name: Run the verified Craft Anything CLI on the same fixture
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/craft.tar.gz" https://github.com/storytold/craft-anything/releases/download/v0.5.0/craft-anything-0.5.0-linux-x86_64.tar.gz
+          python benchmarks/craft_source_map_boundary.py --archive "$RUNNER_TEMP/craft.tar.gz" --baseline "$RUNNER_TEMP/recovery-fixture/baseline" --public "$RUNNER_TEMP/recovery-fixture/public" --private "$RUNNER_TEMP/recovery-fixture/private" --output "$RUNNER_TEMP/craft-source-map.json"
+      - name: Record machine-readable results
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          for name in ("source-map-recovery", "craft-source-map"):
+              data = json.loads((Path(os.environ["RUNNER_TEMP"]) / (name + ".json")).read_bytes())
+              print("RECOVERY_EVIDENCE " + name + " " + json.dumps(data, separators=(",", ":")))
+          PY
+      - name: Keep synthetic reports only
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: source-map-recovery-evidence
+          path: |
+            ${{ runner.temp }}/source-map-recovery.json
+            ${{ runner.temp }}/craft-source-map.json
+          retention-days: 14
+          if-no-files-found: error
+
   javascript:
     name: JavaScript / ${{ matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
@@ -57,7 +102,7 @@ jobs:
         run: npm exec --yes --package=typescript@7.0.2 -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 packages/releaseguard/test/types-smoke.ts
 
       - name: Exercise portable checks without a native toolchain
-        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_analysis tests.test_analysis_cli -v
+        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_analysis tests.test_analysis_cli tests.test_split_maps tests.test_split_maps_cli -v
 
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}

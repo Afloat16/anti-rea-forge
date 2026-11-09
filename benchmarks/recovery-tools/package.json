@@ -1,0 +1,11 @@
+{
+  "name": "releaseguard-source-map-benchmark",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Development-only pinned tools for the source-map recovery control; never a runtime dependency.",
+  "devDependencies": {
+    "@jridgewell/trace-mapping": "0.3.31",
+    "rea-agents": "6.8.0",
+    "terser": "5.44.1"
+  }
+}
