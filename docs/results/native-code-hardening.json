@@ -144,5 +144,14 @@
       "v11-node-tests.log": "af63fcc06cd6fcb7d7f611c30223b37c26231a644fab26ea793cde6f1e543aea",
       "v11-node-integration-final.log": "503ca79564811d2066539e0356c18a4c4a2c8a79e1e6e088e6fc5a9cc416e82a"
     }
+  },
+  "ci_compatibility_fix": {
+    "initial_pr_run": 42644249387,
+    "initial_windows_job": 129253105945,
+    "failure": "CRLF tool output failed anchored LLVM target/global parsing",
+    "change": "Normalize CRLF for IR parsing while retaining hashes of original tool-output bytes",
+    "focused_tests": 30,
+    "focused_failures": 0,
+    "updated_source_sha256": "665719bbb3523c8218bfce8700b908134398f74e457d72cd9ed1ea05479eeb26"
   }
 }

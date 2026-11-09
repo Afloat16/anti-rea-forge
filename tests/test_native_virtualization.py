@@ -89,6 +89,8 @@ class NativeVirtualizationFiles(unittest.TestCase):
     setUp = native_tests.NativeObfuscationFiles.setUp
     fake_run = native_tests.NativeObfuscationFiles.fake_run
     assert_clean = native_tests.NativeObfuscationFiles.assert_clean
+    test_crlf_tool_output_keeps_coverage_and_original_byte_hashes = (
+        native_tests.NativeObfuscationFiles.test_crlf_tool_output_keeps_coverage_and_original_byte_hashes)
 
     def build(self, **overrides):
         self.after = getattr(self, "vm_after", vm_fixture())

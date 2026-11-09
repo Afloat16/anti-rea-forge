@@ -127,6 +127,24 @@ class NativeObfuscationFiles(unittest.TestCase):
             if args != ["--version"] and args[-1].endswith(".ll"):
                 self.assertIn("-verify-each", args)
 
+    def test_crlf_tool_output_keeps_coverage_and_original_byte_hashes(self):
+        original = self.fake_run
+        observed = {}
+        def windows_newlines(tool, args, work, environment):
+            result = original(tool, args, work, environment)
+            if args[-1] in ("before.ll", "after.ll"):
+                path = work / args[-1]
+                content = path.read_text(encoding="utf-8").replace("\n", "\r\n").encode("utf-8")
+                path.write_bytes(content)
+                observed[args[-1]] = hashlib.sha256(content).hexdigest()
+            return result
+        self.fake_run = windows_newlines
+        report = self.build()
+        self.assertTrue(report["transformation_applied"])
+        self.assertEqual(report["before_ir_sha256"], observed["before.ll"])
+        self.assertEqual(report["after_ir_sha256"], observed["after.ll"])
+        self.assertEqual(report["target_triple"], "x86_64-pc-linux-gnu")
+
     def test_environment_injection_is_removed_and_seed_is_recorded(self):
         with patch.dict(os.environ, {"LLVM_OBF_DEBUG_SEED": "y", "LLVM_OBF_SCALAROPTIMIZERLATE_PASSES": "bogus",
                                      "LLVM_OBF_SEED": "untrusted"}):

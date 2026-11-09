@@ -349,7 +349,7 @@ def obfuscate_native_ir(input_path: Path | str, output_dir: Path | str,
         _run(tools / "opt", ["-S", "-passes=verify", "-verify-each", "input.bc", "-o", "before.ll"],
              work, environment)
         before_bytes, _, _ = _read(work / "before.ll", _MAX_BYTES)
-        before_text = before_bytes.decode("utf-8")
+        before_text = before_bytes.decode("utf-8").replace("\r\n", "\n")
         triple_match = re.search(r'^target triple = "([^"\n]+)"$', before_text, re.MULTILINE)
         triple = triple_match[1] if triple_match else ""
         arch = triple.split("-")[0]
@@ -380,7 +380,7 @@ def obfuscate_native_ir(input_path: Path | str, output_dir: Path | str,
                               "-passes=" + pipeline, "-verify-each", "before.ll", "-o", "after.ll"],
              work, environment)
         after_bytes, _, _ = _read(work / "after.ll", _MAX_BYTES)
-        after_text = after_bytes.decode("utf-8")
+        after_text = after_bytes.decode("utf-8").replace("\r\n", "\n")
         after = _functions(after_text)
         if not virtualized and set(before) != set(after):
             raise GuardError("LLVM transformation unexpectedly changed the function definition set")
