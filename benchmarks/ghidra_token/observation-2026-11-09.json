@@ -1,0 +1,245 @@
+{
+  "schema": "releaseguard-ghidra-native-token/v1",
+  "ok": true,
+  "recorded_at_utc": "2026-11-09T10:20:00.543309+00:00",
+  "ghidra_version": "12.2",
+  "official_archive_url": "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.2_build/ghidra_12.2_PUBLIC_20261016.zip",
+  "archive_sha256_verified_in_run": "2c2cd776db3c1f6a097ba418922378ac3649cadd5e844a6f5f088ae628a7be67",
+  "launcher": "official Java AnalyzeHeadless via LaunchSupport VM options",
+  "host": "Linux-6.18.57-x86_64-with-glibc2.39",
+  "python": "3.12.14",
+  "issuer_version": "0.8.0",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)",
+  "compiler_profile": [
+    "-std=c++17",
+    "-O1",
+    "-g0",
+    "-fno-inline",
+    "-fno-builtin-memcmp",
+    "-lcrypto"
+  ],
+  "fixture_cpp_sha256": "9af778d408436f1be11b9c5310b1b61fa8b7ae05a2bb906bc132850866a91452",
+  "verifier_implementation_sha256": "f6c7f5b1686854d8a3fdf505b577ecf7975aa29f8c60c7d04069639cddd545cb",
+  "script_sha256": "9c223f9349fff8387f210d5463e7fbb6947d786580a5dc4af5374a7b13eb3438",
+  "cases": {
+    "embedded_reference": {
+      "binary_sha256": "2524f91de0ee4329136dfa21a60c4f7b523cff1838273d1e0f6466f85a5ac176",
+      "binary_bytes": 17152,
+      "unchanged": true,
+      "exact_reference_in_raw_elf": {
+        "ascii": true,
+        "utf-16-le": false,
+        "utf-16-be": false,
+        "utf-32-le": false,
+        "utf-32-be": false
+      },
+      "headless_exit": 0,
+      "analysis_timed_out": false,
+      "java_runtime": "25.0.5+8-LTS",
+      "java_vendor": "Eclipse Adoptium",
+      "language": "x86:LE:64:default",
+      "nonexternal_functions": 40,
+      "initialized_loaded_blocks": 28,
+      "initialized_loaded_bytes": 5496,
+      "decompiled_functions": [
+        {
+          "name": "rg_example_token",
+          "entry": "00101289",
+          "body_addresses": 12,
+          "decompiled_c_bytes": 118,
+          "decompiled_c_sha256": "8073deef2885c1dfde33de5a56d84081c987be76da763fb39419b9b09cfac2a4",
+          "mentions_comparison": false,
+          "mentions_token_verifier": false,
+          "matches": 1
+        },
+        {
+          "name": "rg_admit",
+          "entry": "00101295",
+          "body_addresses": 53,
+          "decompiled_c_bytes": 258,
+          "decompiled_c_sha256": "c0874fbd4688273904f1630b2fd439d63e8b3c70ebaf8261aebacdfccc45cf66",
+          "mentions_comparison": true,
+          "mentions_token_verifier": false,
+          "matches": 1
+        }
+      ],
+      "decompiled_admission_gate": true,
+      "public_decoy_found_in_memory": true,
+      "memory_candidates": 2,
+      "decompiler_candidates": 2,
+      "distinct_candidates_replayed": 2,
+      "accepted_extracted_candidates": 1,
+      "accepted_candidates_from_memory": 1,
+      "accepted_candidates_from_decompiled_c": 1,
+      "referenced_public_digest_recovered": null,
+      "public_digest_as_token_accepted": null,
+      "legitimate_token_accepted": true,
+      "wrong_and_malformed_denied": true
+    },
+    "verifier_only": {
+      "binary_sha256": "d049333b2e8497612b90dcd374eec40ffe655898290645a0d3cdadd266e5e4a7",
+      "binary_bytes": 19688,
+      "unchanged": true,
+      "exact_reference_in_raw_elf": {
+        "ascii": false,
+        "utf-16-le": false,
+        "utf-16-be": false,
+        "utf-32-le": false,
+        "utf-32-be": false
+      },
+      "headless_exit": 0,
+      "analysis_timed_out": false,
+      "java_runtime": "25.0.5+8-LTS",
+      "java_vendor": "Eclipse Adoptium",
+      "language": "x86:LE:64:default",
+      "nonexternal_functions": 82,
+      "initialized_loaded_blocks": 28,
+      "initialized_loaded_bytes": 9065,
+      "decompiled_functions": [
+        {
+          "name": "rg_example_token",
+          "entry": "001013c9",
+          "body_addresses": 12,
+          "decompiled_c_bytes": 118,
+          "decompiled_c_sha256": "8073deef2885c1dfde33de5a56d84081c987be76da763fb39419b9b09cfac2a4",
+          "mentions_comparison": false,
+          "mentions_token_verifier": false,
+          "matches": 1
+        },
+        {
+          "name": "rg_admit",
+          "entry": "001013d5",
+          "body_addresses": 84,
+          "decompiled_c_bytes": 597,
+          "decompiled_c_sha256": "d86517eefac8e4f31629ddbc0a8641d0df99a47f20b2bbcc33f1c45cd088866f",
+          "mentions_comparison": false,
+          "mentions_token_verifier": true,
+          "matches": 0
+        },
+        {
+          "name": "verify_native_token",
+          "entry": "001018aa",
+          "body_addresses": 553,
+          "decompiled_c_bytes": 5356,
+          "decompiled_c_sha256": "cc7f932f50664cea33bc8f0a83f052fccdb3a4d401fd2dc4ae0639a6325e1843",
+          "mentions_comparison": true,
+          "mentions_token_verifier": true,
+          "matches": 0
+        },
+        {
+          "name": "verify_issued_token",
+          "entry": "00101ad3",
+          "body_addresses": 25,
+          "decompiled_c_bytes": 259,
+          "decompiled_c_sha256": "39e61e46d238d571e840341acf5d8e95bd5e98bf5d91560b36d1284ad67ec1a8",
+          "mentions_comparison": false,
+          "mentions_token_verifier": true,
+          "matches": 0
+        }
+      ],
+      "decompiled_admission_gate": true,
+      "public_decoy_found_in_memory": true,
+      "memory_candidates": 1,
+      "decompiler_candidates": 1,
+      "distinct_candidates_replayed": 1,
+      "accepted_extracted_candidates": 0,
+      "accepted_candidates_from_memory": 0,
+      "accepted_candidates_from_decompiled_c": 0,
+      "referenced_public_digest_recovered": true,
+      "public_digest_as_token_accepted": false,
+      "legitimate_token_accepted": true,
+      "wrong_and_malformed_denied": true
+    },
+    "verifier_plus_accidental_plaintext": {
+      "binary_sha256": "5f20fc8708b954018daea210b7d3f60f4c6bb21ed9e5880e6088fac88c11f655",
+      "binary_bytes": 19736,
+      "unchanged": true,
+      "exact_reference_in_raw_elf": {
+        "ascii": true,
+        "utf-16-le": false,
+        "utf-16-be": false,
+        "utf-32-le": false,
+        "utf-32-be": false
+      },
+      "headless_exit": 0,
+      "analysis_timed_out": false,
+      "java_runtime": "25.0.5+8-LTS",
+      "java_vendor": "Eclipse Adoptium",
+      "language": "x86:LE:64:default",
+      "nonexternal_functions": 83,
+      "initialized_loaded_blocks": 28,
+      "initialized_loaded_bytes": 9201,
+      "decompiled_functions": [
+        {
+          "name": "rg_example_token",
+          "entry": "001013c9",
+          "body_addresses": 12,
+          "decompiled_c_bytes": 118,
+          "decompiled_c_sha256": "8073deef2885c1dfde33de5a56d84081c987be76da763fb39419b9b09cfac2a4",
+          "mentions_comparison": false,
+          "mentions_token_verifier": false,
+          "matches": 1
+        },
+        {
+          "name": "rg_mispackaged_diagnostic",
+          "entry": "001013d5",
+          "body_addresses": 12,
+          "decompiled_c_bytes": 127,
+          "decompiled_c_sha256": "abc3490c9c439de04bad7db738e865a79ae55310264a4d3219e8277c9257fab5",
+          "mentions_comparison": false,
+          "mentions_token_verifier": false,
+          "matches": 1
+        },
+        {
+          "name": "rg_admit",
+          "entry": "001013e1",
+          "body_addresses": 84,
+          "decompiled_c_bytes": 597,
+          "decompiled_c_sha256": "d86517eefac8e4f31629ddbc0a8641d0df99a47f20b2bbcc33f1c45cd088866f",
+          "mentions_comparison": false,
+          "mentions_token_verifier": true,
+          "matches": 0
+        },
+        {
+          "name": "verify_native_token",
+          "entry": "001018b6",
+          "body_addresses": 553,
+          "decompiled_c_bytes": 5356,
+          "decompiled_c_sha256": "704697191097ef0abf0bbf93b3818bc3e902966ed5ff9daf70076ee2a1526dd3",
+          "mentions_comparison": true,
+          "mentions_token_verifier": true,
+          "matches": 0
+        },
+        {
+          "name": "verify_issued_token",
+          "entry": "00101adf",
+          "body_addresses": 25,
+          "decompiled_c_bytes": 259,
+          "decompiled_c_sha256": "39e61e46d238d571e840341acf5d8e95bd5e98bf5d91560b36d1284ad67ec1a8",
+          "mentions_comparison": false,
+          "mentions_token_verifier": true,
+          "matches": 0
+        }
+      ],
+      "decompiled_admission_gate": true,
+      "public_decoy_found_in_memory": true,
+      "memory_candidates": 2,
+      "decompiler_candidates": 2,
+      "distinct_candidates_replayed": 2,
+      "accepted_extracted_candidates": 1,
+      "accepted_candidates_from_memory": 1,
+      "accepted_candidates_from_decompiled_c": 1,
+      "referenced_public_digest_recovered": true,
+      "public_digest_as_token_accepted": false,
+      "legitimate_token_accepted": true,
+      "wrong_and_malformed_denied": true
+    }
+  },
+  "scope": "Complete rg1_ token literals in initialized loaded blocks and selected decompiled C, replayed against these unchanged native Linux fixtures. Not a general Ghidra block.",
+  "limitations": [
+    "The ordinary control embeds plaintext; it is not the separate historical RG_TEXT decoder-reconstruction test.",
+    "Named fixture functions and verifier data are intentionally retained. The gate remains decompilable and patchable.",
+    "No test of arbitrary reconstruction, token capture during use, brute force, an AI agent, or a remote service."
+  ]
+}

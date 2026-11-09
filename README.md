@@ -1,43 +1,46 @@
-# Anti-REA Forge v0.7.0
+# Anti-REA Forge v0.8.0
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [MIT license](LICENSE)
 
-**Ship `app.js`. Keep `app.js.map` for debugging.**
+**Ship the native unlock check without shipping the token that passes it.**
 
-A minified script can still ship with a readable copy of its source. If `app.js.map` contains the original text, a tool can recover comments, variable names and formatting that the build removed. Leaving the map URL out of the script doesn't help if the map is right next to it.
+A binary that carries the correct answer can give that answer to an analyst. Anti-REA Forge issues a token with **256 random bits**, delivers it separately to its holder, and generates C++ headers containing only a public SHA-256 verifier. At unlock time the application hashes the supplied token and compares two fixed-size digests.
 
-Anti-REA Forge splits your build into a public release and a private directory of source maps. It verifies that public files are byte-identical to their input copies. Your error tracker can still use the private maps to locate bugs; your application needs no runtime library or startup check.
+## What could Ghidra actually recover?
 
-## What did it stop?
+We ran official **Ghidra 12.2** on three project-owned Linux x86-64 ELFs. The same script decompiled the actual admission gate, extracted token-shaped candidates from the loaded image and selected functions' pseudocode, then a test driver replayed every candidate against the **unchanged** program.
 
-We ran two unmodified analysis tools on the **same minified JavaScript**, first with its adjacent map and then from the public directory produced by the splitter.
+| Program supplied to Ghidra | Distinct candidates extracted | Candidates that unlocked it |
+| --- | ---: | ---: |
+| Ordinary program with an embedded plaintext reference | 2 | **1** |
+| Program containing only the public verifier | 1 | **0** |
+| Same verifier, with the original token deliberately leaked in diagnostic data | 2 | **1** |
 
-| Tool and operation | Ordinary build (map included) | Public release |
-| --- | --- | --- |
-| Craft Anything · Deep source restore | Wrote **1 original file**, matching the source SHA-256 | Wrote **0 original files** |
-| REA · JavaScript directory analysis | Found **1 map-backed source node** with the original content digest | Found **0 map-backed source nodes** |
+Decompilation succeeded on every run. All three programs accepted the legitimate token. In the middle case Ghidra found the invalid decoy and read the **actual referenced 32-byte digest**. Submitting that digest as a correctly shaped token still failed. Putting the plaintext back made recovery possible again. [Local evidence](benchmarks/ghidra_token/observation-2026-11-09.json) · [Independent CI observation](docs/results/ghidra-token-ci-2026-11-09.json) · [Reproduce the experiment](benchmarks/ghidra_token/README.md)
 
-Craft could still pretty-print the script, and REA fully parsed it in both runs. When we gave Craft the private map again, it restored the **same original file**. The protection covers exact source recovery through the map; the JavaScript you ship can still be analyzed.
+A separate wrong-input experiment observed the comparison calls. A reversibly masked reference passed to `strcmp` disclosed one reusable value; the verifier compared two digests, neither of which unlocked the unchanged program when replayed as a token. [Comparison observation](docs/results/native-token-comparison-2026-11-09.json)
 
-[Inspect the Craft results](docs/results/craft-source-map-2026-11-09.json) · [Inspect the REA results](docs/results/source-map-recovery-2026-11-09.json) · [Reproduce the experiment](docs/private-source-maps.md)
+**Scope: extracting and replaying the credential.** This is not a block on decompilation, local branch patching, or observing a legitimate user's input. The fast verifier is for issuer-generated random tokens, never human passwords or short serial numbers.
 
-## Try it in your build
+## Try it in a native application
 
-From your application's build environment (**Python 3.10+ and Git**), install the tested v0.7.0 code:
-
-```sh
-python -m pip install "git+https://github.com/Afloat16/anti-rea-forge.git@0f5688b26572a8cfb37188ebbbd037bb306c1898"
-```
-
-Configure your bundler to write **separate flat v3 maps**, without an inline map or a `sourceMappingURL` comment (esbuild: `--sourcemap=external`). After building into `build/` and **before compressing** the artifacts, choose two new output directories:
+This Linux example needs Python 3.10+, a C++17 compiler and the OpenSSL development library. Ghidra is needed only to reproduce the analysis.
 
 ```sh
-python -m releaseguard split-source-maps --root build --public release-web --private debug-symbols
+git clone https://github.com/Afloat16/anti-rea-forge.git
+cd anti-rea-forge
+python -m pip install .
+mkdir -m 700 ../myapp-issuer
+python -m releaseguard native-token-issue --public-dir generated --secret-out ../myapp-issuer/demo.rg-token
+c++ -std=c++17 -O2 -Igenerated examples/native-token/check.cpp -lcrypto -o check-token
+./check-token < ../myapp-issuer/demo.rg-token
 ```
 
-- **Deploy only `release-web/`**, and only after the command succeeds. Use a fresh deployment location or remove stale maps from the server and CDN.
-- **Keep `debug-symbols/` outside every served path.** Its maps retain their relative paths for private debugging. The input `build/` is unchanged and still contains the maps.
+- **For the build:** use the headers in `generated/` and call `releaseguard::verify_issued_token(candidate)` at the unlock point. Only that explicit check hashes and compares the input. No background scanner or anti-debugger runs in your app.
+- **For the authorized holder:** deliver the `.rg-token` file privately; never bundle it with the program. Release scanning flags complete token-shaped values in files and supported ZIP members by default. [Integration, rotation and boundaries](docs/native-tokens.md)
 
-**It catches more than filenames.** In a second test, Terser bundled the map itself into an ordinary `.mjs` module. The splitter detected the literal `sourcesContent` key, named the file and left neither output directory behind. This check is conservative: code that merely mentions the key can also be flagged. [Build settings and supported inputs](docs/private-source-maps.md)
+## Shipping JavaScript too?
 
-If this solves a release problem for your team, **star Anti-REA Forge**. Have a different bundler or a packaging case we missed? [Contribute a small reproducible fixture](CONTRIBUTING.en.md).
+`split-source-maps` keeps public JS byte-identical and separates external maps for private debugging. On the same minified fixture, Craft Anything restored **1 exact original** with the map, **0** from the public directory and **1** when the private map was supplied again. REA's map-backed original-source node count went from **1 to 0**. [Build command and evidence](docs/private-source-maps.md)
+
+If this solves a release problem for your team, **star Anti-REA Forge**. Have a different extraction path to test? [Contribute a reproducible, project-owned fixture](CONTRIBUTING.en.md).

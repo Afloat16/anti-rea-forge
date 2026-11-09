@@ -1,6 +1,6 @@
 # Native unlock tokens: ship a verifier, deliver the credential separately
 
-Use this opt-in C++17 component when an application needs to accept an **issuer-generated random token** offline. A client that decodes the expected token and compares two strings makes the reusable answer available at the comparison. Here the expected answer is never needed at build time. The issuer gives the build a public verifier and gives the authorized holder the token through a separate private channel.
+Use this opt-in C++17 component when an application needs to accept an **issuer-generated random token** offline. A client that decodes the expected token and compares two strings makes the reusable answer available at the comparison. Here the compiler never needs that answer. The issuer gives the build a public verifier and gives the authorized holder the token through a separate private channel.
 
 ## Generate, build and try the example
 
