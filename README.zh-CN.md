@@ -1,231 +1,43 @@
-# 🛡️ Anti-REA Forge v0.7.0 · 反逆向共建计划
+# Anti-REA Forge v0.7.0
 
-[English](README.md) · [简体中文](README.zh-CN.md)
+[简体中文](README.zh-CN.md) · [English](README.md) · [MIT 许可证](LICENSE)
 
-![Anti-REA Forge banner](assets/anti-rea-forge.svg)
+**发布 `app.js`，把 `app.js.map` 留给开发者排查报错。**
 
-> **减少发布泄露，把授权放在可信边界，让 Python 和 JavaScript 开发者都能直接贡献。**
+压缩 JS 时删掉的注释、变量名和排版，可能在旁边的 `app.js.map` 里完整保留。即使脚本里没有写映射地址，分析工具也能尝试同名文件，直接取回源码原文。
 
-面向 **AI 辅助逆向时代**的开源软件发布检查与保护研究工具箱，关注 REA 等工具的分析流程。通过 Python 跨语言发布扫描、JavaScript/TypeScript 构建接口、CMake 接入、PE/ELF 门禁、C++ 敏感内存和请求绑定授权，帮助开发者把可验证的保护措施融入工程流程。**MIT 开源、中英文指南、可运行示例，欢迎开发者与逆向研究者一起扩展。**
+Anti-REA Forge 在构建阶段把产物分成两份：一份给用户，一份给内部调试。工具逐个校验公开文件与输入文件的哈希，确保 JS 字节不变。开发者仍可用私有映射把报错位置定位到原始代码，用户的应用无需增加运行库或启动检查。
 
-**MIT · 0.7.0 / Alpha · Python 核心 · JavaScript + TypeScript 类型 · C/C++ 接入**
+## 实际防住了什么？
 
-[跨语言接入](docs/portable-release.md) · [加入共建](CONTRIBUTING.md) · [English contributions](CONTRIBUTING.en.md) · [路线图](docs/ROADMAP.zh-CN.md) · [运行时接入](docs/runtime-protection.zh-CN.md)
+我们让两个未经修改的分析工具检查**同一份压缩 JS**：先给普通构建目录，再只给拆分后的公开目录。
 
-底层工具沿用 **Open Release Guard** 的 Python 包名 `open-release-guard`、CLI `releaseguard` 和 CMake 接口。通用扫描不要求原生入口文件，原生结构检查继续覆盖 Windows PE 与 Linux ELF。构建验证见 [GitHub CI](https://github.com/Afloat16/anti-rea-forge/actions)，真实业务与 Windows DLL ABI 仍需单独验证。本项目独立开发，与 REA 官方无隶属或背书关系。
+| 工具与操作 | 普通构建（附带 map） | 只提供公开目录 |
+| --- | --- | --- |
+| Craft Anything · Deep 模式恢复源码 | 写出 **1 份原始文件**，SHA-256 与原文一致 | 写出 **0 份原始文件** |
+| REA · JavaScript 目录分析 | 找到 **1 个来自 map 的源码节点**，内容摘要与原文一致 | 找到 **0 个来自 map 的源码节点** |
 
-从[共建入口与可复现任务](docs/community/README.md)开始，或阅读[技术故事](docs/community/PROJECT_STORY.md)、[中英文介绍](docs/community/SHARE_COPY.md)与[推广投递记录](docs/community/OUTREACH.md)。介绍稿仅适用于允许该类内容的社区；已提交建议与尚未投递的草稿分开记录。
+两次检查中，Craft 都能正常格式化 JS，REA 也都完整解析了它。**把私有 map 补回后，Craft 又恢复出了同一份原文。** 这项防护堵住的是通过随包映射取回源码原文的途径；已经发布的 JS 逻辑仍然可以分析。
 
-## v0.7.0：阻断用随包 source map 原样恢复源码
+[查看 Craft 原始结果](docs/results/craft-source-map-2026-11-09.json) · [查看 REA 原始结果](docs/results/source-map-recovery-2026-11-09.json) · [复现实验](docs/private-source-maps.md)
 
-实测官方 **Craft Anything v0.5.0**：普通发布包中，即使 JS 没有写映射地址，工具仍从同目录的 `app.js.map` 恢复出与原文哈希一致的源码。只提供分离后的公开目录时，同一工具仍正常完成、仍能格式化同一份 JS，但返回 **0 份原始源码**。重新提供私有图，又恢复了同一份原文。[三组原始结果](docs/results/craft-source-map-2026-11-09.json) · [REA 与 Craft 源码依据](docs/research-source-maps-2026-11-09.md)。
+## 接入自己的项目
 
-**REA 6.8.0** 官方 CLI 的目录分析也完整解析了两侧同一份 JS：普通包中有 1 个来自 map、内容摘要与原文一致的源码节点，公开包中为 **0 个**；两侧都没有截断或跳过 JS。[实际 CLI 记录](docs/results/source-map-recovery-2026-11-09.json)。
+在应用的构建环境中准备好 **Python 3.10+ 和 Git**，安装经过验证的 v0.7.0 代码：
 
-```bash
+```sh
+python -m pip install "git+https://github.com/Afloat16/anti-rea-forge.git@0f5688b26572a8cfb37188ebbbd037bb306c1898"
+```
+
+让构建器生成**独立的扁平 v3 映射文件**，不要使用内联 map，也不要在 JS 中写入 `sourceMappingURL` 注释。esbuild 项目可用 `--sourcemap=external`。正常构建到 `build/` 后，在对产物做 gzip 压缩或打 ZIP 包前，指定两个尚不存在的输出目录：
+
+```sh
 python -m releaseguard split-source-maps --root build --public release-web --private debug-symbols
 ```
 
-先让构建器生成不带公开引用的外部 map，在压缩前运行这条命令；**只发布 `release-web/`**，将 `debug-symbols/` 保存在站点之外。公开 JS 字节不变，不增加应用运行时检查。此处验证的是通过 map 取回源码原文这一条路径，发布的 JS 逻辑仍可分析。[接入步骤、适用范围与复现](docs/private-source-maps.md)。
+- **命令成功后，只部署 `release-web/`。** 使用新的发布路径，或清除服务器和 CDN 上残留的旧 map。
+- **把 `debug-symbols/` 放在站点之外。** 其中的映射保留原来的相对路径，供内部调试使用。输入目录 `build/` 保持不变，里面仍有 map，不要上传。
 
-## v0.6：简化构建接入，在协作分析入口检查授权
+**只检查 `.map` 文件名还不够。** 我们用 Terser 把映射对象打进了一个普通 JS 模块。拆分器检测到里面的 `sourcesContent` 字段，指出具体文件，且没有留下任何输出目录。这项检查较严格：仅仅提到该字段的库也可能被拦截。[构建配置与支持范围](docs/private-source-maps.md)
 
-初始化一次可编辑配置，再在每次正常构建完成后检查发布目录：
-
-```bash
-python -m pip install -e .
-python -m releaseguard project-init --root ./dist --product MyApp
-python -m releaseguard check
-```
-
-- **新增功能不进入原软件运行路径。** `project-init`、`check`、`prepare` 在构建/发布环境执行；`prepare` 扫描并签名同一文件清单，将说明、报告和清单输出到发布目录外，不改写原程序、二进制签名或业务代码。配置按自身位置解析路径，已有输出不会被覆盖。
-- **让已接入的分析工具在操作前明确检查权限。** 新增签名 analysis grant，绑定完整 signed manifest、产品/版本、已认证主体、网关 audience、三个独立 scope 和最长一天的有效期。每次重新核对完整发行文件及可信时钟，不缓存旧的允许结果。
-- **JavaScript / TypeScript 直接接入。** `withAnalysisAuthorization` 只有在检查全部通过时才调用固定 handler；授权拒绝、进程/协议错误、准入前过期或取消都不会调用。另有 `checkProject`、`checkAnalysis` 和类型声明，统一调用 Python 验证器。
-- **根据 REA 实际源码界定能力。** REA 明确将目标字符串和反编译代码视为不可信数据。[2026-11-05 源码研究](docs/rea-agent-authorization-2026-11-05.zh-CN.md)解释了为何目标里的说明不能可靠强制第三方 AI 拒绝，以及协作网关应如何实施检查。
-
-详见[完整接入步骤](docs/analysis-authorization.md)、[可运行的固定 handler 示例](examples/javascript/authorized-analysis.mjs)与[v0.6 验证记录](docs/testing-v0.6-2026-11-05.md)。公开说明不会替换原软件许可证、证明法律权属或自动建立公钥信任。直接启动的 REA 仍在这个网关控制之外。扫描和验签有构建/分析成本；“原程序字节不变”不等于所有应用性能都经过验证。
-
-## v0.5：跨语言发布检查，让贡献更直接
-
-- **所有构建流程都能接入同一个扫描器：** 新增 `scan-release`，直接检查发布目录，不必先指定 PE/ELF。Python、JavaScript/TypeScript、Java 及其他语言项目可以共用；原生结构证据仍由已有 `gate` 检查。
-- **拦截可避免的源码和密钥暴露：** 检测 source map 标记、私钥 PEM 标记、五种编码的声明文字、禁发路径、已知文件哈希和可选精确文件清单。ZIP 系发行包在字节、成员数与嵌套预算内检查内容，不落地解包；不支持或未完成的检查不会给出通过结论。
-- **降低开发和贡献门槛：** 核心规则继续使用 Python；新增可直接运行的 [JavaScript ESM 接口与 TypeScript 类型声明](packages/releaseguard/README.zh-CN.md)，无 npm 运行依赖或编译步骤。接口安全调用已安装的 Python 核心，统一维护安全判定。当前仅提供本地包，尚未发布到 npm。
-- **更新 REA 源码依据：** [2026-11-04 审阅](docs/rea-source-review-2026-11-04.zh-CN.md)固定到 REA 6.8.0 源码，追踪 source map、ZIP、Ghidra 与 Frida 路径，并说明哪些风险仍然成立。
-
-创建 Python 虚拟环境并用 `python -m pip install -e .` 安装当前仓库后，检查实际发布目录：
-
-```bash
-python -m releaseguard scan-release --root ./dist --policy examples/policy-portable-release.json
-```
-
-退出码 **0** 表示配置的检查通过，**3** 表示有违规项，**2** 表示检查出错或未完成。[默认策略](examples/policy-portable-release.json)允许有意发布的普通源码，并非通用秘密扫描器；请按项目调整。详见[接入指南](docs/portable-release.md)、[贡献指南](CONTRIBUTING.md)与[验证记录](docs/testing-v0.5-2026-11-04.md)。
-
-本轮改进减少误发布和接入障碍，不保证无法反编译、无法 Hook 或无法修改客户端。没有将功能测试写成 REA 对抗成功率。
-
-## v0.4：减少动态暴露，把请求授权放到可信服务端
-
-- **原生敏感缓冲区：** C++17 `releaseguard::secure_buffer` 独占带守卫页的不可执行内存，检查锁页结果，在释放前清理自身分配并报告实际保护状态。Linux 可排除这些页的 core dump；本版 Windows 如实报告不提供 dump 排除。使用期间的进程内 hook 仍能观察明文。
-- **绑定请求的服务端能力凭证：** 使用独立签名域的 Ed25519，绑定已认证主体、audience、产品、操作与实际请求字节，有效期最多 300 秒。持久 SQLite 状态原子消费一次性标识，并拒绝可信时钟回拨。签发私钥、验证、重放状态与受限操作必须放在可信服务端。
-- **针对 REA 的威胁映射：** 固定核查 REA 6.7.0 源码及 Frida 脚本桥接，分别处理内存快照、实时 hook、本地分支替换和凭证重放；参考正式发表于 2024–2026 安全顶会的研究和成熟开源内存方案，区分借鉴原则与已经实现的功能。
-
-见[中文运行时接入](docs/runtime-protection.zh-CN.md)、[English](docs/runtime-protection.md)与[v0.4 验证记录](docs/testing-v0.4-2026-10-20.md)。这些组件需要业务接入；Python 密码学 API 仍返回托管 `bytes`，本版不自动部署服务端、TLS、身份认证或 TEE。授权只消费一次不等于业务恰好执行一次；被窃取的有效 bearer 凭证仍可能被抢先用于其原请求。
-
-## v0.3：移除可逆参考口令，检查整个发布目录
-
-根据用户提供的 REA 实测文章，本轮实现三项强化：
-
-- **单向口令校验：** `password-create / password-check` 使用固定 64 MiB、3 次迭代、4 lanes 的 Argon2id，随机盐、32 字节校验值，在调用 KDF 前拒绝恶意成本参数。不再把可解密的参考口令存入校验记录；弱口令仍能被猜中，本地校验分支仍可被补丁绕过。
-- **外部密钥资产：** `asset-keygen / asset-seal / asset-open` 使用随机外部 256 位主密钥、每包 HKDF-SHA256 派生和 AES-256-GCM；绑定调用方可信的产品、版本、用途、资产身份。错误密钥、篡改或跨上下文替换均在创建明文输出前失败。密钥不能随客户端发布；合法解密后的明文和密钥仍可能被内存观察。
-- **完整发布目录门禁：** `gate --root` 可按精确文件清单拒绝多余或缺失文件，拦截源码/备份路径、已知旧制品 SHA-256，并在字节预算内检查全部发布文件的声明文字。[严格原生发布策略](examples/policy-strict-release.json) 需要按自己的应用调整，不是通用秘密扫描器。
-
-本版提供 Python API、CLI 和构建工具，尚未提供原生 C/C++ 校验/解密 SDK、代码虚拟化、服务端或密钥服务。离线客户端中的永久秘密无法对控制运行环境的人保证保密；真正要求保密的逻辑应由可信服务端执行并授权，只暴露必要操作。
-
-见[中文接入与文章威胁映射](docs/crypto-protection.zh-CN.md)、[English](docs/crypto-protection.md)、[v0.3 验证记录](docs/testing-2026-10-20.md)及[密码学边界实测](docs/results/crypto-boundary-2026-10-20.json)。实测保留了弱口令被恢复和合法明文在内存可见的对照；它不代表已完成 REA 对抗测评，也不是防破解成功率。
-
-## 先看真实战况
-
-| 已经做了什么 | 当前结果 |
-| --- | --- |
-| v0.7.0 · 私有 source map | 对同一份压缩 JS，Craft Anything 在普通包中恢复 **1 份原文**，在公开包中恢复 **0 份**，补回私有 map 后再次恢复 **1 份**。REA 完整解析两侧 JS，来自 map 的原始源码节点从 **1 个降至 0 个**。[用法与范围](docs/private-source-maps.md) · [工具实测记录](https://github.com/Afloat16/anti-rea-forge/actions/runs/42572504515/job/129012835263) |
-| v0.6 最终提交的跨平台验证 | **六项 CI 全部通过**；两套 Linux Python 各 432 项通过，Linux/macOS 的 JS 各 63 项通过、Windows 62 项通过及 1 项 POSIX 跳过；三平台各 9 项真实接入通过。Windows/MSVC、跳过原因与目标文件不变证据见[验证记录](docs/testing-v0.6-2026-11-05.md) |
-| v0.5 本地跨语言与原生集成测试 | 2026-11-04，Python 377 项中 376 项通过、1 项跳过；JavaScript 44 项及真实 CLI 接入 5 项全部通过，见[范围与打包验证](docs/testing-v0.5-2026-11-04.md) |
-| v0.4 本地功能与原生集成测试 | 2026-10-20，331 项中 330 项通过、1 项因 `/proc/self/smaps` 不可用跳过；[详细范围与 Frida 受阻记录](docs/testing-v0.4-2026-10-20.md) |
-| 本地功能与真实 CMake 集成测试 | 2026-10-15，176 项通过，无跳过，含 Windows 时间信息兼容与 PE 条目分类回归 |
-| 选中文字静态掩码、发布门禁、签名清单与离线授权工具 | 已实现，边界见下文 |
-
-欢迎在自有样本上复现实验、补充跨平台测试，或提交可验证的改进。
-
-## 一起把它做强
-
-- **会逆向：** 分析仓库自有或获授权样本，提交步骤、工具版本和可验证结果；让下一次改进有明确目标。
-- **会 C/C++：** 改进编译接入、兼容性与防护方案，同时证明业务输出和公共接口仍然正确。
-- **会 Python 或测试：** 完善 PE/ELF 检查、环境诊断和可复现实验，明确区分恢复成功、超时与环境故障。
-- **用 Windows：** 帮我们实际验证 MSVC、EXE/DLL 和调用方兼容性。
-- **第一次贡献：** 从文档、最小复现、错误信息和测试环境说明开始。先读 [贡献指南](CONTRIBUTING.md)，小 PR 同样欢迎。
-
-你可以通过仓库的 **Issues → New issue** 选择缺陷、实验报告或方案提议模板，也可以直接提交 PR。请在公开材料中使用合成测试数据；敏感安全问题按 [SECURITY.md](SECURITY.md) 处理。欢迎 Star、Fork，把项目分享给愿意一起验证和改进的人。
-
-**不能保证“无法反编译 / 无法破解”。** IDA、Ghidra、.NET 反编译器等能够分析本地程序；控制运行环境的人也可以修改客户端来跳过检查。开源后仍有意义的保证是：在私钥保密、可信公钥固定和验证器未被替换的前提下，其他人不能仅凭本项目源码生成有效的发行签名或授权签名。本项目尚未经过独立安全审计。
-
-## 已实现
-
-| 功能 | 能做什么 |
-| --- | --- |
-| `scan-release` / Python `scan_release` | 不要求 PE/ELF 的全目录发布泄露检查与有界 ZIP 成员检查 |
-| JavaScript ESM + TypeScript 类型 | 基于已安装 Python 核心的只读构建接入，隔离调用、类型提示、超时和输出限额 |
-| `native-init` + `releaseguard_protect(target POLICY ...)` | 生成 CMake/C++ 构建组件，启用 Release 优化与 LTO，并在产物违反策略时使构建失败 |
-| `RG_TEXT("...")` | 对选择的 C++17 字符串做编译期可逆掩码，使用时恢复到作用域对象；不同构建种子改变静态载荷 |
-| `releaseguard::secure_buffer` | 独占原生页，守卫页、受检锁页、清理与实际平台 dump 状态 |
-| `capability-issue / capability-consume / replay-store-init` | 服务端短期授权，绑定精确请求，持久原子防重放 |
-| `gate` | 扫描五种编码的声明文字、检查调试/符号元数据、禁发旁文件和所需 PE 静态证据 |
-| v0.3 `gate --root` | 精确文件清单、源码/备份路径、旧制品哈希拒绝与有界全目录文字扫描 |
-| `password-create / password-check` | 固定成本的加盐 Argon2id 单向口令校验，在 KDF 前限制参数 |
-| `asset-keygen / asset-seal / asset-open` | 外部密钥 AES-256-GCM 数据资产，HKDF-SHA256 派生与可信上下文绑定 |
-| `audit` | 只读检查 PE32/PE32+ EXE/DLL、CLR 目录、ASLR/DEP/CFG 标记和结构证据、调试目录与证书表 |
-| `keygen` | 生成口令加密的 Ed25519 私钥和可分发公钥；拒绝覆盖现有文件 |
-| `manifest-sign / manifest-verify` | 签名完整发布文件清单；验证哈希、产品和版本，拒绝缺失、篡改及额外文件 |
-| `license-issue / license-verify` | 签发/验证便携式离线许可证，检查产品、持有人、有效期和功能权限 |
-| `cmake/ReleaseGuard.cmake` | 支持 MSVC/Windows 与 GCC、Clang/Linux 的构建接入；保留原 MSVC `releaseguard_harden` 接口 |
-
-v0.2 已提供实际构建组件和选择性文字掩码，不是“任意 EXE 一键变成不可破解程序”。敏感文字需要用 `RG_TEXT` 标注；本版没有通用代码虚拟化、所有字符串自动改写或 C/C++/.NET 授权运行时 SDK。授权验证仍需接入业务入口或可信安装/更新流程。客户端检查可被补丁修改，构建种子也不是秘密密钥。
-
-自有样本的实验步骤与完整结果见[历史实验记录](docs/testing-2026-10-15.zh-CN.md)及[REA 威胁模型](docs/rea-threat-model.zh-CN.md)。每项防护结论均限于实际测试的操作和发布物。
-
-## 编译时接入
-
-安装后，在 CMake 工程内包含本项目的模块，目标创建后调用一次：
-
-```cmake
-include("/path/to/anti-rea-forge/cmake/ReleaseGuard.cmake")
-add_executable(myapp main.cpp)
-releaseguard_protect(myapp POLICY "${CMAKE_CURRENT_SOURCE_DIR}/policy.json")
-```
-
-在需要保护的 C++ 文字位置使用作用域对象；hook 会生成并包含构建种子头：
-
-```cpp
-#include <releaseguard/literal.hpp>
-auto message = RG_TEXT("internal-feature-route-v1");
-use(message.c_str()); // message 必须保持存活
-```
-
-使用 [接入指南](docs/native-build.zh-CN.md) 创建策略、使用已安装包生成模块，以及配置最终发布目录检查。纯 C 可使用构建加固和门禁，文字组件要求 C++17。其他语言和构建系统当前没有自动转换后端。
-
-## 安装和检查
-
-需要 Python 3.10 或以上。Python 签名工具可在 Windows/Linux/macOS 使用；编译 hook 当前支持 MSVC/Windows 和 GCC、Clang/Linux。`audit` 检查 Windows PE，`gate` 按策略检查 PE 或 ELF。下面命令在项目根目录执行：
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install .
-releaseguard --help
-releaseguard audit C:\releases\MyApp\MyApp.exe
-```
-
-上面是 Windows PowerShell 的虚拟环境激活命令。Linux/macOS 使用 `source .venv/bin/activate`。如果终端找不到 `releaseguard`，可在同一虚拟环境中使用 `python -m releaseguard` 代替。
-
-`audit` 仅报告静态证据，不启动被检查文件。证书表存在不代表 Authenticode 签名可信。Windows 代码签名请使用系统信任验证，例如安装 Windows SDK 后运行 `signtool verify /pa /all /v MyApp.exe`。`policy_passed` 表示静态审计是否没有警告；`--strict` 使报告含风险警告时返回 3 且 `ok` 为 `false`，工具本身的错误返回 2。即使静态审计通过，报告中的 `notes` 仍适用。
-
-## 1. 在开发者机器生成私钥
-
-**先建立独立于源码仓库和发布目录的私有目录。** 示例路径需按你的机器调整：
-
-```powershell
-mkdir C:\ReleaseGuardKeys
-releaseguard keygen --private C:\ReleaseGuardKeys\issuer-private.pem --public .\issuer-public.pem
-```
-
-交互终端会要求输入并确认口令，至少 12 个 UTF-8 字节。私钥采用加密 PKCS#8；POSIX 文件创建权限为 0600。Windows 上请使用自己的用户 ACL 保护该目录，并加密备份私钥。不要上传私钥、口令或真实客户许可证。自动化可从密钥管理系统注入 `RELEASEGUARD_PASSPHRASE` 环境变量，不要把口令写进脚本或命令行参数。
-
-公钥可以公开，但验证端必须通过可信渠道固定它。例如把公钥或其完整 SHA-256 指纹内置于验证组件。**不能允许许可证或下载包自行决定可信公钥**。`--public` 应指向先前可信配置中的文件。公钥被替换后，攻击者可以用自己的私钥签发一整套伪造材料。
-
-## 2. 为发布文件生成并验证签名清单
-
-在完成构建、测试和 Authenticode 签名后，把所有要发布的程序文件放入干净的目录。私钥、清单、公钥和许可证均可以放在发布目录之外；清单必须在外，以免自引用：
-
-```powershell
-releaseguard manifest-sign --root .\release\MyApp --private C:\ReleaseGuardKeys\issuer-private.pem --product MyApp --release 1.0.0 --out .\MyApp-1.0.0.manifest.json
-releaseguard manifest-verify .\MyApp-1.0.0.manifest.json --root .\release\MyApp --public .\issuer-public.pem --product MyApp --release 1.0.0
-```
-
-合法目录会返回 `"ok": true`。修改任意文件、删除 DLL 或添加清单以外的文件会验证失败。所有输出文件只允许新建；发布新版本请使用新文件名。默认严格检查整个目录，不提供忽略额外 DLL 的开关。验证时指定 `--release` 可拒绝与预期版本不同的旧清单；预期版本本身仍需来自可信更新策略。
-
-清单支持 Unicode NFC 路径，拒绝路径穿越、绝对路径、Windows 设备名/ADS/路径别名、大小写冲突、符号链接及 reparse point。生成清单时会拒绝常见密钥文件名，这是额外防误操作措施，并非通用秘密扫描器。可变日志、缓存和用户数据请存放在另一个目录。
-
-## 3. 签发和验证离线许可证
-
-```powershell
-releaseguard license-issue --private C:\ReleaseGuardKeys\issuer-private.pem --product MyApp --subject customer-001 --days 365 --feature export --out .\customer-001.license.json
-releaseguard license-verify .\customer-001.license.json --public .\issuer-public.pem --product MyApp --subject customer-001 --require-feature export
-```
-
-签名清单和许可证使用不同签名域，不能相互冒充。生产环境也可以为发行签名和授权签名分别生成独立密钥。许可证以 UTC 校验，结束时间为排他边界。许可证内容是可读的签名数据，**没有加密客户信息**；本版许可证可复制，没有设备绑定、在线撤销或可靠的离线防时间回拨功能。
-
-Python 接入示例见 [examples/verify_startup.py](examples/verify_startup.py)。原生 C++/C# 程序可以根据 [v1 格式](docs/format-v1.md) 使用经过维护的密码库做对应验证；本项目当前没有提供已经测试的原生 SDK。授权要求应在业务入口实际执行，并按功能检查权限。对于必须保密的算法或服务凭证，可考虑让服务端执行并保留秘密；离线客户端中的永久秘密难以保密。
-
-## 构建加固和验证
-
-参见 [v0.2 编译接入指南](docs/native-build.zh-CN.md)、[Windows/.NET 构建说明](docs/build-hardening.zh-CN.md) 与 [安全模型](SECURITY.md)。ASLR、DEP 和 CFG 是漏洞利用缓解措施，不能阻止反编译。PDB 请保留在私有符号存储中。Native AOT 需要逐项目评估兼容性，REA 仍可对其做原生分析。
-
-```powershell
-python -m unittest discover -s tests -v
-cmake -S examples -B build -A x64
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure
-```
-
-Linux 上可运行 `python benchmarks/native_compare.py --out comparison.json` 对比自有普通/保护构建。其他原生实验的复现步骤、退出码解释和适用范围见[验证记录](docs/validation.zh-CN.md)。
-
-## 项目与贡献
-
-本项目由 [Afloat16](https://github.com/Afloat16) 发起，采用 [MIT 许可](LICENSE)。欢迎 Fork 后提交 PR，也欢迎先通过 Issue 提供实验结果和设计建议。具体贡献方式、验证要求和适合首次参与的任务见 [CONTRIBUTING.md](CONTRIBUTING.md)，计划与验收条件见 [路线图](docs/ROADMAP.zh-CN.md)。
-
-开源的是工具、方法和合成测试样本；你的业务源码、生产密钥和服务端实现不需要随之公开。
-
-## 依据
-
-- [cryptography: Ed25519 signing](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/)
-- [Microsoft: PE Format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format)
-- [Microsoft: Control Flow Guard](https://learn.microsoft.com/en-us/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-170)
-- [Microsoft: Native AOT deployment](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/)
+如果这解决了你的发布问题，欢迎给项目一个 **Star**。如果你用的是另一款构建器，也欢迎[贡献一个可复现的小样本](CONTRIBUTING.md)，让下一种打包方式也得到验证。
