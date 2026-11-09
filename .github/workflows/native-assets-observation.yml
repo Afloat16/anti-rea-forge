@@ -1,15 +1,49 @@
-name: Native asset IDA loading diagnostic
+name: Native encrypted asset observation
 on:
   push:
     branches: [verify/native-asset-controls]
 permissions:
   contents: read
-  actions: read
 concurrency:
   group: ida-freeware-noncommercial-observation
   cancel-in-progress: false
 jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Install the native i386 crypto toolchain
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install -y g++-multilib libssl-dev:i386
+          python -m pip install .
+      - name: Build owned programs and analyze their loaded bytes
+        run: |
+          python benchmarks/native_asset_controls.py prepare "$RUNNER_TEMP/corpus"
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/ghidra.zip" https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.2_build/ghidra_12.2_PUBLIC_20261016.zip
+          python benchmarks/native_asset_controls.py ghidra "$RUNNER_TEMP/corpus" --archive "$RUNNER_TEMP/ghidra.zip" --out "$RUNNER_TEMP/ghidra-assets.json"
+          tar -C "$RUNNER_TEMP" -cf "$RUNNER_TEMP/corpus.tar" corpus
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: synthetic-sealed-corpus
+          path: |
+            ${{ runner.temp }}/corpus.tar
+            ${{ runner.temp }}/ghidra-assets.json
+          retention-days: 7
+          if-no-files-found: error
   ida:
+    needs: build
     runs-on: windows-2022
     timeout-minutes: 12
     steps:
@@ -19,8 +53,6 @@ jobs:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
           name: synthetic-sealed-corpus
-          github-token: ${{ github.token }}
-          run-id: 42623869128
           path: ${{ runner.temp }}/asset-data
       - name: Fetch the pinned freeware for project-owned research
         shell: pwsh
@@ -52,4 +84,44 @@ jobs:
           name: ida-asset-bytes
           path: ${{ runner.temp }}/ida-reports
           retention-days: 7
+          if-no-files-found: error
+  evaluate:
+    needs: ida
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: synthetic-sealed-corpus
+          path: ${{ runner.temp }}/asset-data
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: ida-asset-bytes
+          path: ${{ runner.temp }}/ida-reports
+      - name: Validate extracted bytes and replay native patches
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install -y libssl3t64:i386 libstdc++6:i386
+          python -m pip install .
+          tar -xf "$RUNNER_TEMP/asset-data/corpus.tar" -C "$RUNNER_TEMP/asset-data"
+          python benchmarks/native_asset_controls.py ida "$RUNNER_TEMP/asset-data/corpus" --observations "$RUNNER_TEMP/ida-reports" --out "$RUNNER_TEMP/ida-assets.json"
+          python benchmarks/native_asset_controls.py compare --ghidra "$RUNNER_TEMP/asset-data/ghidra-assets.json" --ida "$RUNNER_TEMP/ida-assets.json" --out "$RUNNER_TEMP/dual-assets.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["RUNNER_TEMP"]) / "dual-assets.json"
+          print("ASSET_OBSERVATION " + json.dumps(json.loads(p.read_bytes()), separators=(",", ":")))
+          PY
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: verified-dual-asset-observation
+          path: ${{ runner.temp }}/dual-assets.json
+          retention-days: 14
           if-no-files-found: error
