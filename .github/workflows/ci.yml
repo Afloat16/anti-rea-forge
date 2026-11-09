@@ -9,6 +9,52 @@ permissions:
   contents: read
 
 jobs:
+  ghidra-token:
+    name: Ghidra native-token controls / Linux
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Install project and check native compiler dependencies
+        run: |
+          python -m pip install .
+          g++ --version
+          pkg-config --modversion libcrypto
+          RELEASEGUARD_REQUIRE_OPENSSL_NATIVE=1 python -m unittest tests.test_native_token tests.test_native_token_scan tests.test_native_token_cli -v
+      - name: Run wrong-input comparison controls on project-owned programs
+        run: python benchmarks/native_token_compare.py --out "$RUNNER_TEMP/token-compare.json"
+      - name: Analyze three project-owned ELFs with the verified official Ghidra release
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/ghidra.zip" https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.2_build/ghidra_12.2_PUBLIC_20261016.zip
+          python benchmarks/ghidra_token/probe.py --archive "$RUNNER_TEMP/ghidra.zip" --python "$(command -v python)" --out "$RUNNER_TEMP/ghidra-token.json"
+      - name: Record verified observations (no bearer tokens or raw decompiler output)
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          for name in ("ghidra-token", "token-compare"):
+              data = json.loads((Path(os.environ["RUNNER_TEMP"]) / (name + ".json")).read_bytes())
+              print("TOKEN_OBSERVATION " + name + " " + json.dumps(data, separators=(",", ":")))
+          PY
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: native-token-observations
+          path: |
+            ${{ runner.temp }}/ghidra-token.json
+            ${{ runner.temp }}/token-compare.json
+          if-no-files-found: error
+          retention-days: 14
+
   source-map-recovery:
     name: Real source-map recovery controls / Linux
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 — 2026-11-09
+
+- Add `native-token-issue`: issue an external 256-bit random bearer and generate public C++17/OpenSSL verifier headers without putting its usable value in build inputs.
+- Check portable release contents and supported ZIP members for the native token format, across chunks and five encodings. Ordinary reports identify the location without echoing matched contents.
+- Add a native example, independent wrong-input comparison controls and a pinned official Ghidra decompilation/extraction/replay benchmark on project-owned Linux ELFs. See [integration and reproduction](docs/native-tokens.md).
+
 ## 0.7.0 — 2026-11-09
 
 - Add the build-only `split-source-maps` command. Create an unchanged public JavaScript release and a separate private external-map directory, failing on recognized residual disclosure or unsupported inputs. The local JavaScript SDK API remains unchanged.

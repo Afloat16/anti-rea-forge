@@ -78,6 +78,10 @@ def parser() -> argparse.ArgumentParser:
     native.add_argument("--out", type=Path, required=True, help="Fresh generated directory, or unchanged output to reuse")
     native.add_argument("--seed", help="Optional 16 hexadecimal digits for reproducible builds; not a secret key")
 
+    token = commands.add_parser("native-token-issue", help="Generate an external random unlock token and C++ verification headers")
+    token.add_argument("--public-dir", type=Path, required=True, help="New build include directory; contains no usable token")
+    token.add_argument("--secret-out", type=Path, required=True, help="New private token file outside the release; never ship with your application")
+
     release_gate = commands.add_parser("gate", help="Fail a build if a PE/ELF artifact violates an explicit static policy")
     release_gate.add_argument("artifact", type=Path)
     release_gate.add_argument("--policy", type=Path, required=True)
@@ -221,6 +225,9 @@ def _crypto_input(path: Path, limit: int) -> bytes:
 
 
 def _run(args: argparse.Namespace) -> tuple[dict, int]:
+    if args.command == "native-token-issue":
+        from .native_token import issue_native_token
+        return issue_native_token(args.public_dir, args.secret_out), 0
     if args.command == "split-source-maps":
         from .split_maps import split_source_maps
         result = split_source_maps(args.root, args.public, args.private)

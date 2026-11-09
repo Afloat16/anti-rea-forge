@@ -33,6 +33,12 @@ and rerun the check before signing or distributing the result.
 
 ### Python API
 
+Native-token exposure checks are on by default (`check_native_tokens: true`).
+They detect complete token-shaped content in inspected files and supported ZIP
+members. The matched payload is not echoed; reports still include names, paths
+and hashes. See [native token integration](native-tokens.md) for the exact
+format and its limits.
+
 ```python
 from releaseguard.core import GuardError
 from releaseguard.distribution import scan_release
