@@ -1,0 +1,34 @@
+{
+  "schema": "releaseguard-elf-symbol-fixture/v1",
+  "inputs": {
+    "baseline": "b934accade720010d9f7a20fa7cdfe0bcf0812c0ac050c24684dcb2d5222fccd",
+    "public": "50af96dbe866312706ce108bbbea1433d58e9cd488ddb55ceeea9b52b41b7fbf",
+    "restored": "dc32c864857f3d27080016f8d199d55cf9d7da9a5750afe4eac9f9e80c403eb7"
+  },
+  "private_name": "rg_private_45da593e80a255be",
+  "private_entry": "0x8049000",
+  "public_name": "rg_public_entry",
+  "public_entry": "0x8049016",
+  "text_sha256": "b490df62d65f5d06bbae0565cff1a29326698e8dd074a26d91d3c6462d298d36",
+  "sidecar_sha256": "5264856b219d49c2b71f4bb0dc7547ce9e3f10355494d01361c684efd02efcd0",
+  "fixture_source_sha256": "4b6a166f01869dce260564348518952c14571805bb1dc06bdc6a6a70c8f47ee7",
+  "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "objcopy": "GNU objcopy (GNU Binutils for Ubuntu) 2.42",
+  "compiler_flags": [
+    "-m32",
+    "-O0",
+    "-g",
+    "-fno-pic",
+    "-fno-pie",
+    "-fno-omit-frame-pointer",
+    "-fno-stack-protector",
+    "-nostdlib",
+    "-no-pie",
+    "-Wl,--no-dynamic-linker,-e,_start,--export-dynamic-symbol=rg_public_entry,-Ttext-segment=0x08048000"
+  ],
+  "observed_exit_codes": [
+    39,
+    52,
+    65
+  ]
+}

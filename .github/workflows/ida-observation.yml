@@ -1,0 +1,35 @@
+name: One-time ELF32 observation
+on:
+  push:
+    branches: [verify/ida-elf32-controls]
+permissions:
+  contents: read
+jobs:
+  observe:
+    runs-on: windows-2022
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Fetch pinned freeware for this project-owned research fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Join-Path $env:RUNNER_TEMP 'idafree50.exe'
+          Invoke-WebRequest 'https://downloads.scummvm.org/frs/extras/IDA/idafree50.exe' -OutFile $installer
+          if ((Get-FileHash $installer).Hash -ne 'e3a5e1f2334f68f14f5ee81c3fcc44121cb24f514be78dfc30805ceee0de6029') { throw 'unexpected distribution' }
+          $dest = Join-Path $env:RUNNER_TEMP 'ida50'
+          $p = Start-Process $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',("/DIR=" + $dest)) -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "installer failed $($p.ExitCode)" }
+      - name: Analyze three samples separately
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:RG_IDA_BIN = Join-Path $env:RUNNER_TEMP 'ida50/idag.exe'
+          foreach ($case in @('baseline','public','restored')) {
+            python cases/ida_symbol_probe.py "cases/$case.elf" "cases/$case.json" 0x8049000 0x8049016
+            if ($LASTEXITCODE -ne 0) { throw "IDA did not complete $case" }
+            $record = Get-Content -Raw "cases/$case.json" | ConvertFrom-Json | ConvertTo-Json -Compress
+            Write-Output "IDA_OBSERVATION $case $record"
+          }
