@@ -13,6 +13,7 @@ import time
 from ghidra_token.probe import ARCHIVE_SHA, VERSION, get_ghidra, launch_command
 from sealed_native.elf_bytes import verify_loaded_bytes
 from releaseguard.core import GuardError
+from releaseguard.distribution import scan_release
 from releaseguard.native_asset import export_native_asset
 from releaseguard.sealed import open_asset, seal_asset
 
@@ -73,6 +74,8 @@ def prepare(args):
     flags = [f"-m{args.bits}", "-std=c++17", "-O0", "-g0", "-fno-inline", "-fno-pie",
              "-fno-builtin-memcmp", "-no-pie", "-Wl,--hash-style=both,--export-dynamic-symbol=rg_asset_gate"]
     inputs = {}
+    scan_results = {}
+    save(root / "scan-policy.json", {"version": 1})
     for index, case in enumerate(CASES):
         folder = root / case
         folder.mkdir()
@@ -92,12 +95,19 @@ def prepare(args):
         require((good.returncode, good.stdout, good.stderr) == (0, payload, b"") and
                 (wrong.returncode, wrong.stdout, wrong.stderr) == (1, b"", b""), "Native functional control failed")
         inputs[case] = digest(raw)
+        scanned = scan_release(folder, root / "scan-policy.json", asset_key_files=[root / "private/key.bin"])
+        require(scanned["ok"] is (case != "key_leak"), "Key-exposure release scan control failed")
+        exposed = [item for item in scanned["findings"] if item["code"] == "asset_key_exposure"]
+        require(bool(exposed) is (case == "key_leak") and
+                (case != "key_leak" or any(item["path"] == "app" for item in exposed)),
+                "Release scan did not identify the actual leaked-key binary")
+        scan_results[case] = {"ok": scanned["ok"], "asset_key_findings": len(exposed)}
     command(["gcc", f"-m{args.bits}", "-shared", "-fPIC", HERE / "forced_final.c", "-o", root / "forced_final.so"])
     save(root / "fixture.json", {
         "schema": "releaseguard-native-asset-fixture/v1", "bits": args.bits, "inputs": inputs,
         "payload_sha256": digest(payload), "payload_bytes": len(payload), "decoy_hex": decoy.hex(),
         "key_sha256": digest(key), "envelope_sha256": digest((root / "asset.json").read_bytes()),
-        "context": CONTEXT, "compiler_flags": flags,
+        "context": CONTEXT, "compiler_flags": flags, "key_release_scans": scan_results,
         "compiler": command(["g++", "--version"]).decode().splitlines()[0],
         "openssl": command(["openssl", "version"]).decode().strip(),
         "native_header_sha256": digest((root / "include/releaseguard/sealed_asset.hpp").read_bytes()),
@@ -202,7 +212,7 @@ def analyze(args):
                 isolated.mkdir()
                 target, raw_report = isolated / "app", isolated / "observed.json"
                 target.write_bytes(image)
-                cmd = [*launcher, work / "projects", case, "-import", target, "-readOnly", "-deleteProject",
+                cmd = [*launcher, work / "projects", case, "-import", target, "-loader-applyRelocations", "false", "-readOnly", "-deleteProject",
                        "-analysisTimeoutPerFile", "180", "-max-cpu", "2", "-scriptPath", HERE,
                        "-postScript", "ExtractAssetBytes.java", raw_report]
                 proc = subprocess.run(list(map(str, cmd)), env=env, timeout=300, capture_output=True, check=False)
@@ -238,7 +248,7 @@ def analyze(args):
                         and replay.returncode == 0 and replay.stdout == plaintext and not replay.stderr,
                         "Recovered candidate did not unlock the actual native asset")
             row = {key: value for key, value in record.items() if key != "blocks"}
-            row.update(distinct_32byte_candidates=len(candidates), public_decoy_found=True,
+            row.update(input_file_bytes=len(image), distinct_32byte_candidates=len(candidates), public_decoy_found=True,
                        direct_payload_recoveries=len(raw_payloads), successful_key_decryptions=len(recovered),
                        exact_payload_recoveries=len(raw_payloads) + len(recovered),
                        all_candidates_tested_with_public_envelope=True, candidate_test_seconds=elapsed,
@@ -248,7 +258,7 @@ def analyze(args):
             rows[case] = row
     result = {"schema": "releaseguard-native-asset-observation/v1", "tool": tool, "fixture": fixture, "cases": rows}
     if tool == "Ghidra":
-        result.update(archive_sha256_verified=ARCHIVE_SHA if args.archive else None,
+        result.update(loader_apply_relocations=False, archive_sha256_verified=ARCHIVE_SHA if args.archive else None,
                       script_sha256=digest((HERE / "ExtractAssetBytes.java").read_bytes()))
     save(args.out, result)
 

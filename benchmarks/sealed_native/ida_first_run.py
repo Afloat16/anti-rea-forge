@@ -72,8 +72,8 @@ def windows_for_pid(pid):
     return forms
 
 
-def run_ida(cmd, work):
-    with subprocess.Popen(cmd, cwd=work) as proc:
+def run_ida(cmd, work, env=None):
+    with subprocess.Popen(cmd, cwd=work, env=env) as proc:
         last_forms = None
         for _ in range(25):
             try:

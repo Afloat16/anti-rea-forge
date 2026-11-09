@@ -89,11 +89,12 @@ def main():
         script = work / "probe.idc"
         script.write_text(IDC, encoding="ascii")
         cmd = [str(ida), "-A", "-c", f"-L{work / 'ida.log'}", f"-S{script}", "sample.elf"]
+        env = {**os.environ, "IDA_NORELOC": "1", "IDA_ELF_PATCH_MODE": "0"}
         if os.environ.get("RG_IDA_CONFIRM_FREEWARE") == "1":
             from ida_first_run import run_ida
-            status = run_ida(cmd, work)
+            status = run_ida(cmd, work, env=env)
         else:
-            status = subprocess.run(cmd, cwd=work, timeout=180, check=False).returncode
+            status = subprocess.run(cmd, cwd=work, env=env, timeout=180, check=False).returncode
         output = work / "sample.elf.probe"
         if status or not output.is_file():
             log = work / "ida.log"
@@ -102,7 +103,8 @@ def main():
         record = json.loads(output.read_text(encoding="ascii"))
         require(sample.read_bytes() == image, "IDA input changed during analysis")
         verify_loaded_bytes(image, record)
-    record.update(tool="IDA", version="5.0.0.879 Freeware", input_sha256=sha256(image))
+    record.update(tool="IDA", version="5.0.0.879 Freeware", input_sha256=sha256(image),
+                  loader_options={"IDA_NORELOC": "1", "IDA_ELF_PATCH_MODE": "0"})
     with report.open("x", encoding="utf-8") as stream:
         json.dump(record, stream, separators=(",", ":"))
         stream.write("\n")
