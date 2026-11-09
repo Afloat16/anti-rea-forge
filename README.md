@@ -1,61 +1,55 @@
-# Anti-REA Forge v0.9.0
+# Anti-REA Forge v0.10.0
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [MIT license](LICENSE)
 
-**Ship native code with private debug symbols kept in-house. Keep restricted operations behind a service you control.**
+**Ship encrypted native data and supply its key independently to authorized users.**
 
-A user can patch a local client to report success. Anti-REA Forge separates private symbol metadata at build time and lets a Python service require a one-use signed capability before calling a sensitive handler. The programs, credentials and services below are project-owned simulations. Both analysis tools ran on the same three ELF files.
+Anti-REA Forge now opens authenticated data in C++17 with OpenSSL. The build receives a sealed envelope and the application's expected context. A separately supplied random 256-bit key is required to recover the data. Release checks catch accidental inclusion of that key in common representations.
 
-## Can the analyzers recover the developer's function name?
+## Can Ghidra and IDA recover the embedded data?
 
-We gave each analyzer the private function address so it could inspect the same instructions in every case. The source identifier contained a fresh random value. A separate public entry remained exported for both tools to locate independently.
+Both tools analyzed the same three complete Linux i386 executables generated for this project. Each executable can return the same fresh 32-byte resource when given the correct key. The observer checks exact output bytes and verifies every allocated, file-backed ELF section exported through the analyzer database.
 
-| Linux i386 ELF supplied | Ghidra 12.2 | IDA Freeware 5.0 |
+| Program supplied | Ghidra 12.2 | IDA Freeware 5.0 |
 | --- | --- | --- |
-| Original symbols and debugging information | Exact source name | Exact source name |
-| Public ELF alone | `FUN_08049000` | `sub_8049000` |
-| Public ELF with just the name restored from the private debug file | Exact source name again | Exact source name again |
+| Original resource embedded as plaintext | Recovered original data | Recovered original data |
+| Encrypted resource, key kept outside the release | Zero successful data or key recoveries | Zero successful data or key recoveries |
+| Encrypted resource with the actual key deliberately embedded | Recovered key, replayed it against the program and read original data | Recovered key, replayed it against the program and read original data |
 
-The three programs had identical `.text` hashes and gave identical results for three inputs. Ghidra decompiled the function and IDA disassembled it. An analyst can still infer behavior from the instructions. This control measures recovery of the developer's exact name from the distributed metadata. [Paired tool observations](docs/results/native-elf-controls.json)
+The extraction procedure tries every distinct contiguous 32-byte candidate in the exported initialized bytes against the public envelope. Ghidra decompiles the gate and IDA disassembles it. IDA's documented additional-file loading API supplements metadata ranges omitted by its default ELF loader. Each added range is recorded, and every resulting byte is checked against the input. [Paired observations](docs/results/native-asset-controls.json) · [Reproduction and loader settings](docs/native-assets.md#reproduce-the-native-controls)
 
-## Can a patched client perform a restricted operation?
+## Does patching the program recover the data?
 
-Both tools located the same exported entry by name. At each tool's reported address, the harness patched six bytes in a disposable copy. Its return code changed from `39` to the fixture's approval value, `42`. Two separate service processes then exercised different trust policies. The harness verified the signature on every receipt.
+The harness patches the gate address discovered independently by each tool. With the wrong key, the plaintext control returns the original data after patching. The encrypted program returns no data.
 
-| Service decision | Observed outcome |
-| --- | --- |
-| Trust the client status | The original client was denied. The patched client obtained a signed receipt. |
-| Verify on the service, with a missing grant, an attacker-signed grant or a changed request | All three attempts produced zero handler calls. |
-| Verify a genuine capability for the exact request from the same patched client | One signed receipt. Reusing that capability was denied. |
+A second fixture-only override forces OpenSSL's final authentication check to report success. The encrypted program then exits successfully and emits 32 bytes, but their SHA-256 differs from the original resource. Supplying the actual key to that same modified program still returns the exact original. The intentionally embedded-key release also triggers the production `asset_key_exposure` check. [Native experiment](benchmarks/native_asset_controls.py)
 
-Run the restricted operation on an independently controlled service. An offline client can still be patched. The joint observation covers these tool versions and project-owned 32-bit x86 fixtures. [Design and reproduction](docs/private-elf-debug.md#reproduce-the-two-engine-observation)
+The protection target is selected data with an independently held key. The executable's instructions remain available for analysis. During legitimate use, the process possesses both the key and plaintext. The recorded results cover the stated tools, Linux i386 fixtures and extraction/patch procedures. [Design references and scope](docs/research-native-data-2026-11-09.md)
 
-## Use it in a build
+## Use it in a native build
 
-Install on a Linux build machine with GNU binutils and Python 3.10+. This example assumes you have a linked, symbol-bearing `build/myapp` and want to check the internal name `calculate_internal_quote`.
+Run from this repository on a Linux build machine with Python 3.10+, a C++17 compiler and OpenSSL development files. This example assumes your private `../asset-issuer` directory already contains `data.bin`, with a maximum size of 1 MiB. Use fresh output paths.
 
 ```sh
-git clone https://github.com/Afloat16/anti-rea-forge.git
-python -m pip install ./anti-rea-forge
-python -m releaseguard split-elf-debug build/myapp \
-  --public release-linux --private private-symbols \
-  --private-name calculate_internal_quote
+python -m pip install .
+python -m releaseguard asset-keygen --out ../asset-issuer/key.bin
+python -m releaseguard asset-seal ../asset-issuer/data.bin \
+  --key-file ../asset-issuer/key.bin \
+  --product myapp --release v1 --purpose reference-data --asset-id table \
+  --out asset.json
+python -m releaseguard native-asset-export asset.json \
+  --product myapp --release v1 --purpose reference-data --asset-id table \
+  --out generated-asset
+mkdir release-asset
+c++ -std=c++17 -O2 -Igenerated-asset examples/native-asset/read.cpp \
+  -lcrypto -o release-asset/read-asset
+./release-asset/read-asset < ../asset-issuer/key.bin
 ```
 
-**Deploy only `release-linux/myapp`.** Keep `private-symbols/myapp.debug` for internal crash diagnosis. If the selected name survives in an export, diagnostic string or wide string, the command reports the name and refuses publication. Splitting happens at build time and adds no application runtime component. [Supported inputs and private debugging](docs/private-elf-debug.md)
+The last command outputs the original resource. In your application, include the generated header and call `releaseguard::open_embedded_asset(external_key, output)`. Deliver the key through your authorization flow and keep the issuer directory private. Run `scan-release --asset-key-file` on the final staging directory before publication. [Complete integration and release-check commands](docs/native-assets.md)
 
-On the service, supply the trusted issuer key, authenticated user and route. The handler receives the exact request bytes after the capability has been verified and consumed.
+The recorded 1 MiB opening-cost test measured a median of **189.860 microseconds** across 25 calls after five warmups on one Linux x86-64 host. It includes HKDF, AES-GCM, allocations and cleansing the previous output. External-key retrieval and process startup are outside the measurement. The full report retains all samples, including the 1,456.005-microsecond maximum. [Timing record](docs/results/native-asset-cost.json)
 
-```python
-from releaseguard.capabilities import run_authorized_operation
+Existing integrations cover private ELF debugging information, service-side authorization, external C++ unlock tokens and JavaScript source maps. [Private ELF symbols and service operations](docs/private-elf-debug.md) · [Native tokens](docs/native-tokens.md) · [Private source maps](docs/private-source-maps.md)
 
-receipt = run_authorized_operation(
-    grant, trusted_issuer_public_key, replay_store,
-    subject=authenticated_user, audience="exports", product="myapp",
-    operation="create-export", request=request_bytes, handler=create_export,
-)
-```
-
-[Service integration example](docs/private-elf-debug.md#put-the-restricted-operation-behind-a-service-side-check)
-
-Other release tools cover [external C++ unlock tokens](docs/native-tokens.md) and [private JavaScript source maps](docs/private-source-maps.md). If this solves a release problem for your team, **star the project** or [contribute a reproducible fixture of your own](CONTRIBUTING.en.md).
+If this solves a release problem for your team, **star the project** or contribute a reproducible fixture of your own. [Contributing](CONTRIBUTING.en.md)

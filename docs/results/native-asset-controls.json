@@ -1,0 +1,490 @@
+{
+  "schema": "releaseguard-dual-native-assets/v1",
+  "ghidra": {
+    "schema": "releaseguard-native-asset-observation/v1",
+    "tool": "Ghidra",
+    "fixture": {
+      "schema": "releaseguard-native-asset-fixture/v1",
+      "bits": 32,
+      "inputs": {
+        "plaintext": "f72ab5922d43ca5e648b3b984196a6487443cb4cba8de201fb81386753d96332",
+        "encrypted": "55ce758d76d68227190a5ee9a0b183b6269a4f63acc338f73b2195c57246c7ee",
+        "key_leak": "c7f08bf20df8083dce778ed207bb458aa9cce63864674d23c61a2b6e79cdf36e"
+      },
+      "payload_sha256": "bbb8597925fa6516ca6eaf813ecf7bbef0fed72962acddd4c2e859c630d54d39",
+      "payload_bytes": 32,
+      "decoy_hex": "38459d6496ba931d194aae1c5c43671c3df46e7f716a8c1975b141674a2eb1d3",
+      "key_sha256": "a89d508067be70153e7a4e8aca388d8de1642633c095cd2f67fb78ddb1d63b07",
+      "envelope_sha256": "527a8044336ef0f6e6138af9781f86d7d4b41de27e6f630f6e8a59ffb3771ca6",
+      "context": {
+        "product": "NativeAssetFixture",
+        "release": "v1",
+        "purpose": "reference-data",
+        "asset_id": "random32"
+      },
+      "compiler_flags": [
+        "-m32",
+        "-std=c++17",
+        "-O0",
+        "-g0",
+        "-fno-inline",
+        "-fno-pie",
+        "-fno-builtin-memcmp",
+        "-no-pie",
+        "-Wl,--hash-style=both,--export-dynamic-symbol=rg_asset_gate"
+      ],
+      "key_release_scans": {
+        "plaintext": {
+          "ok": true,
+          "asset_key_findings": 0
+        },
+        "encrypted": {
+          "ok": true,
+          "asset_key_findings": 0
+        },
+        "key_leak": {
+          "ok": false,
+          "asset_key_findings": 1
+        }
+      },
+      "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)",
+      "native_header_sha256": "8a597a6cc6b155ccd046792ec1661e967fdd782e8f29d911eaa0e5a0d858abaa",
+      "fixture_cpp_sha256": "9e0060999fc98bbc7aebe42b3379262b65ebeeefbb81bb351b50abfa62a75f90",
+      "forced_final_source_sha256": "3ef5914d4db1ecdf9a5eaf502f1e5bb64a77ed03067f400d1dd52bd1a7e420ae",
+      "forced_final_sha256": "f64f953fc41b3b725d5b1685c6def32fa94ed493348d8c17027307caad92f095"
+    },
+    "cases": {
+      "plaintext": {
+        "tool": "Ghidra",
+        "version": "12.2",
+        "input_sha256": "f72ab5922d43ca5e648b3b984196a6487443cb4cba8de201fb81386753d96332",
+        "language": "x86:LE:32:default",
+        "format": "Executable and Linking Format (ELF)",
+        "loaded_bytes": 8364,
+        "loaded_range_count": 26,
+        "gate_name": "rg_asset_gate",
+        "gate_entry": "0x8049266",
+        "gate_size": 172,
+        "gate_instructions": 59,
+        "gate_prefix_hex": "5589e5565383ec408b45088945c465a1",
+        "gate_decompiled_bytes": 698,
+        "allocated_section_bytes_verified": 7960,
+        "input_file_bytes": 18992,
+        "distinct_32byte_candidates": 8050,
+        "public_decoy_found": true,
+        "direct_payload_recoveries": 1,
+        "successful_key_decryptions": 0,
+        "exact_payload_recoveries": 1,
+        "all_candidates_tested_with_public_envelope": true,
+        "candidate_test_seconds": 0.17429001799999355,
+        "candidate_set_sha256": "b5baf6e214ea95993b99e897fc313d54458a0e5f56f9fc384654adb8bc1f74a8",
+        "native_recovered_key_replays": 0,
+        "patched": {
+          "gate_file_offset": 4710,
+          "gate_entry": "0x8049266",
+          "patch_hex": "b801000000c3",
+          "patched_sha256": "d97c34e19acf2de92e34200b84e96bb757620cdb7c825b18e8828ee550c0ea46",
+          "legitimate_payload": true,
+          "wrong_key_original_exit": 1,
+          "wrong_key_patched_exit": 0,
+          "wrong_key_patched_bytes": 32,
+          "wrong_key_patched_exact_payload": true,
+          "forced_final": null
+        }
+      },
+      "encrypted": {
+        "tool": "Ghidra",
+        "version": "12.2",
+        "input_sha256": "55ce758d76d68227190a5ee9a0b183b6269a4f63acc338f73b2195c57246c7ee",
+        "language": "x86:LE:32:default",
+        "format": "Executable and Linking Format (ELF)",
+        "loaded_bytes": 18356,
+        "loaded_range_count": 26,
+        "gate_name": "rg_asset_gate",
+        "gate_entry": "0x8049409",
+        "gate_size": 172,
+        "gate_instructions": 59,
+        "gate_prefix_hex": "5589e5565383ec408b45088945c465a1",
+        "gate_decompiled_bytes": 698,
+        "allocated_section_bytes_verified": 17952,
+        "input_file_bytes": 40980,
+        "distinct_32byte_candidates": 18024,
+        "public_decoy_found": true,
+        "direct_payload_recoveries": 0,
+        "successful_key_decryptions": 0,
+        "exact_payload_recoveries": 0,
+        "all_candidates_tested_with_public_envelope": true,
+        "candidate_test_seconds": 0.39721893799999464,
+        "candidate_set_sha256": "d475915a2dd78cd368e343a8fce22ac0633aa07ade7016c705bbbad09eb55f57",
+        "native_recovered_key_replays": 0,
+        "patched": {
+          "gate_file_offset": 5129,
+          "gate_entry": "0x8049409",
+          "patch_hex": "b801000000c3",
+          "patched_sha256": "4b2ce5e39b367c29470ed7b9b61731b8b7a454c103927de9ced2946f60a09822",
+          "legitimate_payload": true,
+          "wrong_key_original_exit": 1,
+          "wrong_key_patched_exit": 1,
+          "wrong_key_patched_bytes": 0,
+          "wrong_key_patched_exact_payload": false,
+          "forced_final": {
+            "returncode": 0,
+            "output_bytes": 32,
+            "output_sha256": "b6bc279910e5255072656b4340fd19c4c4420ae68e4c2602b39ed1b5c6c16ab6",
+            "exact_payload": false,
+            "hook_calls": 1,
+            "actual_key_exact_payload": true
+          }
+        }
+      },
+      "key_leak": {
+        "tool": "Ghidra",
+        "version": "12.2",
+        "input_sha256": "c7f08bf20df8083dce778ed207bb458aa9cce63864674d23c61a2b6e79cdf36e",
+        "language": "x86:LE:32:default",
+        "format": "Executable and Linking Format (ELF)",
+        "loaded_bytes": 18442,
+        "loaded_range_count": 26,
+        "gate_name": "rg_asset_gate",
+        "gate_entry": "0x8049409",
+        "gate_size": 172,
+        "gate_instructions": 59,
+        "gate_prefix_hex": "5589e5565383ec408b45088945c465a1",
+        "gate_decompiled_bytes": 698,
+        "allocated_section_bytes_verified": 18038,
+        "input_file_bytes": 41028,
+        "distinct_32byte_candidates": 18090,
+        "public_decoy_found": true,
+        "direct_payload_recoveries": 0,
+        "successful_key_decryptions": 1,
+        "exact_payload_recoveries": 1,
+        "all_candidates_tested_with_public_envelope": true,
+        "candidate_test_seconds": 0.3868529570000021,
+        "candidate_set_sha256": "6de8c42b10f0eca3a60a64a0d963d6effcc352fbdfa99a94b6cebc5984a13ccf",
+        "native_recovered_key_replays": 1,
+        "patched": {
+          "gate_file_offset": 5129,
+          "gate_entry": "0x8049409",
+          "patch_hex": "b801000000c3",
+          "patched_sha256": "60bc8bed0ed7a3ba381c60aced9f5caa7764d8844863a89789744971b946ae7d",
+          "legitimate_payload": true,
+          "wrong_key_original_exit": 1,
+          "wrong_key_patched_exit": 1,
+          "wrong_key_patched_bytes": 0,
+          "wrong_key_patched_exact_payload": false,
+          "forced_final": {
+            "returncode": 0,
+            "output_bytes": 32,
+            "output_sha256": "b6bc279910e5255072656b4340fd19c4c4420ae68e4c2602b39ed1b5c6c16ab6",
+            "exact_payload": false,
+            "hook_calls": 1,
+            "actual_key_exact_payload": true
+          }
+        }
+      }
+    },
+    "loader_apply_relocations": false,
+    "archive_sha256_verified": "2c2cd776db3c1f6a097ba418922378ac3649cadd5e844a6f5f088ae628a7be67",
+    "script_sha256": "0cb0fc13152b66ba129f487d41818c253801f1e7dc0085d512cd485b3445acaa"
+  },
+  "ida": {
+    "schema": "releaseguard-native-asset-observation/v1",
+    "tool": "IDA",
+    "fixture": {
+      "schema": "releaseguard-native-asset-fixture/v1",
+      "bits": 32,
+      "inputs": {
+        "plaintext": "f72ab5922d43ca5e648b3b984196a6487443cb4cba8de201fb81386753d96332",
+        "encrypted": "55ce758d76d68227190a5ee9a0b183b6269a4f63acc338f73b2195c57246c7ee",
+        "key_leak": "c7f08bf20df8083dce778ed207bb458aa9cce63864674d23c61a2b6e79cdf36e"
+      },
+      "payload_sha256": "bbb8597925fa6516ca6eaf813ecf7bbef0fed72962acddd4c2e859c630d54d39",
+      "payload_bytes": 32,
+      "decoy_hex": "38459d6496ba931d194aae1c5c43671c3df46e7f716a8c1975b141674a2eb1d3",
+      "key_sha256": "a89d508067be70153e7a4e8aca388d8de1642633c095cd2f67fb78ddb1d63b07",
+      "envelope_sha256": "527a8044336ef0f6e6138af9781f86d7d4b41de27e6f630f6e8a59ffb3771ca6",
+      "context": {
+        "product": "NativeAssetFixture",
+        "release": "v1",
+        "purpose": "reference-data",
+        "asset_id": "random32"
+      },
+      "compiler_flags": [
+        "-m32",
+        "-std=c++17",
+        "-O0",
+        "-g0",
+        "-fno-inline",
+        "-fno-pie",
+        "-fno-builtin-memcmp",
+        "-no-pie",
+        "-Wl,--hash-style=both,--export-dynamic-symbol=rg_asset_gate"
+      ],
+      "key_release_scans": {
+        "plaintext": {
+          "ok": true,
+          "asset_key_findings": 0
+        },
+        "encrypted": {
+          "ok": true,
+          "asset_key_findings": 0
+        },
+        "key_leak": {
+          "ok": false,
+          "asset_key_findings": 1
+        }
+      },
+      "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)",
+      "native_header_sha256": "8a597a6cc6b155ccd046792ec1661e967fdd782e8f29d911eaa0e5a0d858abaa",
+      "fixture_cpp_sha256": "9e0060999fc98bbc7aebe42b3379262b65ebeeefbb81bb351b50abfa62a75f90",
+      "forced_final_source_sha256": "3ef5914d4db1ecdf9a5eaf502f1e5bb64a77ed03067f400d1dd52bd1a7e420ae",
+      "forced_final_sha256": "f64f953fc41b3b725d5b1685c6def32fa94ed493348d8c17027307caad92f095"
+    },
+    "cases": {
+      "plaintext": {
+        "supplemental_file_ranges": [
+          {
+            "start": "0x08048000",
+            "size": 1964,
+            "file_offset": 0,
+            "created_segment": 1
+          },
+          {
+            "start": "0x08049D3F",
+            "size": 1,
+            "file_offset": 7487,
+            "created_segment": 1
+          },
+          {
+            "start": "0x0804A231",
+            "size": 3,
+            "file_offset": 8753,
+            "created_segment": 1
+          },
+          {
+            "start": "0x0804BEE0",
+            "size": 272,
+            "file_offset": 12000,
+            "created_segment": 1
+          }
+        ],
+        "supplemental_loaded_bytes": 2240,
+        "gate_name": "rg_asset_gate",
+        "gate_entry": "0x08049266",
+        "gate_size": 172,
+        "gate_instructions": 59,
+        "gate_prefix_hex": "5589E5565383EC408B45088945C465A1",
+        "loaded_bytes": 8372,
+        "synthetic_extern_segments": [
+          {
+            "type": "SEG_XTRN",
+            "start": "0x0804C088",
+            "end": "0x0804C11C"
+          }
+        ],
+        "allocated_section_bytes_verified": 7960,
+        "loaded_range_count": 15,
+        "tool": "IDA",
+        "version": "5.0.0.879 Freeware",
+        "input_sha256": "f72ab5922d43ca5e648b3b984196a6487443cb4cba8de201fb81386753d96332",
+        "loader_mode": "ELF loader with IDC loadfile for missing PT_LOAD bytes",
+        "loader_options": {
+          "IDA_NORELOC": "1",
+          "IDA_ELF_PATCH_MODE": "0"
+        },
+        "input_file_bytes": 18992,
+        "distinct_32byte_candidates": 8202,
+        "public_decoy_found": true,
+        "direct_payload_recoveries": 1,
+        "successful_key_decryptions": 0,
+        "exact_payload_recoveries": 1,
+        "all_candidates_tested_with_public_envelope": true,
+        "candidate_test_seconds": 0.2588685179999999,
+        "candidate_set_sha256": "f8561be3b5d4848a4c11799b3018db9b1f735a8660ced2f0fbbc263e38336ed7",
+        "native_recovered_key_replays": 0,
+        "patched": {
+          "gate_file_offset": 4710,
+          "gate_entry": "0x8049266",
+          "patch_hex": "b801000000c3",
+          "patched_sha256": "d97c34e19acf2de92e34200b84e96bb757620cdb7c825b18e8828ee550c0ea46",
+          "legitimate_payload": true,
+          "wrong_key_original_exit": 1,
+          "wrong_key_patched_exit": 0,
+          "wrong_key_patched_bytes": 32,
+          "wrong_key_patched_exact_payload": true,
+          "forced_final": null
+        }
+      },
+      "encrypted": {
+        "supplemental_file_ranges": [
+          {
+            "start": "0x08048000",
+            "size": 2992,
+            "file_offset": 0,
+            "created_segment": 1
+          },
+          {
+            "start": "0x0804C26B",
+            "size": 1,
+            "file_offset": 17003,
+            "created_segment": 1
+          },
+          {
+            "start": "0x0804EEE0",
+            "size": 272,
+            "file_offset": 24288,
+            "created_segment": 1
+          }
+        ],
+        "supplemental_loaded_bytes": 3265,
+        "gate_name": "rg_asset_gate",
+        "gate_entry": "0x08049409",
+        "gate_size": 172,
+        "gate_instructions": 59,
+        "gate_prefix_hex": "5589E5565383EC408B45088945C465A1",
+        "loaded_bytes": 18360,
+        "synthetic_extern_segments": [
+          {
+            "type": "SEG_XTRN",
+            "start": "0x0804F0C8",
+            "end": "0x0804F1F4"
+          }
+        ],
+        "allocated_section_bytes_verified": 17952,
+        "loaded_range_count": 14,
+        "tool": "IDA",
+        "version": "5.0.0.879 Freeware",
+        "input_sha256": "55ce758d76d68227190a5ee9a0b183b6269a4f63acc338f73b2195c57246c7ee",
+        "loader_mode": "ELF loader with IDC loadfile for missing PT_LOAD bytes",
+        "loader_options": {
+          "IDA_NORELOC": "1",
+          "IDA_ELF_PATCH_MODE": "0"
+        },
+        "input_file_bytes": 40980,
+        "distinct_32byte_candidates": 18121,
+        "public_decoy_found": true,
+        "direct_payload_recoveries": 0,
+        "successful_key_decryptions": 0,
+        "exact_payload_recoveries": 0,
+        "all_candidates_tested_with_public_envelope": true,
+        "candidate_test_seconds": 0.5563288100000037,
+        "candidate_set_sha256": "673e84482232633c698f01b8dd780ce387e8a95f86460ff92c95bfc90abded32",
+        "native_recovered_key_replays": 0,
+        "patched": {
+          "gate_file_offset": 5129,
+          "gate_entry": "0x8049409",
+          "patch_hex": "b801000000c3",
+          "patched_sha256": "4b2ce5e39b367c29470ed7b9b61731b8b7a454c103927de9ced2946f60a09822",
+          "legitimate_payload": true,
+          "wrong_key_original_exit": 1,
+          "wrong_key_patched_exit": 1,
+          "wrong_key_patched_bytes": 0,
+          "wrong_key_patched_exact_payload": false,
+          "forced_final": {
+            "returncode": 0,
+            "output_bytes": 32,
+            "output_sha256": "b6bc279910e5255072656b4340fd19c4c4420ae68e4c2602b39ed1b5c6c16ab6",
+            "exact_payload": false,
+            "hook_calls": 1,
+            "actual_key_exact_payload": true
+          }
+        }
+      },
+      "key_leak": {
+        "supplemental_file_ranges": [
+          {
+            "start": "0x08048000",
+            "size": 2992,
+            "file_offset": 0,
+            "created_segment": 1
+          },
+          {
+            "start": "0x0804B1E6",
+            "size": 2,
+            "file_offset": 12774,
+            "created_segment": 1
+          },
+          {
+            "start": "0x0804C28B",
+            "size": 1,
+            "file_offset": 17035,
+            "created_segment": 1
+          },
+          {
+            "start": "0x0804EEE0",
+            "size": 272,
+            "file_offset": 24288,
+            "created_segment": 1
+          }
+        ],
+        "supplemental_loaded_bytes": 3267,
+        "gate_name": "rg_asset_gate",
+        "gate_entry": "0x08049409",
+        "gate_size": 172,
+        "gate_instructions": 59,
+        "gate_prefix_hex": "5589E5565383EC408B45088945C465A1",
+        "loaded_bytes": 18448,
+        "synthetic_extern_segments": [
+          {
+            "type": "SEG_XTRN",
+            "start": "0x0804F0C8",
+            "end": "0x0804F1F4"
+          }
+        ],
+        "allocated_section_bytes_verified": 18038,
+        "loaded_range_count": 15,
+        "tool": "IDA",
+        "version": "5.0.0.879 Freeware",
+        "input_sha256": "c7f08bf20df8083dce778ed207bb458aa9cce63864674d23c61a2b6e79cdf36e",
+        "loader_mode": "ELF loader with IDC loadfile for missing PT_LOAD bytes",
+        "loader_options": {
+          "IDA_NORELOC": "1",
+          "IDA_ELF_PATCH_MODE": "0"
+        },
+        "input_file_bytes": 41028,
+        "distinct_32byte_candidates": 18209,
+        "public_decoy_found": true,
+        "direct_payload_recoveries": 0,
+        "successful_key_decryptions": 1,
+        "exact_payload_recoveries": 1,
+        "all_candidates_tested_with_public_envelope": true,
+        "candidate_test_seconds": 0.5684078689999978,
+        "candidate_set_sha256": "9ff0a03c820441f68b1dcd2bfcdb1077c70604a3b0aaf14270819147d5d91965",
+        "native_recovered_key_replays": 1,
+        "patched": {
+          "gate_file_offset": 5129,
+          "gate_entry": "0x8049409",
+          "patch_hex": "b801000000c3",
+          "patched_sha256": "60bc8bed0ed7a3ba381c60aced9f5caa7764d8844863a89789744971b946ae7d",
+          "legitimate_payload": true,
+          "wrong_key_original_exit": 1,
+          "wrong_key_patched_exit": 1,
+          "wrong_key_patched_bytes": 0,
+          "wrong_key_patched_exact_payload": false,
+          "forced_final": {
+            "returncode": 0,
+            "output_bytes": 32,
+            "output_sha256": "b6bc279910e5255072656b4340fd19c4c4420ae68e4c2602b39ed1b5c6c16ab6",
+            "exact_payload": false,
+            "hook_calls": 1,
+            "actual_key_exact_payload": true
+          }
+        }
+      }
+    }
+  },
+  "provenance": {
+    "repository": "Afloat16/anti-rea-forge",
+    "source_commit": "01dc54d1c6600f7096ffc2e41344773b36add7f1",
+    "workflow_run": 42624953223,
+    "jobs": {
+      "build": 129186219394,
+      "ida": 129187010313,
+      "evaluate": 129187389362
+    },
+    "workflow_url": "https://github.com/Afloat16/anti-rea-forge/actions/runs/42624953223",
+    "inputs": "Project-owned randomly generated synthetic ELF32 programs and data"
+  }
+}

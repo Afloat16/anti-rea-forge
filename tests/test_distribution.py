@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 import json
@@ -65,6 +66,38 @@ class PortableReleaseTests(unittest.TestCase):
         self.assertEqual(report["checks"]["files_scanned"], 3)
         self.assertEqual(report["files"][0]["path"], "NOTICE")
         self.assertEqual(report["files"][0]["sha256"], hashlib.sha256(b"MIT").hexdigest())
+
+    def test_external_asset_key_exposure_in_encodings_and_nested_zip(self):
+        key = bytes(range(32))
+        private = self.base / "asset.key"
+        private.write_bytes(key)
+        patterns = {"raw": key, "hex": key.hex().encode(), "uppercase": key.hex().upper().encode(),
+                    "base64": base64.b64encode(key), "base64url": base64.urlsafe_b64encode(key).rstrip(b"="),
+                    "wide": key.hex().encode("utf-32-be")}
+        for name, data in patterns.items():
+            self.put(name + ".bin", b"prefix" + data + b"suffix")
+        self.put("nested.zip", archive([("data.zip", archive([("key.dat", key)]))]))
+        with patch.object(distribution, "_CHUNK_BYTES", 17):
+            report = distribution.scan_release(self.root, self.policy, asset_key_files=[private])
+        self.assertFalse(report["ok"])
+        self.assertEqual(report["checks"]["asset_keys_checked"], 1)
+        findings = [item for item in report["findings"] if item["code"] == "asset_key_exposure"]
+        self.assertEqual({item["path"] for item in findings}, {name + ".bin" for name in patterns} | {"nested.zip"})
+        self.assertTrue(any(item.get("archive_members") == ["data.zip", "key.dat"] for item in findings))
+        self.assertNotIn(key.hex(), json.dumps(report))
+        self.assertNotIn(base64.b64encode(key).decode(), json.dumps(report))
+
+    def test_asset_key_inputs_fail_closed_and_clean_release_passes(self):
+        self.put("app", b"ordinary release")
+        key = self.base / "asset.key"
+        for value in (b"", b"short", b"x" * 33):
+            key.write_bytes(value)
+            with self.assertRaises(GuardError):
+                distribution.scan_release(self.root, self.policy, asset_key_files=[key])
+        key.write_bytes(bytes(range(32)))
+        self.assertTrue(distribution.scan_release(self.root, self.policy, asset_key_files=[key])["ok"])
+        with self.assertRaises(GuardError):
+            distribution.scan_release(self.root, self.policy, asset_key_files=str(key))
 
     def test_empty_release_is_not_accepted(self):
         with self.assertRaisesRegex(GuardError, "empty"):

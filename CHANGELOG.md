@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.0 — 2026-11-09
+
+- Add `native-asset-export` and a C++17/OpenSSL reader for the existing authenticated sealed-data format. The build consumes a public envelope, with an independent 256-bit key supplied at use time.
+- Bind product, release, purpose and asset identifier through HKDF-SHA256 and AES-256-GCM, authenticate before exposing native output, and clear previous or failed output.
+- Keep generated assets local to their translation units. Add a real multi-file regression for two distinct resources sharing one external key.
+- Add optional, repeatable `scan-release --asset-key-file` checks for exact key exposure in raw bytes and common text encodings, including supported nested ZIP members and read-boundary matches.
+- Add native asset recovery fixtures, exact analyzer-byte coverage checks, actual gate patches, a forced GCM-success control and an intentionally embedded-key control. Run the Ghidra variant in CI.
+- Record a completed paired Ghidra 12.2 and IDA Freeware 5.0 observation on the same three project-owned Linux i386 programs. The ciphertext-only case yielded zero exact payload recoveries across all extracted contiguous 32-byte candidates. [Paired observation](docs/results/native-asset-controls.json)
+- Document native integration, open-source design references and a verified 1 MiB opening-cost observation. [Integration and reproduction](docs/native-assets.md)
+
 ## 0.9.0 — 2026-11-09
 
 - Add `split-elf-debug` for GNU/Linux builds. Ship a linked ELF with private static symbols and debug metadata separated, retain a matching private debug file, and check configured names for residual disclosures.

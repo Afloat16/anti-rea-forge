@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   ghidra-token:
-    name: Ghidra native token, private symbols and patched client / Linux
+    name: Ghidra native assets, tokens, symbols and patched clients / Linux
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -30,7 +30,7 @@ jobs:
           python -m pip install .
           g++ --version
           pkg-config --modversion libcrypto
-          RELEASEGUARD_REQUIRE_OPENSSL_NATIVE=1 python -m unittest tests.test_native_token tests.test_native_token_scan tests.test_native_token_cli -v
+          RELEASEGUARD_REQUIRE_OPENSSL_NATIVE=1 python -m unittest tests.test_native_token tests.test_native_token_scan tests.test_native_token_cli tests.test_native_asset tests.test_native_asset_cli tests.test_asset_key_scan_cli -v
       - name: Run wrong-input comparison controls on project-owned programs
         run: python benchmarks/native_token_compare.py --out "$RUNNER_TEMP/token-compare.json"
       - name: Analyze three project-owned ELFs with the verified official Ghidra release
@@ -41,6 +41,10 @@ jobs:
         run: |
           python benchmarks/native_symbol_controls.py prepare "$RUNNER_TEMP/symbol-corpus"
           python benchmarks/native_symbol_controls.py ghidra "$RUNNER_TEMP/symbol-corpus" --archive "$RUNNER_TEMP/ghidra.zip" --out "$RUNNER_TEMP/elf-symbols-ghidra.json"
+      - name: Extract native asset bytes and replay gate and crypto-success patches
+        run: |
+          python benchmarks/native_asset_controls.py prepare "$RUNNER_TEMP/asset-corpus" --bits 64
+          python benchmarks/native_asset_controls.py ghidra "$RUNNER_TEMP/asset-corpus" --archive "$RUNNER_TEMP/ghidra.zip" --out "$RUNNER_TEMP/native-assets-ghidra.json"
       - name: Record verified observations (no bearer tokens or raw decompiler output)
         run: |
           python - <<'PY'
@@ -57,6 +61,7 @@ jobs:
             ${{ runner.temp }}/elf-symbols-ghidra.json
             ${{ runner.temp }}/ghidra-token.json
             ${{ runner.temp }}/token-compare.json
+            ${{ runner.temp }}/native-assets-ghidra.json
           if-no-files-found: error
           retention-days: 14
 

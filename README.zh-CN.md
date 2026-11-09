@@ -1,61 +1,55 @@
-# Anti-REA Forge v0.9.0
+# Anti-REA Forge v0.10.0
 
 [简体中文](README.zh-CN.md) · [English](README.md) · [MIT 许可证](LICENSE)
 
-**发布程序可以保留机器码、移除内部函数名。即使客户端被改成“通过”，服务端仍能要求有效授权。**
+**将原生程序的数据加密后发布，在授权使用时独立提供密钥。**
 
-如果用户能修改自己的客户端，把本地判断改成“通过”并不难。Anti-REA Forge 为 Linux 构建拆分私有调试信息，并为 Python 服务提供一次性签名授权检查。下面的程序、凭据和服务都是本项目生成的模拟样本。Ghidra 和 IDA 实际运行并分析了同一组三份 ELF。
+Anti-REA Forge 新增 C++17/OpenSSL 数据读取组件。构建过程接收密文封装和应用固定的上下文，使用时通过独立提供的随机 256 位密钥取回数据。发布检查还能发现误打包的密钥及其常见编码形式。
 
-## Ghidra 和 IDA 能恢复内部函数的原名吗？
+## Ghidra 和 IDA 能恢复里面的数据吗？
 
-我们给两个分析器相同的私有函数地址，让它们直接查看同一段机器码。函数原名带有每次实验新生成的随机值。公开入口则始终保留名称，供分析器独立定位。
+两款工具实际分析了同一组三个完整的 Linux i386 程序。程序、密钥和资源均为本项目生成的模拟样本，每个程序在收到正确密钥后都能返回同一份随机 32 字节资源。实验逐字节核对分析器数据库导出的内容，并要求覆盖 ELF 中所有已分配且有文件内容的节。
 
-| 交给分析器的 i386 Linux 程序 | Ghidra 12.2 | IDA Freeware 5.0 |
+| 交给分析器的程序 | Ghidra 12.2 | IDA Freeware 5.0 |
 | --- | --- | --- |
-| 带原始符号和调试信息 | 找到原名 | 找到原名 |
-| 只提供公开 ELF | 显示 `FUN_08049000` | 显示 `sub_8049000` |
-| 从私有调试文件取回名称，重新加入公开 ELF | 再次找到原名 | 再次找到原名 |
+| 内置原始明文资源 | 恢复原始数据 | 恢复原始数据 |
+| 内置加密资源，密钥独立保管 | 数据和有效密钥恢复数均为 0 | 数据和有效密钥恢复数均为 0 |
+| 内置加密资源，并故意把实际密钥放回程序 | 找到密钥，交回原程序后读出原始数据 | 找到密钥，交回原程序后读出原始数据 |
 
-三份程序的 `.text` 哈希相同，三组输入的运行结果也相同。Ghidra 成功反编译了目标函数，IDA 成功反汇编了目标函数。分析者仍能根据指令推断函数用途。这里验证的是能否从发行文件的元数据直接读出原名。[双工具原始记录](docs/results/native-elf-controls.json)
+提取流程将导出的初始化字节中每个不同的连续 32 字节候选都用于尝试解密公开封装。Ghidra 实际反编译了授权函数，IDA 实际反汇编了授权函数。IDA 通过其额外文件加载 API 补充默认 ELF 加载器省略的元数据范围，报告逐项记录补充地址，并将最终导出字节与原文件核对。[双工具实测记录](docs/results/native-asset-controls.json) · [复现步骤和加载设置](docs/native-assets.md#reproduce-the-native-controls)
 
-## 修改客户端能拿到受限结果吗？
+## 把程序改成“通过”能取出数据吗？
 
-两个分析器都从公开符号独立找到了同一个入口。实验脚本按各自报告的地址修改测试程序副本中的六个字节，客户端返回值从 `39` 变成了模拟“通过”的 `42`。随后两个独立运行的模拟服务收到测试请求，实验逐份核验服务端回执的签名。
+两款工具分别定位授权入口，实验按各自报告的地址修改程序副本。使用错误密钥时，明文对照在打补丁后输出了原始资源，加密程序没有输出数据。
 
-| 服务如何决定是否执行 | 实际结果 |
-| --- | --- |
-| 直接相信客户端返回值 | 原客户端被拒绝，打补丁后拿到了有效回执 |
-| 服务端验签，已修改的客户端缺少授权、使用自签授权或篡改请求 | 三种请求都未执行受限操作 |
-| 同一已修改客户端提交针对原请求签发的有效授权 | 首次拿到有效回执，重用同一授权时被拒绝 |
+随后，测试专用组件强制 OpenSSL 的最终认证检查返回成功。加密程序确实以成功状态退出，并输出 32 字节，但输出的 SHA-256 与原始资源不同。同一已修改程序收到正确密钥后，仍能返回原始数据。故意嵌入密钥的发行目录也被生产发布检查以 `asset_key_exposure` 拦下。[原生实验代码](benchmarks/native_asset_controls.py)
 
-需要保护的操作应在你控制的服务上执行。纯离线功能的本地判断仍可修改。两款工具的联合结论限于这组 32 位 x86 模拟程序和表中版本。[实验设计与复现](docs/private-elf-debug.md#reproduce-the-two-engine-observation)
+这层防护的对象是独立保管密钥的加密数据。程序指令仍可被分析，合法使用时的进程也会持有密钥和明文。实测结论限于上述工具版本、Linux i386 模拟程序以及记录中的提取和补丁流程。[开源参考与适用范围](docs/research-native-data-2026-11-09.md)
 
-## 接入自己的软件
+## 接入自己的原生程序
 
-在有 GNU binutils 和 Python 3.10+ 的 Linux 构建机上安装。下例假定你已有带符号的 `build/myapp`，并想检查内部函数名 `calculate_internal_quote`。
+在仓库根目录操作，Linux 构建机需要 Python 3.10+、C++17 编译器、OpenSSL 开发头文件和 libcrypto。下例假定私有的 `../asset-issuer` 目录已经存在，其中保存着不超过 1 MiB 的 `data.bin`。输出文件和目录使用新路径。
 
 ```sh
-git clone https://github.com/Afloat16/anti-rea-forge.git
-python -m pip install ./anti-rea-forge
-python -m releaseguard split-elf-debug build/myapp \
-  --public release-linux --private private-symbols \
-  --private-name calculate_internal_quote
+python -m pip install .
+python -m releaseguard asset-keygen --out ../asset-issuer/key.bin
+python -m releaseguard asset-seal ../asset-issuer/data.bin \
+  --key-file ../asset-issuer/key.bin \
+  --product myapp --release v1 --purpose reference-data --asset-id table \
+  --out asset.json
+python -m releaseguard native-asset-export asset.json \
+  --product myapp --release v1 --purpose reference-data --asset-id table \
+  --out generated-asset
+mkdir release-asset
+c++ -std=c++17 -O2 -Igenerated-asset examples/native-asset/read.cpp \
+  -lcrypto -o release-asset/read-asset
+./release-asset/read-asset < ../asset-issuer/key.bin
 ```
 
-**只部署 `release-linux/myapp`。** 私有的 `private-symbols/myapp.debug` 可用于内部崩溃定位。如果指定的名称仍藏在导出表、日志或宽字符串里，命令会指出名称并拒绝发布。拆分只在构建时执行，应用无需加载额外运行库。[输入限制和调试用法](docs/private-elf-debug.md)
+最后一条命令会输出原始资源。接入应用时包含生成的头文件，调用 `releaseguard::open_embedded_asset(external_key, output)`，通过自己的授权流程独立交付密钥，并保管好签发目录。发布前使用 `scan-release --asset-key-file` 检查最终发行目录。[完整接入和发布检查命令](docs/native-assets.md)
 
-如果软件需要执行受限操作，在服务端固定签发公钥、用户身份和处理函数。授权绑定请求的原始字节，验签并消费授权之后才调用 `create_export`。
+在一台 Linux x86-64 主机上，1 MiB 数据预热 5 次后测量 25 次，打开耗时的中位数为 **189.860 微秒**。计时包含 HKDF、AES-GCM、内存分配和上一次输出的清理，密钥获取和进程启动另计。报告保留全部样本，包括最高的 1,456.005 微秒。[性能原始记录](docs/results/native-asset-cost.json)
 
-```python
-from releaseguard.capabilities import run_authorized_operation
+项目已有的接入方式还包括私有 ELF 调试信息、服务端授权、C++ 外部随机令牌和 JavaScript source map 管理。[私有 ELF 符号与服务端操作](docs/private-elf-debug.md) · [原生令牌](docs/native-tokens.md) · [私有 source map](docs/private-source-maps.md)
 
-receipt = run_authorized_operation(
-    grant, trusted_issuer_public_key, replay_store,
-    subject=authenticated_user, audience="exports", product="myapp",
-    operation="create-export", request=request_bytes, handler=create_export,
-)
-```
-
-[服务端接入示例](docs/private-elf-debug.md#put-the-restricted-operation-behind-a-service-side-check)
-
-项目也支持 [C++ 外部随机令牌](docs/native-tokens.md) 和 [JavaScript 私有 source map](docs/private-source-maps.md)。如果这解决了你的发布问题，欢迎给项目一个 **Star**，或[贡献一个可复现的自有样本](CONTRIBUTING.md)。
+如果这解决了你的发布问题，欢迎给项目一个 **Star**，或贡献一个可复现的自有样本。[贡献说明](CONTRIBUTING.md)
