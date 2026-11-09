@@ -37,6 +37,10 @@ jobs:
         run: |
           curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/ghidra.zip" https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.2_build/ghidra_12.2_PUBLIC_20261016.zip
           python benchmarks/ghidra_token/probe.py --archive "$RUNNER_TEMP/ghidra.zip" --python "$(command -v python)" --out "$RUNNER_TEMP/ghidra-token.json"
+      - name: Resolve private ELF symbols and replay a patched client against a receipt service
+        run: |
+          python benchmarks/native_symbol_controls.py prepare "$RUNNER_TEMP/symbol-corpus"
+          python benchmarks/native_symbol_controls.py ghidra "$RUNNER_TEMP/symbol-corpus" --archive "$RUNNER_TEMP/ghidra.zip" --out "$RUNNER_TEMP/elf-symbols-ghidra.json"
       - name: Record verified observations (no bearer tokens or raw decompiler output)
         run: |
           python - <<'PY'
@@ -50,6 +54,7 @@ jobs:
         with:
           name: native-token-observations
           path: |
+            ${{ runner.temp }}/elf-symbols-ghidra.json
             ${{ runner.temp }}/ghidra-token.json
             ${{ runner.temp }}/token-compare.json
           if-no-files-found: error

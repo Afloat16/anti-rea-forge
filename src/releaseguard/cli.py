@@ -100,6 +100,12 @@ def parser() -> argparse.ArgumentParser:
     split.add_argument("--public", required=True, type=Path, help="New public release directory; deploy only this output")
     split.add_argument("--private", required=True, type=Path, help="New private debug directory outside the served tree")
 
+    elf = commands.add_parser("split-elf-debug", help="Split one linked ELF into a public binary and private debug symbols")
+    elf.add_argument("artifact", type=Path, help="Linked ELF built with symbols, before signing or packaging")
+    elf.add_argument("--public", required=True, type=Path, help="New public output directory")
+    elf.add_argument("--private", required=True, type=Path, help="New private symbol directory outside the release")
+    elf.add_argument("--private-name", action="append", default=[], help="Exact ASCII name to check for residual disclosure (repeatable)")
+
     project = commands.add_parser("project-init", help="Create editable build-only configuration outside your release")
     project.add_argument("--root", type=Path, required=True, help="Release directory; it may be built later")
     project.add_argument("--product", required=True)
@@ -228,6 +234,10 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
     if args.command == "native-token-issue":
         from .native_token import issue_native_token
         return issue_native_token(args.public_dir, args.secret_out), 0
+    if args.command == "split-elf-debug":
+        from .split_elf import split_elf_debug
+        result = split_elf_debug(args.artifact, args.public, args.private, private_names=args.private_name)
+        return result, 0 if result["ok"] else 3
     if args.command == "split-source-maps":
         from .split_maps import split_source_maps
         result = split_source_maps(args.root, args.public, args.private)

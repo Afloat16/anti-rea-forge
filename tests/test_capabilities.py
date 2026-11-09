@@ -59,6 +59,30 @@ class CapabilityTests(unittest.TestCase):
             count = connection.execute("SELECT COUNT(*) FROM capability_nonces").fetchone()[0]
         return last_seen, count
 
+    def test_server_handler_gets_verified_bytes_once_even_if_it_fails(self):
+        calls = []
+        def record(request):
+            calls.append(request)
+            raise RuntimeError("fixture handler failure")
+        invoke = capabilities.run_authorized_operation
+        grant = issue_capability(self.private, **self.context)
+        with self.assertRaises(GuardError):
+            invoke(grant, self.public, self.store, **{**self.context, "request": b"changed"}, handler=record)
+        self.assertEqual(calls, [])
+        with self.assertRaisesRegex(RuntimeError, "fixture handler failure"):
+            invoke(grant, self.public, self.store, **self.context, handler=record)
+        with self.assertRaises(GuardError):
+            invoke(grant, self.public, self.store, **self.context, handler=record)
+        self.assertEqual(calls, [self.context["request"]])
+
+    def test_invalid_handler_does_not_consume_and_success_returns_result(self):
+        grant = issue_capability(self.private, **self.context)
+        invoke = capabilities.run_authorized_operation
+        with self.assertRaises(GuardError):
+            invoke(grant, self.public, self.store, **self.context, handler=None)
+        self.assertEqual(invoke(grant, self.public, self.store, **self.context, handler=len),
+                         len(self.context["request"]))
+
     def test_real_issue_consume_and_exact_public_claims(self) -> None:
         document = self.issue()
         self.assertEqual(set(document), {"format", "claims", "signature"})
