@@ -10,7 +10,7 @@ Anti-REA Forge is an MIT-licensed toolkit for software release checks and protec
 
 **Bring software protection into your engineering workflow:** catch avoidable release exposure before shipping, give sensitive native data an explicit lifetime, and bind server authorization to the actual request. Explore the examples, integrate a component, or help build the next release.
 
-**MIT · 0.6.0 / Alpha · Python core · JavaScript + TypeScript types · C/C++ integration**
+**MIT · 0.7.0 / Alpha · Python core · JavaScript + TypeScript types · C/C++ integration**
 
 [Portable quick start](docs/portable-release.md) · [Contribute](CONTRIBUTING.en.md) · [贡献指南](CONTRIBUTING.md) · [Roadmap (Chinese)](docs/ROADMAP.zh-CN.md) · [Runtime integration](docs/runtime-protection.md)
 
@@ -18,7 +18,17 @@ The tooling retains the **Open Release Guard** Python distribution name `open-re
 
 **New here?** Start with the [community guide and runnable examples](docs/community/README.md), read the [project story](docs/community/PROJECT_STORY.md), or share the [English/Chinese introductions](docs/community/SHARE_COPY.md) with developers interested in software protection. Small contributions are welcome.
 
-## New in v0.6: build-only setup and scoped analysis authorization
+## v0.7: keep source maps available to developers and out of public releases
+
+Craft Anything v0.5.0 recovered the exact original source of our minified JS fixture from a sibling `app.js.map`, even though the script contained no map URL. With only the split public directory, the same tool completed its inspection and reformatted the same JS, but returned **zero original-source files**. Giving it the private map again restored the matching original. [Three-way observation](docs/results/craft-source-map-2026-11-09.json) · [REA and Craft source review](docs/research-source-maps-2026-11-09.md).
+
+```bash
+python -m releaseguard split-source-maps --root build --public release-web --private debug-symbols
+```
+
+Run after building with unlinked external maps and before compression. Deploy **only** `release-web/` to a fresh public location. Keep `debug-symbols/` outside all served paths. Generated JS bytes stay unchanged; all work happens during the build. This protects the exact source carried by a map; shipped JS remains analyzable. [Setup, limitations and reproduction](docs/private-source-maps.md).
+
+## v0.6: build-only setup and scoped analysis authorization
 
 Initialize an editable configuration once, then check the completed release after each build:
 

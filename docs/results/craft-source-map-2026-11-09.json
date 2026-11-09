@@ -1,0 +1,66 @@
+{
+  "schema": "releaseguard-craft-source-map-observation/v1",
+  "passed": true,
+  "recorded_at_utc": "2026-11-09T06:11:19.732619+00:00",
+  "tool": {
+    "repo": "storytold/craft-anything",
+    "release": "v0.5.0",
+    "commit": "622d023cdfdb91c00df8b9a37c486a2a18fb0917",
+    "asset": "craft-anything-0.5.0-linux-x86_64.tar.gz",
+    "archive_sha256": "d18c54ef05e5c7ef50f8c4959fee8983c0a4a1f141edc488d11f7029973c885b",
+    "cli_sha256": "61beefb5fc3f3a102649a9daed94f45f2e302c3f415ea5830fbf2cc317a1f901",
+    "operation": "js_sources_restore",
+    "mode": "Deep"
+  },
+  "host": {
+    "platform": "Linux",
+    "architecture": "x86_64",
+    "python": "3.12.14"
+  },
+  "fixture_sha256": {
+    "app.js": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8",
+    "package.json": "0d0723506b0a29cb81b1ff5a4dcfcb005b39a661b5c7d15f306ee9c570e6b93c",
+    "app.js.map": "0b84e1698955dbdde34d8017e362aa1bca5e726e036353bdba1fd3987d20b979"
+  },
+  "expected_original_sha256": "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5",
+  "observations": {
+    "baseline": {
+      "exit_code": 0,
+      "deep_mode": true,
+      "coverage": "complete",
+      "analyzed_js_sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8",
+      "pretty_files": 1,
+      "pretty_sha256": "0c2961f9344d96cc1345a80b074a6cef327439e1766fc071953b2659df883d71",
+      "original_source_files": 1,
+      "recovered_original_sha256": [
+        "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5"
+      ],
+      "canary_in_emitted_files": true
+    },
+    "public": {
+      "exit_code": 0,
+      "deep_mode": true,
+      "coverage": "complete",
+      "analyzed_js_sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8",
+      "pretty_files": 1,
+      "pretty_sha256": "0c2961f9344d96cc1345a80b074a6cef327439e1766fc071953b2659df883d71",
+      "original_source_files": 0,
+      "recovered_original_sha256": [],
+      "canary_in_emitted_files": false
+    },
+    "public_plus_private_map": {
+      "exit_code": 0,
+      "deep_mode": true,
+      "coverage": "complete",
+      "analyzed_js_sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8",
+      "pretty_files": 1,
+      "pretty_sha256": "0c2961f9344d96cc1345a80b074a6cef327439e1766fc071953b2659df883d71",
+      "original_source_files": 1,
+      "recovered_original_sha256": [
+        "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5"
+      ],
+      "canary_in_emitted_files": true
+    }
+  },
+  "scope": "Exact source restoration via an external sibling map on this one synthetic bundle. Pretty-printing still works. Does not measure behavioral reconstruction or other targets."
+}
