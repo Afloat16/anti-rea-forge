@@ -87,6 +87,7 @@ def windows_for_pid(pid):
         info = describe(hwnd)
         info["controls"] = []
         agree = []
+        okay = []
 
         @callback
         def child(handle, _):
@@ -95,6 +96,8 @@ def windows_for_pid(pid):
                 info["controls"].append(control)
                 if control == {"class": "TButton", "caption": "I Agree"}:
                     agree.append(handle)
+                if control == {"class": "TButton", "caption": "OK"}:
+                    okay.append(handle)
             return True
 
         user.EnumChildWindows(hwnd, child, 0)
@@ -107,6 +110,14 @@ def windows_for_pid(pid):
             if not user.PostMessageW(agree[0], 0x00F5, 0, 0):  # BM_CLICK
                 raise ctypes.WinError(ctypes.get_last_error())
             info["action"] = "I Agree clicked on IDA Pro License"
+        if (info["class"] == "TAboutBox" and info["caption"] == "About" and len(okay) == 1
+                and ("TCheckBox", "Do not display IDA 6.x info next time") in labels
+                and any(c == "TStaticText" and t.startswith("Welcome to the freeware edition of IDA Pro 5.0.")
+                        for c, t in labels)):
+            user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            if not user.PostMessageW(okay[0], 0x00F5, 0, 0):
+                raise ctypes.WinError(ctypes.get_last_error())
+            info["action"] = "Dismissed the IDA Freeware 5.0 welcome message"
         forms.append(info)
         return True
 
@@ -116,20 +127,20 @@ def windows_for_pid(pid):
 
 def run_ida(cmd, work):
     with subprocess.Popen(cmd, cwd=work) as proc:
-        try:
-            proc.wait(timeout=8)
-        except subprocess.TimeoutExpired:
-            print("IDA startup windows:", windows_for_pid(proc.pid), flush=True)
+        last_forms = None
+        for _ in range(25):
             try:
-                proc.wait(timeout=75)
-            except subprocess.TimeoutExpired as exc:
+                return proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
                 forms = windows_for_pid(proc.pid)
-                proc.kill()
-                proc.wait(timeout=10)
-                log = work / "ida.log"
-                detail = log.read_text(errors="replace")[-2000:] if log.is_file() else "no log"
-                raise RuntimeError(f"IDA timed out; windows={forms!r}, log={detail}") from exc
-        return proc.returncode
+                if forms != last_forms:
+                    print("IDA startup windows:", forms, flush=True)
+                    last_forms = forms
+        proc.kill()
+        proc.wait(timeout=10)
+        log = work / "ida.log"
+        detail = log.read_text(errors="replace")[-2500:] if log.is_file() else "no log"
+        raise RuntimeError(f"IDA timed out; windows={last_forms!r}, log={detail}")
 
 
 def main():
