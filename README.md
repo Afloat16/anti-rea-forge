@@ -8,6 +8,8 @@
 
 Ordinary, split/flatten/substitution and VM-only samples were independently reconstructed and matched every one of 1,081,924 hidden evaluations. Those results led to instruction encryption, real Ghidra extraction and patch controls, and regressions for discovered compiler and metadata failures. IDA 9.x engine execution remains pending. [Integration and results](docs/native-code.md) · [中文说明](docs/native-code.zh-CN.md)
 
+Post-fix independent reconstruction is also incomplete because the execution layer's automatic safety review blocked that subtask. The recorded post-fix results cover the automated controls and compiler regressions. [Verification status](docs/results/native-code-hardening.json)
+
 ## Native data protection in v0.10.0
 
 **Ship encrypted native data and supply its key independently to authorized users.**

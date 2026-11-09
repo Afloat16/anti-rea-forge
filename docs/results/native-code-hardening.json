@@ -114,8 +114,8 @@
   },
   "local_regression": {
     "python": {
-      "tests": 636,
-      "seconds": 77.524,
+      "tests": 638,
+      "seconds": 74.781,
       "failures": 0,
       "errors": 0,
       "skips": 1,
@@ -142,7 +142,8 @@
     "log_sha256": {
       "v11-full-tests-final.log": "c558afb8fbe82d719ca2ef852e82a422a296f1df80d27982dd451f6ffa1c3d24",
       "v11-node-tests.log": "af63fcc06cd6fcb7d7f611c30223b37c26231a644fab26ea793cde6f1e543aea",
-      "v11-node-integration-final.log": "503ca79564811d2066539e0356c18a4c4a2c8a79e1e6e088e6fc5a9cc416e82a"
+      "v11-node-integration-final.log": "503ca79564811d2066539e0356c18a4c4a2c8a79e1e6e088e6fc5a9cc416e82a",
+      "v11-full-tests-crlf.log": "129226086e00685eee60d319c0012ec44c536364b20cbb7588f7a166e4a204d8"
     }
   },
   "ci_compatibility_fix": {

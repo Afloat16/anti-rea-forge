@@ -22,6 +22,7 @@ The protection target is the release before external key delivery. An authorized
 Use the official Amice LLVM 18 Linux artifact below. Its source revision is `19b6c473ee8a59d66a91d3b7c2d460bb6af7c99e`, released as `v0.1.6-beta.1` under Apache-2.0. The integration clears inherited `AMICE_*` and `LLVM_OBF_*` configuration and selects the built-in VM profile with a module runtime. [Pinned Amice source](https://github.com/fuqiuluo/amice/tree/19b6c473ee8a59d66a91d3b7c2d460bb6af7c99e)
 
 ```sh
+python -m pip install .
 curl --fail --location -o amice-llvm18.so \
   https://github.com/fuqiuluo/amice/releases/download/v0.1.6-beta.1/libamice-llvm18-linux-x86_64.so
 echo 'aa4527516a03ddbdc4034e68dece3190110dfe8ff34a4d1a8284e896a733a882  amice-llvm18.so' | sha256sum --check
@@ -56,6 +57,16 @@ bool run_computation(const releaseguard::native_asset_key& external_key,
     protected_code::clear_native_code();
     return true;
 }
+```
+
+An application source containing this integration can select the generated namespace at build time.
+
+```sh
+RG_CODE_NAMESPACE="$(python -c 'import json; print(json.load(open("sealed-function/report.json"))["code_seal"]["cpp_namespace"])')"
+c++ -std=c++17 -O2 -Isealed-function \
+  "-DRG_CODE_NAMESPACE=$RG_CODE_NAMESPACE" your_application.cpp \
+  sealed-function/releaseguard_native_code.cpp sealed-function/protected.o \
+  -lcrypto -o application
 ```
 
 Initialize with exclusive ownership before starting workers. Clear after all workers have joined. A failed reinitialization clears the previous VM storage. Separate generated modules use separate namespaces, ready flags and storage. The caller owns the external key's lifetime and cleanup. Run the existing `scan-release --asset-key-file` check against the final release staging directory. [Release-key check](native-assets.md)
@@ -109,7 +120,7 @@ The optional build seed is exactly 32 hexadecimal digits. Omitting it generates 
 
 ## Required coverage and failure behavior
 
-The command checks the input and plugin digests, parses and verifies IR through the real `opt`, checks supported target triples and function bodies, invokes the recorded pass pipeline, and verifies each requested function's body change and newly introduced dispatcher. A requested function that is absent or silently skipped causes a build error. Generated objects must be relocatable ELF of the requested x86 class and machine type.
+The command checks the input and plugin digests, parses and verifies IR through the real `opt`, checks supported target triples and function bodies, and invokes the recorded pass pipeline. Control-flow profiles require each requested function's body to change and acquire a new dispatcher. VM profiles require a replacement wrapper, connected private runtime and bytecode/descriptor storage, and absence of a normalized copy of the original function body. The sealed profile requires VM coverage for every retained original function. A requested function that is absent or silently skipped causes a build error. Generated objects must be relocatable ELF of the requested x86 class and machine type.
 
 The supported scope is intentionally explicit.
 
@@ -117,7 +128,7 @@ The supported scope is intentionally explicit.
 - The `flatten` profile requires at least two basic blocks in every requested function.
 - A multi-block function must have a branch or switch terminator in its entry block. An upstream defect changed a legal function returning `9` into one returning `27` by redirecting entry into an unreachable block. Both profiles now have a real LLVM regression test for rejecting this input.
 - The arithmetic profile accepts scalar integer and pointer IR with integer widths of 1, 8, 16, 32 or 64 bits. Vector and floating-point IR, explicit `undef`, `poison`, `freeze`, atomic read-modify-write operations, fences and vararg instructions cause rejection.
-- Preflight checks cover the whole input unit because the plugin can transform unrequested functions. Unrequested `optnone` functions may remain unchanged. A request for an `optnone` function fails.
+- Preflight checks cover the whole input unit because the plugin can transform unrequested functions. Control-flow profiles allow unrequested `optnone` functions to remain unchanged. Requested `optnone` functions and every `optnone` function in a VM input unit cause rejection.
 - Input, plugin, normalized IR and generated object sizes each have a 64 MiB budget. Tool processes have finite timeouts. Input identity changes and output-directory races abort publication.
 
 Build reports contain per-function hashes, basic-block counts, coverage flags, tool versions, plugin digest, seed and object digest. The following fields preserve the evaluations still needed for the particular application.
