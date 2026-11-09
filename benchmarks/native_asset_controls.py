@@ -219,6 +219,7 @@ def analyze(args):
                 require(proc.returncode == 0 and raw_report.is_file()
                         and b"RELEASEGUARD_ASSET_BYTES_COMPLETE" in proc.stdout + proc.stderr,
                         "Ghidra incomplete: " + (proc.stdout + proc.stderr)[-2200:].decode(errors="replace"))
+                require(target.read_bytes() == image, "Ghidra input changed")
                 record = load(raw_report)
                 require(record["version"] == VERSION and record["language"].startswith(f"x86:LE:{fixture['bits']}:")
                         and "ELF" in record["format"], "Unexpected Ghidra engine or input")
@@ -270,13 +271,23 @@ def compare(args):
     for observation in (ghidra, ida):
         for case, expected in zip(CASES, (1, 0, 1)):
             row = observation["cases"][case]
-            require(row["input_sha256"].lower() == observation["fixture"]["inputs"][case]
+            require(observation["schema"] == "releaseguard-native-asset-observation/v1"
+                    and row["tool"] == observation["tool"]
+                    and row["version"] == (VERSION if observation["tool"] == "Ghidra" else "5.0.0.879 Freeware")
+                    and row["input_sha256"].lower() == observation["fixture"]["inputs"][case]
                     and row["exact_payload_recoveries"] == expected and row["public_decoy_found"]
-                    and row["allocated_section_bytes_verified"] > 0 and row["gate_instructions"] > 0,
+                    and row["allocated_section_bytes_verified"] > 0 and row["gate_instructions"] > 0
+                    and row["direct_payload_recoveries"] == (1 if case == "plaintext" else 0)
+                    and row["successful_key_decryptions"] == (1 if case == "key_leak" else 0)
+                    and row["native_recovered_key_replays"] == (1 if case == "key_leak" else 0)
+                    and row["all_candidates_tested_with_public_envelope"] is True
+                    and row["distinct_32byte_candidates"] > 0,
                     "Incomplete independent extraction evidence")
             patch = row["patched"]
             require(patch["legitimate_payload"] and patch["wrong_key_original_exit"] == 1
                     and patch["patch_hex"] == PATCH.hex()
+                    and int(patch["gate_entry"], 16) == int(row["gate_entry"], 16)
+                    and patch["wrong_key_patched_bytes"] == (32 if case == "plaintext" else 0)
                     and patch["wrong_key_patched_exact_payload"] is (case == "plaintext")
                     and patch["wrong_key_patched_exit"] == (0 if case == "plaintext" else 1),
                     "Missing actual native patch control")
@@ -287,8 +298,13 @@ def compare(args):
                         and forced["output_sha256"] != observation["fixture"]["payload_sha256"],
                         "Missing forced crypto-success control")
     for case in CASES:
-        require(ghidra["cases"][case]["patched"]["patched_sha256"] == ida["cases"][case]["patched"]["patched_sha256"],
+        require(all(ghidra["cases"][case]["patched"][field] == ida["cases"][case]["patched"][field]
+                    for field in ("patched_sha256", "gate_file_offset", "forced_final")),
                 "Engines did not locate the same patch")
+    scans = ghidra["fixture"]["key_release_scans"]
+    require(scans["encrypted"] == {"ok": True, "asset_key_findings": 0}
+            and scans["key_leak"]["ok"] is False and scans["key_leak"]["asset_key_findings"] > 0,
+            "Protected release and accidental key-leak scanner controls missing")
     save(args.out, {"schema": "releaseguard-dual-native-assets/v1", "ghidra": ghidra, "ida": ida})
 
 

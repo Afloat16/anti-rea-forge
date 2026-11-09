@@ -1,0 +1,63 @@
+{
+  "schema": "releaseguard/native-asset-cost/v1",
+  "ok": true,
+  "core_version": "0.10.0",
+  "payload_bytes": 1048576,
+  "warmup_iterations": 5,
+  "measured_iterations": 25,
+  "exact_plaintext_verified_each_iteration": true,
+  "asset_open_microseconds": {
+    "median": 189.86,
+    "minimum": 188.698,
+    "maximum": 1456.005,
+    "samples": [
+      207.846,
+      189.859,
+      1456.005,
+      219.974,
+      194.968,
+      190.18,
+      189.179,
+      190.47,
+      209.118,
+      190.971,
+      188.828,
+      189.489,
+      188.698,
+      190.3,
+      212.012,
+      189.859,
+      188.768,
+      205.753,
+      188.748,
+      189.86,
+      189.509,
+      189.349,
+      203.9,
+      189.659,
+      188.948
+    ]
+  },
+  "fixture_executable_bytes": 1075496,
+  "native_helper_sha256": "8a597a6cc6b155ccd046792ec1661e967fdd782e8f29d911eaa0e5a0d858abaa",
+  "compiler": "c++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "compiler_flags": [
+    "-std=c++17",
+    "-O2",
+    "-DNDEBUG",
+    "-Wall",
+    "-Wextra",
+    "-Werror"
+  ],
+  "link_libraries": [
+    "crypto"
+  ],
+  "openssl": "OpenSSL 3.0.13 30 Jan 2024",
+  "host": {
+    "system": "Linux",
+    "release": "6.18.57",
+    "machine": "x86_64",
+    "logical_cpus": 9
+  },
+  "scope": "Synthetic within-process asset-open cost. Includes HKDF, AES-GCM, allocations and cleansing the previous output. Excludes process startup, external-key retrieval, stdin, compilation and exact-output comparison. The performance fixture receives the key and plaintext reference. This run is separate from adversarial analysis."
+}

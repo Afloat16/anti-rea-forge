@@ -42,6 +42,7 @@ static main() {
   for (seg = FirstSeg(); seg != BADADDR; seg = NextSeg(seg)) {
     end = SegEnd(seg);
     if (end <= seg || end-seg > 2097152) Exit(15);
+    if (GetSegmentAttr(seg, SEGATTR_TYPE) == SEG_XTRN) continue;
     cursor = seg;
     while (cursor < end) {
       while (cursor < end && !isLoaded(cursor)) cursor++;
@@ -60,7 +61,15 @@ static main() {
     }
   }
   if (total == 0) Exit(17);
-  fprintf(f, "],\"loaded_bytes\":%d}\n", total);
+  fprintf(f, "],\"loaded_bytes\":%d,\"synthetic_extern_segments\":[", total);
+  first = 1;
+  for (seg = FirstSeg(); seg != BADADDR; seg = NextSeg(seg)) {
+    if (GetSegmentAttr(seg, SEGATTR_TYPE) != SEG_XTRN) continue;
+    if (!first) fprintf(f, ",");
+    first = 0;
+    fprintf(f, "{\"type\":\"SEG_XTRN\",\"start\":\"0x%08X\",\"end\":\"0x%08X\"}", seg, SegEnd(seg));
+  }
+  fprintf(f, "]}\n");
   fclose(f);
   Exit(0);
 }

@@ -18,7 +18,7 @@ _HELPER = "sealed_asset.hpp"
 def _array(name: str, data: bytes) -> str:
     rows = [", ".join(f"0x{value:02x}" for value in data[i:i + 12])
             for i in range(0, len(data), 12)]
-    return (f"inline constexpr std::array<unsigned char, {len(data)}> {name} = {{\n    "
+    return (f"static constexpr std::array<unsigned char, {len(data)}> {name} = {{\n    "
             + ",\n    ".join(rows) + "\n};\n")
 
 
@@ -45,13 +45,13 @@ namespace releaseguard {
                        ("embedded_asset_ciphertext", ciphertext), ("embedded_asset_aad", aad)):
         header += _array(name, data)
     header += """
-inline constexpr native_asset_view embedded_asset = {
+static constexpr native_asset_view embedded_asset = {
     embedded_asset_salt, embedded_asset_nonce,
     embedded_asset_ciphertext.data(), embedded_asset_ciphertext.size(),
     embedded_asset_aad.data(), embedded_asset_aad.size()
 };
 
-inline bool open_embedded_asset(const native_asset_key& key, std::vector<unsigned char>& output) {
+static inline bool open_embedded_asset(const native_asset_key& key, std::vector<unsigned char>& output) {
     return open_native_asset(key, embedded_asset, output);
 }
 }  // namespace releaseguard

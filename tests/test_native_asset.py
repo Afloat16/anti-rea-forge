@@ -212,6 +212,44 @@ class CompiledNativeAsset(unittest.TestCase):
         self.assertNotIn(self.key, self.app.read_bytes())
         self.assertNotIn(self.payload, self.app.read_bytes())
 
+    def test_two_assets_in_separate_translation_units_keep_their_own_data(self):
+        translation_units = []
+        for name, payload in (("first", b"asset A"), ("second", b"asset B")):
+            context = {**CONTEXT, "asset_id": name}
+            document = seal_asset(payload, self.key, **context)
+            export_native_asset(document, self.work / name, **context)
+            source = self.work / (name + ".cpp")
+            source.write_text(
+                '#include "' + name + '/releaseguard_asset.hpp"\n'
+                'bool open_' + name + '(const releaseguard::native_asset_key& key, '
+                'std::vector<unsigned char>& output) {'
+                'return releaseguard::open_embedded_asset(key, output); }\n',
+                encoding="ascii")
+            translation_units.append(source)
+        main = self.work / "multiple.cpp"
+        main.write_text(
+            '#include "first/releaseguard/sealed_asset.hpp"\n#include <iostream>\n'
+            'bool open_first(const releaseguard::native_asset_key&, std::vector<unsigned char>&);\n'
+            'bool open_second(const releaseguard::native_asset_key&, std::vector<unsigned char>&);\n'
+            'int main() { releaseguard::native_asset_key key{}; '
+            'std::cin.read(reinterpret_cast<char*>(key.data()), key.size()); '
+            'if (std::cin.gcount() != 32) return 2; '
+            'std::vector<unsigned char> first, second; '
+            'if (!open_first(key, first) || !open_second(key, second)) return 3; '
+            'std::cout.write(reinterpret_cast<const char*>(first.data()), first.size()); '
+            'std::cout.write(reinterpret_cast<const char*>(second.data()), second.size()); '
+            'return 0; }\n',
+            encoding="ascii")
+        app = self.work / "multiple-assets"
+        compiled = subprocess.run(
+            [self.cxx, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+             *map(str, translation_units), str(main), "-lcrypto", "-o", str(app)],
+            text=True, capture_output=True, timeout=120)
+        self.assertEqual(compiled.returncode, 0, compiled.stderr)
+        result = subprocess.run([str(app)], input=self.key, capture_output=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, b"asset Aasset B")
+
     def test_wrong_key_context_tag_lengths_and_provider_leave_empty_output(self):
         wrong = bytes([self.key[0] ^ 1]) + self.key[1:]
         calls = [self.call(wrong)]
