@@ -1,0 +1,978 @@
+{
+  "schema": "releaseguard.independent-sealed-assessment.v1",
+  "analyst": "/root/sealed_assessment",
+  "started_utc": "2026-11-09T14:57:13+00:00",
+  "ended_utc": "2026-11-09T15:05:06.229372+00:00",
+  "elapsed_seconds": 473.229372,
+  "status": "complete_and_frozen",
+  "termination_reason": "Parent requested final reviewable report after concrete partial descriptor recovery. No updated sample was accessed.",
+  "authorization": "Project-owned simulated encryption/reverse-engineering challenge with explicit patching and execution authorization.",
+  "scope": {
+    "target_abi": "uint32_t rg_compute(uint32_t)",
+    "platform": "Linux x86-64",
+    "stdin_contract": "32 externally supplied key bytes followed by LE32 arguments",
+    "read_allowlist": [
+      "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/**",
+      "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/native_code_seal.py",
+      "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/native_obfuscation.py",
+      "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/sealed.py",
+      "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/native_asset.py"
+    ],
+    "write_root": "/workspace/scratch/0d6a04e6117d/v11-sealed-assessment",
+    "isolation": "Instruction-enforced allowlist on a shared filesystem. No separate OS sandbox or account isolation was established for this analyst.",
+    "prohibited_inputs_accessed": false,
+    "private_fixture_source_or_key_received": false,
+    "hidden_native_reference_or_expected_outputs_received": false,
+    "other_agents_recovery_results_used": false,
+    "toolchain_and_os_runtime_dependencies": "Installed interpreter, compiler, binutils, crypto libraries and normal dynamic dependencies were used. They were not treated as challenge source material.",
+    "independent_function_restrictions": "No x86 emulator or binary-linked substitute function was submitted. Native executable copies were used only for authorized diagnostic patches."
+  },
+  "input_sha256": "386ba52fa4cdf11f0dbe180611754cc87c816a4eacd012ff117a8bf8e6e3548d",
+  "input_hashes": [
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/envelope.json",
+      "size": 3862,
+      "sha256": "9e6ee162dd73727dc7706e0ad80fc5cb8821e3dd074fcfaa6ccceb5548d84434"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/public.json",
+      "size": 2093,
+      "sha256": "a142a1e559531c0cd5a7af81aba7440d1b1a3a7df926ad2fa2aec5b8a80fd508"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/releaseguard_native_code_asset.hpp",
+      "size": 19824,
+      "sha256": "94bff54beb72e11706f02d3209c8f400cde25fe493a8ed37179938f7a667f2ea"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/sample.elf",
+      "size": 47984,
+      "sha256": "386ba52fa4cdf11f0dbe180611754cc87c816a4eacd012ff117a8bf8e6e3548d"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/releaseguard_native_code.hpp",
+      "size": 309,
+      "sha256": "10ee836ab90845a8d2db53c9f973cd79d144c45231e32e5f5f8a1137fa09cf56"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/releaseguard_native_code.cpp",
+      "size": 2520,
+      "sha256": "6f42111cda892735917a4156ce537b12a11b0f73ba6bf68301dcf242bdf008f3"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/releaseguard_sealed_asset.hpp",
+      "size": 4317,
+      "sha256": "6224172492bf90e1c2e86d4efea784930c3534edc3cfa75cf6e7a292628cc985"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/function.json",
+      "size": 11830,
+      "sha256": "057b2dab3c8e76f14f16f6ea6adb21e4306a84b25e28ee03c9c2314277a3d42e"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/run.json",
+      "size": 44871,
+      "sha256": "0cf0ef93ab8cfce11fe85f9bfed3afb2381db66be0524c8b6a2a6dc10479791a"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/program.elf",
+      "size": 47984,
+      "sha256": "386ba52fa4cdf11f0dbe180611754cc87c816a4eacd012ff117a8bf8e6e3548d"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/program.json",
+      "size": 82590,
+      "sha256": "ea5e155d3c0a46878769264772da3c74805fd0a95c7fc9f644582c20c90604d7"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/program.c",
+      "size": 52738,
+      "sha256": "d9ee3544aeedcbb7a8d2c1ba88aa41f78e52010bba7f1453b9ab6c6101f3afe9"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/program-memory.json",
+      "size": 171367,
+      "sha256": "a868371d5c668926b98e08ea83d57fb01a46dc6b27ed18dadc8b319356b64dbe"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/headless.log",
+      "size": 30609,
+      "sha256": "4eb025d81b5559112aaeabea13dcfa54c238c14dc27d1e0edbfb1493cda2f32f"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/console.log",
+      "size": 24167,
+      "sha256": "e100698e1aa8b87cf03e675e3fb3ac398864e7d81d313717d428b147dceb3b6c"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/decompiled.c",
+      "size": 203,
+      "sha256": "0daf771eb2bd4156f9876576ed6a1699992994a8d0c301c22cba1bc152dfb74b"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/program-warnings.json",
+      "size": 39398,
+      "sha256": "cda83d67dc7b7a4dfa2363efbccb42ec46aea8cdce70ff06d28596388f1de8d4"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/v11-sealed-challenge/observations/script.log",
+      "size": 8913,
+      "sha256": "cd509b051e57ff70538d54a4f43a423ef0588cedb35794394109bd53ec88b43b"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/native_code_seal.py",
+      "size": 17956,
+      "sha256": "90b14a1b65cbfccb43276981176377843df5b945e4ac13ff057c9cd44121dad9"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/native_obfuscation.py",
+      "size": 26526,
+      "sha256": "fe7775cff5a58b5dde14d65025c777fe6e148c3c7bd4fb99e08bd54fbcf8b13f"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/sealed.py",
+      "size": 10793,
+      "sha256": "4325b06bf94272b0bf75231cb14e1f69cbab71deac01d58f88f5433c3b444f50"
+    },
+    {
+      "path": "/workspace/scratch/0d6a04e6117d/repo/src/releaseguard/native_asset.py",
+      "size": 3126,
+      "sha256": "f1b3663fcf6e909e6a27b6bc9cc607f0e383e0682998799eeb1280af4041e9e6"
+    }
+  ],
+  "input_changes_during_assessment": [],
+  "sample_unchanged": true,
+  "tool_versions": {
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "cryptography": "50.0.2",
+    "python_ssl": "OpenSSL 3.5.8 25 Aug 2026",
+    "cc": "cc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+    "objdump": "GNU objdump (GNU Binutils for Ubuntu) 2.42",
+    "readelf": "GNU readelf (GNU Binutils for Ubuntu) 2.42",
+    "strings": "GNU strings (GNU Binutils for Ubuntu) 2.42",
+    "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)",
+    "Ghidra_observations": "12.2 with Java 25.0.5+8-LTS supplied by the challenge. The analyst did not rerun Ghidra."
+  },
+  "outcome": {
+    "classification": "partial_descriptor_recovery",
+    "master_key_recovered": false,
+    "package_key_recovered": false,
+    "complete_vm_payload_recovered": false,
+    "original_vm_instruction_bytes_recovered": 0,
+    "descriptor_bytes_recovered": 8,
+    "independent_function_candidate": null,
+    "original_function_behavior_recovered": false,
+    "hidden_reference_comparison": "Not available to this analyst. Parent can compare the supplied eight-byte candidate to payload offset 2751."
+  },
+  "findings": [
+    {
+      "id": "SEALED-PARTIAL-001",
+      "title": "Public reversible descriptor fingerprint discloses one accepted descriptor word",
+      "status": "Native check validated with positive and negative controls",
+      "scope": "A single 64-bit descriptor fingerprint word at payload offset 2751, corresponding to descriptor index 7. Other descriptor words and VM instructions remain unresolved.",
+      "value_hex": "a233d198961a183c",
+      "little_endian_bytes_hex": "3c181a9698d133a2",
+      "payload_offset": 2751,
+      "descriptor_memory_address": "0x40bc10",
+      "derivation": "word = (ROL64(0x3a6826d63c159e05, 23) XOR 0xf8728c21ea4d5fb0) - 0xf138b55652b65367 modulo 2^64",
+      "evidence": [
+        "observations/program.c lines 759-760 exposes the simplified reversible equality.",
+        "sample.elf 0x401a3b reads descriptor word 7, 0x401ac7 rotates, 0x401aca compares and 0x401acd rejects mismatch.",
+        "Patch changes the gate to supply a selected descriptor value and ready state. It places an output marker at the success target 0x401ad3 while retaining the original conditional branch.",
+        "The recovered word produces marker 0x11223344 on four arguments. Zero and recovered-word XOR 1 both produce zero on the same four arguments."
+      ],
+      "native_validation": [
+        {
+          "mode": "zero_control",
+          "word_hex": "0000000000000000",
+          "returncode": 0,
+          "stdout_hex": "00000000000000000000000000000000",
+          "output_u32": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "patched_sha256": "2f2c4e672bf02d64b06e379e224c3b86e3caedfba63f3d3d46b3bb7ab412351b",
+          "gate_hex": "48b800000000000000004889042510bc4000c6042518bc400001b801000000c3",
+          "success_marker_hex": "48c744245044332211e959310000"
+        },
+        {
+          "mode": "recovered_word7",
+          "word_hex": "a233d198961a183c",
+          "returncode": 0,
+          "stdout_hex": "44332211443322114433221144332211",
+          "output_u32": [
+            287454020,
+            287454020,
+            287454020,
+            287454020
+          ],
+          "patched_sha256": "19e286316a1b871ef10986caccdc8a17dce31dbefc3a3064e740b45f972d8caa",
+          "gate_hex": "48b83c181a9698d133a24889042510bc4000c6042518bc400001b801000000c3",
+          "success_marker_hex": "48c744245044332211e959310000"
+        },
+        {
+          "mode": "flipped_word7",
+          "word_hex": "a233d198961a183d",
+          "returncode": 0,
+          "stdout_hex": "00000000000000000000000000000000",
+          "output_u32": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "patched_sha256": "c9d94c9a8d45de0561a4280b16a7f702b24bf7485495a6bdcd6a72ae18f2d124",
+          "gate_hex": "48b83d181a9698d133a24889042510bc4000c6042518bc400001b801000000c3",
+          "success_marker_hex": "48c744245044332211e959310000"
+        }
+      ],
+      "candidate_file": "recovered_descriptor_word7.bin",
+      "reproduction": "python /workspace/scratch/0d6a04e6117d/v11-sealed-assessment/recover_descriptor_word.py",
+      "limits": "The native equality fixes this word uniquely. Direct comparison to the encrypted original plaintext awaits the parent hidden reference. This observation does not provide the AES key or genuine function behavior."
+    },
+    {
+      "id": "SEALED-OBS-002",
+      "title": "Release retains symbols, VM decoder and dispatcher metadata",
+      "status": "Observed",
+      "evidence": [
+        "ELF .symtab includes rg_compute, module storage names, ready flag, loader names and source filenames kernel.c and driver.cpp.",
+        "No .debug_* sections were present in the ELF section inventory. Strings inspection found filenames and compiler identities but no embedded original source text.",
+        "The dispatcher table at 0x406008 contains 2510 32-bit relative entries and 658 unique native target addresses. These include opcode variants and the common rejection target.",
+        "VM storage is NOBITS .bss. Supplied Ghidra loaded-memory observation contains zeros for both storage ranges and ready state."
+      ],
+      "scope": "Structural metadata and interpreter implementation disclosure. This review did not demonstrate a plaintext function clone or recover full VM storage from these features.",
+      "artifacts": [
+        "elf_sections.txt",
+        "elf_symbols.txt",
+        "strings.txt",
+        "disassembly.txt",
+        "vm_surface.json"
+      ]
+    }
+  ],
+  "methods": [
+    {
+      "name": "Inventory and static public implementation review",
+      "inputs": "All challenge files and the four permitted source modules",
+      "actions": [
+        "Hash inputs",
+        "Inspect ELF sections, symbols and strings",
+        "Read generated C++ loader and sealed-asset helper",
+        "Review allowed sealing and obfuscation implementation",
+        "Read full-program Ghidra observations and native disassembly around VM and loader paths"
+      ],
+      "result": "Loader clears storage before authentication, checks exact size and full SHA-256 before copying, and then sets ready. VM bytecode and descriptor arrays occupy zero-initialized .bss in this sample."
+    },
+    {
+      "name": "Candidate key and contiguous payload search",
+      "candidate_source_rules": [
+        "Every contiguous 32-byte window from every released challenge file, including observations and duplicate ELF.",
+        "Every 32-byte window from contiguous even-length hex strings of at least 64 hex characters found in textual challenge files.",
+        "Canonical-looking 44-character base64 strings that decode to exactly 32 bytes.",
+        "Decoded C/C++ runs of at least 32 byte hex literals.",
+        "Chosen repeated-byte keys for all 256 byte values, ascending and descending bytes, the published payload hash, salt, and SHA-256 digests of six public context words."
+      ],
+      "deduplication": "Exact 32-byte value dictionary, keeping the first source and offset. Detailed per-source new-candidate counts appear in key_scan.json.",
+      "unique_32byte_candidates": 247070,
+      "gcm_authentication_attempts": 494140,
+      "modes": [
+        "HKDF-SHA256 master key using exact header AAD and info prefix",
+        "Candidate directly treated as AES-256 package key"
+      ],
+      "matched_keys": [],
+      "contiguous_binary_payload_windows": 45226,
+      "contiguous_payload_matches": [],
+      "positive_control": {
+        "chosen_key_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "expected_derived_hex": "0472d28e719e6f17bfb1ffbc4d73c428c1ab34975fb1df771b5da6c7c765d538",
+        "observed_derived_hex": "0472d28e719e6f17bfb1ffbc4d73c428c1ab34975fb1df771b5da6c7c765d538",
+        "match": true
+      },
+      "seconds": 3.230367660522461,
+      "limits": "Covers the recorded raw and text-decoded representations. Arbitrary split, compressed, transformed or generated key representations were not exhaustively searched.",
+      "reproduction": "python /workspace/scratch/0d6a04e6117d/v11-sealed-assessment/scan_keys.py"
+    },
+    {
+      "name": "Wrong keys, gate/ready patches and crypto-result replacement",
+      "recorded_probe_count": 47,
+      "chosen_argument_count_per_full_stream": 1024,
+      "wrong_key_count": 36,
+      "results": [
+        {
+          "label": "short_stdin_0",
+          "returncode": 2,
+          "stdout_bytes": 0,
+          "stderr": ""
+        },
+        {
+          "label": "short_stdin_1",
+          "returncode": 2,
+          "stdout_bytes": 0,
+          "stderr": ""
+        },
+        {
+          "label": "short_stdin_15",
+          "returncode": 2,
+          "stdout_bytes": 0,
+          "stderr": ""
+        },
+        {
+          "label": "short_stdin_31",
+          "returncode": 2,
+          "stdout_bytes": 0,
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_0",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_1",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_2",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_3",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_4",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_5",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_6",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_7",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_8",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_9",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_10",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_11",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_12",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_13",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_14",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_15",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_16",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_17",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_18",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_19",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_20",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_21",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_22",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_23",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_24",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_25",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_26",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_27",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_28",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_29",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_30",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_31",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_32",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_33",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_34",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "wrong_key_35",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "gate_only",
+          "returncode": 0,
+          "stdout_bytes": 4096,
+          "output_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+          "all_output_words_zero": true,
+          "output_first_16_u32": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "stderr": ""
+        },
+        {
+          "label": "gate_and_ready",
+          "returncode": 0,
+          "stdout_bytes": 4096,
+          "output_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+          "all_output_words_zero": true,
+          "output_first_16_u32": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "stderr": ""
+        },
+        {
+          "label": "gate_ready_and_descriptor",
+          "returncode": -11,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": ""
+        },
+        {
+          "label": "hook_final_False_memcmp_False",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": "derived=0472d28e719e6f17bfb1ffbc4d73c428c1ab34975fb1df771b5da6c7c765d538\nreal_final=0\n"
+        },
+        {
+          "label": "hook_final_True_memcmp_False",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": "derived=0472d28e719e6f17bfb1ffbc4d73c428c1ab34975fb1df771b5da6c7c765d538\nreal_final=0\nreal_cmp=1,len=32\n"
+        },
+        {
+          "label": "hook_final_False_memcmp_True",
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "all_output_words_zero": false,
+          "output_first_16_u32": [],
+          "stderr": "derived=0472d28e719e6f17bfb1ffbc4d73c428c1ab34975fb1df771b5da6c7c765d538\nreal_final=0\n"
+        },
+        {
+          "label": "hook_final_True_memcmp_True",
+          "returncode": 0,
+          "stdout_bytes": 4096,
+          "output_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+          "all_output_words_zero": true,
+          "output_first_16_u32": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "stderr": "derived=0472d28e719e6f17bfb1ffbc4d73c428c1ab34975fb1df771b5da6c7c765d538\nreal_final=0\nreal_cmp=1,len=32\n"
+        }
+      ],
+      "patches": [
+        {
+          "name": "gate_only",
+          "patches": [
+            {
+              "address": "0x4014a0",
+              "file_offset": 5280,
+              "original_hex": "f30f1efa5348",
+              "new_hex": "b801000000c3"
+            }
+          ],
+          "sha256": "0616cd274c8a48d6a43e19ce88596def83bcd3b1322d7f5f72384a5979939730"
+        },
+        {
+          "name": "gate_and_ready",
+          "patches": [
+            {
+              "address": "0x4014a0",
+              "file_offset": 5280,
+              "original_hex": "f30f1efa5348",
+              "new_hex": "b801000000c3"
+            },
+            {
+              "address": "0x404c7a",
+              "file_offset": 19578,
+              "original_hex": "0f8581000000",
+              "new_hex": "909090909090"
+            }
+          ],
+          "sha256": "51628ea7ff9d25eb58c296dd4208b6971f991af12fb47340bf331d675b9c673c"
+        },
+        {
+          "name": "gate_ready_and_descriptor",
+          "patches": [
+            {
+              "address": "0x4014a0",
+              "file_offset": 5280,
+              "original_hex": "f30f1efa5348",
+              "new_hex": "b801000000c3"
+            },
+            {
+              "address": "0x404c7a",
+              "file_offset": 19578,
+              "original_hex": "0f8581000000",
+              "new_hex": "909090909090"
+            },
+            {
+              "address": "0x401acd",
+              "file_offset": 6861,
+              "original_hex": "0f8567310000",
+              "new_hex": "909090909090"
+            }
+          ],
+          "sha256": "18367e8a556df3b6edbdc2a5bd0a4b867f53804b5213db682b24d99b84f53caf"
+        }
+      ],
+      "summary": [
+        "All four short-stdin cases exited 2 with empty stdout.",
+        "All 36 chosen wrong keys exited 1 with empty stdout.",
+        "Gate-only and gate-plus-ready patches each exited 0 with 1024 zero words.",
+        "Bypassing the descriptor condition as well caused SIGSEGV with empty stdout.",
+        "Forcing only EVP_DecryptFinal_ex success reached the full hash comparison and was rejected.",
+        "Forcing only CRYPTO_memcmp success was rejected at AEAD finalization.",
+        "Forcing both results admitted wrong-key bytes, then produced 1024 zero words after the VM descriptor check."
+      ],
+      "scope": "The single- and dual-hook experiments replace selected crypto return values. Full malicious crypto-provider output synthesis was not evaluated. Their outputs were not submitted as original function recovery.",
+      "reproduction": [
+        "cc -shared -fPIC -O2 /workspace/scratch/0d6a04e6117d/v11-sealed-assessment/audit_hooks.c -o /workspace/scratch/0d6a04e6117d/v11-sealed-assessment/audit_hooks.so -ldl",
+        "python /workspace/scratch/0d6a04e6117d/v11-sealed-assessment/probe_runtime.py"
+      ]
+    }
+  ],
+  "unassessed": [
+    "Hidden-reference scoring of the descriptor candidate and original function behavior.",
+    "Recovery of the remaining seven descriptor words and VM bytecode under AES-GCM.",
+    "Exhaustive analysis of every native dispatcher target and construction of a complete standalone VM implementation.",
+    "Arbitrary encoded, split or compressed duplicate payload and key representations.",
+    "Exhaustive 256-bit key search, cryptographic attacks, side-channel attacks and multi-envelope nonce correlations.",
+    "A legitimately authorized process containing the original key or decrypted VM storage.",
+    "Concurrent initialize/clear/compute behavior outside the documented exclusive lifecycle.",
+    "Hostile build inputs, coverage metadata forgery, module-level asm and alternative LLVM constructs. Parent investigation of these inputs is separate from this sample assessment.",
+    "A fully malicious replacement crypto provider that synthesizes arbitrary plaintext and forges all dependent checks.",
+    "Updated samples or fixes produced after this assessment began."
+  ],
+  "source_policy": {
+    "public_web_sources": [],
+    "external_source_code_retrieved": false,
+    "local_sources": "Input file list above plus generated local diagnostic scripts. Compiler and binutils observations were generated from the approved sample.",
+    "no_general_security_guarantee": "Negative recovery results apply only to the listed sample, methods and time bound. Ghidra warnings and decompiler failures were not used as protection evidence."
+  },
+  "artifact_files": [
+    {
+      "name": "audit_hooks.c",
+      "bytes": 1190,
+      "sha256": "f7002d94ebcd2cd9028b320044ccf06eb54b7470c2753740f096ae02389b28d0"
+    },
+    {
+      "name": "audit_hooks.so",
+      "bytes": 15896,
+      "sha256": "f80735e385d5279c4b696bdc703c619b1cf8b6c6546e23e3dcaf6458f5efb14e"
+    },
+    {
+      "name": "chosen_inputs.json",
+      "bytes": 11912,
+      "sha256": "623bf652ff7d98642196c52a7dbd2f6d6f245c8abf7e26eb21ea5fa9bb5a4a9f"
+    },
+    {
+      "name": "descriptor_flipped_word7.elf",
+      "bytes": 47984,
+      "sha256": "c9d94c9a8d45de0561a4280b16a7f702b24bf7485495a6bdcd6a72ae18f2d124"
+    },
+    {
+      "name": "descriptor_recovered_word7.elf",
+      "bytes": 47984,
+      "sha256": "19e286316a1b871ef10986caccdc8a17dce31dbefc3a3064e740b45f972d8caa"
+    },
+    {
+      "name": "descriptor_zero_control.elf",
+      "bytes": 47984,
+      "sha256": "2f2c4e672bf02d64b06e379e224c3b86e3caedfba63f3d3d46b3bb7ab412351b"
+    },
+    {
+      "name": "disassembly.txt",
+      "bytes": 251912,
+      "sha256": "ea252a6cfcf68440f9b10c2896c4a81df3d6f6fd4efd89f7ddbfa8796d50bb9e"
+    },
+    {
+      "name": "elf_sections.txt",
+      "bytes": 3190,
+      "sha256": "7aee3958f87e242ff3334ac97f1d443bd3c4864075697a6b8ef30376503e483a"
+    },
+    {
+      "name": "elf_symbols.txt",
+      "bytes": 11400,
+      "sha256": "fe1a804bbd07463e2db81a65ba77629683e092a71cc6d2ca93de90b4a8156e80"
+    },
+    {
+      "name": "finalize_report.py",
+      "bytes": 12405,
+      "sha256": "e4a44af0ec0990ac344e273d27110607751924905502b66eeb24dfc0f277abed"
+    },
+    {
+      "name": "gate_and_ready.elf",
+      "bytes": 47984,
+      "sha256": "51628ea7ff9d25eb58c296dd4208b6971f991af12fb47340bf331d675b9c673c"
+    },
+    {
+      "name": "gate_only.elf",
+      "bytes": 47984,
+      "sha256": "0616cd274c8a48d6a43e19ce88596def83bcd3b1322d7f5f72384a5979939730"
+    },
+    {
+      "name": "gate_ready_and_descriptor.elf",
+      "bytes": 47984,
+      "sha256": "18367e8a556df3b6edbdc2a5bd0a4b867f53804b5213db682b24d99b84f53caf"
+    },
+    {
+      "name": "input_hashes.json",
+      "bytes": 4411,
+      "sha256": "9a6d175cf0b90dc716566b1a8034d271c5e999b22bbf856ddaa8fa44d6a5e8ff"
+    },
+    {
+      "name": "key_scan.json",
+      "bytes": 21226,
+      "sha256": "a6f9058515dc88e643b12861e025906f4883891139f4b28e578a4a9557f07958"
+    },
+    {
+      "name": "partial_descriptor_recovery.json",
+      "bytes": 2018,
+      "sha256": "9402c1d9495a3aac3629a865484cffd75502572dd35a0f84bdc31a5fe9c93d07"
+    },
+    {
+      "name": "probe_runtime.py",
+      "bytes": 4300,
+      "sha256": "0504f41d51672a3f2953293c40a24eb8bca4d6e5f0322b1d330044b2b399b86f"
+    },
+    {
+      "name": "recover_descriptor_word.py",
+      "bytes": 3073,
+      "sha256": "428c139c2ef7cc2f0a6217543c2bc46ff55dbab3cf1c098af708eaace7530ee2"
+    },
+    {
+      "name": "recovered_descriptor_word7.bin",
+      "bytes": 8,
+      "sha256": "74e4586157c477cb698c4920283a3c55113be04b28e100872578d709854cd76a"
+    },
+    {
+      "name": "runtime_probes.json",
+      "bytes": 15079,
+      "sha256": "69ca50f9a923ea23f7affeac56bf57db22da9db85deb3bfadd72cf7eadea8e02"
+    },
+    {
+      "name": "scan_keys.py",
+      "bytes": 4443,
+      "sha256": "f8e76c75c5641ebe57e10c4718567dd8df4b06272e6e9c6dc997c4ef8e278851"
+    },
+    {
+      "name": "strings.txt",
+      "bytes": 7071,
+      "sha256": "1fbece90bef3f03fdc4ec4ff8e5494a6d3a5ff0868df6c08911474bf71807e69"
+    },
+    {
+      "name": "tool_versions.json",
+      "bytes": 454,
+      "sha256": "36052e08f8c53859d204c9d798853ecc99469d2d1e9f74ee0d3f71ee28827a6c"
+    },
+    {
+      "name": "vm_surface.json",
+      "bytes": 45070,
+      "sha256": "f6c38f12716e2c6c773aecb6f0332adc3feb92b167e22cd04734edc602daa78e"
+    }
+  ]
+}

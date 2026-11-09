@@ -2,6 +2,14 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [MIT license](LICENSE)
 
+## Native function protection in development
+
+`native-obfuscate --profile sealed-virtualize` adds experimental LLVM 18 integration for Linux x86-64 scalar-integer functions. It encrypts the VM instructions and descriptors required by the functions, with a generated C++17/OpenSSL loader and an independently supplied 32-byte key. An authorized process holds plaintext VM storage.
+
+Ordinary, split/flatten/substitution and VM-only samples were independently reconstructed and matched every one of 1,081,924 hidden evaluations. Those results led to instruction encryption, real Ghidra extraction and patch controls, and regressions for discovered compiler and metadata failures. IDA 9.x engine execution remains pending. [Integration and results](docs/native-code.md) · [中文说明](docs/native-code.zh-CN.md)
+
+## Native data protection in v0.10.0
+
 **Ship encrypted native data and supply its key independently to authorized users.**
 
 Anti-REA Forge now opens authenticated data in C++17 with OpenSSL. The build receives a sealed envelope and the application's expected context. A separately supplied random 256-bit key is required to recover the data. Release checks catch accidental inclusion of that key in common representations.

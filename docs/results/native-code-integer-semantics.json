@@ -1,0 +1,127 @@
+{
+  "work": "/workspace/scratch/0d6a04e6117d/v11-native/semantics-7ugopd91",
+  "functions": [
+    {
+      "name": "umul_32",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "smul_32",
+      "checked": 1074,
+      "excluded_undefined": 26
+    },
+    {
+      "name": "udiv_32",
+      "checked": 1090,
+      "excluded_undefined": 10
+    },
+    {
+      "name": "sdiv_32",
+      "checked": 1089,
+      "excluded_undefined": 11
+    },
+    {
+      "name": "urem_32",
+      "checked": 1090,
+      "excluded_undefined": 10
+    },
+    {
+      "name": "srem_32",
+      "checked": 1089,
+      "excluded_undefined": 11
+    },
+    {
+      "name": "shl_32",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "lshr_32",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "ashr_32",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "ucmp_32",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "scmp_32",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "switch_32",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "umul_64",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "smul_64",
+      "checked": 1074,
+      "excluded_undefined": 26
+    },
+    {
+      "name": "udiv_64",
+      "checked": 1090,
+      "excluded_undefined": 10
+    },
+    {
+      "name": "sdiv_64",
+      "checked": 1089,
+      "excluded_undefined": 11
+    },
+    {
+      "name": "urem_64",
+      "checked": 1090,
+      "excluded_undefined": 10
+    },
+    {
+      "name": "srem_64",
+      "checked": 1089,
+      "excluded_undefined": 11
+    },
+    {
+      "name": "shl_64",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "lshr_64",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "ashr_64",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "ucmp_64",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "scmp_64",
+      "checked": 1100,
+      "excluded_undefined": 0
+    },
+    {
+      "name": "switch_64",
+      "checked": 1100,
+      "excluded_undefined": 0
+    }
+  ],
+  "all_equal": true,
+  "total": 26264
+}

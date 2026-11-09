@@ -1,0 +1,148 @@
+{
+  "schema": "releaseguard-native-code-hardening/v1",
+  "completed_utc": "2026-11-09T15:21:22.203798+00:00",
+  "base_revision": "6143e7989d16fe0ea596890bc59929f468c4de6b",
+  "scope": {
+    "platform": "Linux x86-64",
+    "input": "Dedicated self-contained scalar-integer LLVM 18 unit",
+    "protected_material": "VM instructions, descriptors and randomized guard storage before external key delivery",
+    "authorized_process_contains_plaintext_vm_storage": true,
+    "public_format_metadata_remains_observable": true
+  },
+  "initial_independent_assessment": {
+    "report": "native-code-sealed-review-initial.json",
+    "root_private_score": {
+      "assessment_sample_sha256": "386ba52fa4cdf11f0dbe180611754cc87c816a4eacd012ff117a8bf8e6e3548d",
+      "recovered_bytes": 8,
+      "payload_offset": 2751,
+      "matches_private_payload": true,
+      "recovered_word_sha256": "74e4586157c477cb698c4920283a3c55113be04b28e100872578d709854cd76a",
+      "payload_bytes": 2759,
+      "key_and_complete_plaintext_disclosed": false
+    },
+    "full_function_recovered": false,
+    "partial_descriptor_bytes_recovered": 8,
+    "candidate_master_and_direct_package_key_attempts": 494140,
+    "candidate_keys": 247070,
+    "input_access_isolation": "Instruction-enforced allowlist on shared filesystem"
+  },
+  "fixed_findings": [
+    {
+      "finding": "Original function bodies retained under other symbols",
+      "change": "Check every transformed function body for a normalized original copy"
+    },
+    {
+      "finding": "Original global storage can survive constant folding",
+      "change": "Reject original global definitions in sealed input"
+    },
+    {
+      "finding": "Module assembly preserves arbitrary plaintext bytes",
+      "change": "Reject module assembly at API preflight and direct sealer entry"
+    },
+    {
+      "finding": "Amice drops executable prologue",
+      "change": "Reject prefix and prologue in both VM profiles",
+      "actual_reference_output_at_zero": 1234568,
+      "body_only_output_at_zero": 1234567
+    },
+    {
+      "finding": "Source filename and llvm.ident retain arbitrary plaintext markers",
+      "change": "Normalize source_filename and remove llvm.ident"
+    },
+    {
+      "finding": "Linker options and dependent-library metadata preserve arbitrary plaintext strings",
+      "change": "Reject both metadata forms"
+    },
+    {
+      "finding": "Public reversible descriptor guard exposes payload word seven",
+      "change": "Use independent nonzero random words and seal expected comparison table"
+    },
+    {
+      "finding": "Equal zeroed guard arrays could admit cleared storage",
+      "change": "Require expected guard to be nonzero and equal to the descriptor word"
+    },
+    {
+      "finding": "Required compiler tests could silently skip missing tools",
+      "change": "Fail required native CI configuration instead of skipping"
+    }
+  ],
+  "guard_fix_private_validation": {
+    "sample_sha256": "d4586625d21eb6e870cd7a15a121ac60c0885289019ef1a2bcd03b809c8e2a90",
+    "payload_bytes": 2767,
+    "descriptor_word_index": 7,
+    "descriptor_guard_offset": 2751,
+    "new_expected_table_offset": 2759,
+    "old_recovered_word_matches_new_payload": false,
+    "new_descriptor_guard_matches_sealed_expected_table": true,
+    "new_guard_nonzero": true,
+    "new_random_guard_or_private_key_published": false
+  },
+  "post_fix_genuine_ghidra": {
+    "report": "native-code-sealed-controls.json",
+    "version": "12.2",
+    "input_count": 82014,
+    "encrypted_distinct_32byte_candidates": 30982,
+    "encrypted_successful_key_decryptions": 0,
+    "deliberately_embedded_key_successful_recoveries": 1,
+    "correct_key_differences": 0,
+    "outer_gate_patch_wrong_key_differences": 82014,
+    "scope": "Recorded contiguous-candidate, outer-gate, forced-final, tamper and context controls"
+  },
+  "post_fix_independent_reconstruction": {
+    "status": "blocked_before_completion",
+    "reason": "The execution layer rejected the independent recovery subtask for possible cybersecurity risk",
+    "no_success_claim": true
+  },
+  "modern_ida": {
+    "engine": "IDA 9.x with Hex-Rays",
+    "actual_execution": "not_performed",
+    "reason": "No runnable compatible engine and decompiler in this workspace",
+    "adapter": "benchmarks/ida_function/export_functions.py",
+    "engine_independent_tests": 8
+  },
+  "additional_semantic_validation": {
+    "report": "native-code-integer-semantics.json",
+    "functions": 24,
+    "evaluated_pairs": 26264,
+    "differences": 0,
+    "undefined_inputs_excluded": true
+  },
+  "source_sha256": {
+    "src/releaseguard/native_obfuscation.py": "2e16d975e5eb38ee8993319cc4fa20379873c97c39ee2f17fd2d8ef2c8057f70",
+    "src/releaseguard/native_code_seal.py": "bb32dec321b4d88ffc38533eacb4623295e5661c1205343a0a55ee3e8da77682",
+    "benchmarks/sealed_code_controls.py": "319d73e7767d44d5a923df7caa54d74eef1ad4dbcd213cbbf76be7044721dbc3"
+  },
+  "local_regression": {
+    "python": {
+      "tests": 636,
+      "seconds": 77.524,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "skip_reason": "/proc/self/smaps unavailable in this sandbox",
+      "required_native_obfuscation": true,
+      "required_native_virtualization": true,
+      "required_native_openssl": true
+    },
+    "javascript_unit": {
+      "tests": 63,
+      "failures": 0,
+      "skips": 0
+    },
+    "javascript_installed_core_integration": {
+      "tests": 9,
+      "failures": 0,
+      "skips": 0
+    },
+    "modern_ida_engine_independent": {
+      "tests": 8,
+      "failures": 0,
+      "actual_engine_execution": false
+    },
+    "log_sha256": {
+      "v11-full-tests-final.log": "c558afb8fbe82d719ca2ef852e82a422a296f1df80d27982dd451f6ffa1c3d24",
+      "v11-node-tests.log": "af63fcc06cd6fcb7d7f611c30223b37c26231a644fab26ea793cde6f1e543aea",
+      "v11-node-integration-final.log": "503ca79564811d2066539e0356c18a4c4a2c8a79e1e6e088e6fc5a9cc416e82a"
+    }
+  }
+}
