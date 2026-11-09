@@ -24,16 +24,19 @@ import secrets
 import sqlite3
 import stat
 import unicodedata
+from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, TypeVar
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from .core import GuardError, _is_link, canonical
+
+_Result = TypeVar("_Result")
 
 MAX_REQUEST_BYTES = 1024 * 1024
 MAX_TTL_SECONDS = 300
@@ -194,6 +197,22 @@ def consume_capability(document: dict[str, Any], public: Ed25519PublicKey,
     store._consume_nonce(hashlib.sha256(raw_public).hexdigest(), expected["audience"],
                          claims["jti"], claims["iat"], claims["exp"], now)
     return claims
+
+
+def run_authorized_operation(document: dict[str, Any], public: Ed25519PublicKey,
+                             store: ReplayStore, *, subject: str, audience: str,
+                             product: str, operation: str, request: bytes,
+                             handler: Callable[[bytes], _Result]) -> _Result:
+    """Consume one capability, then give the verified bytes to a server-owned handler.
+
+    The service supplies the public key, authenticated identity, operation and
+    handler. A handler exception leaves the capability spent.
+    """
+    if not callable(handler):
+        raise GuardError("The server operation handler must be callable")
+    consume_capability(document, public, store, subject=subject, audience=audience,
+                       product=product, operation=operation, request=request)
+    return handler(request)
 
 
 def _capacity(value: Any) -> int:

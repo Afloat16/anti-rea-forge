@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 — 2026-11-09
+
+- Add `split-elf-debug` for GNU/Linux builds. Ship a linked ELF with private static symbols and debug metadata separated, retain a matching private debug file, and check configured names for residual disclosures.
+- Add `run_authorized_operation` for trusted Python services. The handler receives the exact request bytes after the service verifies and consumes a single-use capability.
+- Add a matched i386 ELF experiment for source function names and a real client patch with an independently checked signed-receipt control.
+
 ## 0.8.0 — 2026-11-09
 
 - Add `native-token-issue`: issue an external 256-bit random bearer and generate public C++17/OpenSSL verifier headers without putting its usable value in build inputs.
