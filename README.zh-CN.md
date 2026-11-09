@@ -1,4 +1,4 @@
-# 🛡️ Anti-REA Forge · 反逆向共建计划
+# 🛡️ Anti-REA Forge v0.7.0 · 反逆向共建计划
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -16,7 +16,7 @@
 
 从[共建入口与可复现任务](docs/community/README.md)开始，或阅读[技术故事](docs/community/PROJECT_STORY.md)、[中英文介绍](docs/community/SHARE_COPY.md)与[推广投递记录](docs/community/OUTREACH.md)。介绍稿仅适用于允许该类内容的社区；已提交建议与尚未投递的草稿分开记录。
 
-## v0.7：阻断用随包 source map 原样恢复源码
+## v0.7.0：阻断用随包 source map 原样恢复源码
 
 实测官方 **Craft Anything v0.5.0**：普通发布包中，即使 JS 没有写映射地址，工具仍从同目录的 `app.js.map` 恢复出与原文哈希一致的源码。只提供分离后的公开目录时，同一工具仍正常完成、仍能格式化同一份 JS，但返回 **0 份原始源码**。重新提供私有图，又恢复了同一份原文。[三组原始结果](docs/results/craft-source-map-2026-11-09.json) · [REA 与 Craft 源码依据](docs/research-source-maps-2026-11-09.md)。
 
@@ -86,6 +86,7 @@ python -m releaseguard scan-release --root ./dist --policy examples/policy-porta
 
 | 已经做了什么 | 当前结果 |
 | --- | --- |
+| v0.7.0 · 私有 source map | 对同一份压缩 JS，Craft Anything 在普通包中恢复 **1 份原文**，在公开包中恢复 **0 份**，补回私有 map 后再次恢复 **1 份**。REA 完整解析两侧 JS，来自 map 的原始源码节点从 **1 个降至 0 个**。[用法与范围](docs/private-source-maps.md) · [工具实测记录](https://github.com/Afloat16/anti-rea-forge/actions/runs/42572504515/job/129012835263) |
 | v0.6 最终提交的跨平台验证 | **六项 CI 全部通过**；两套 Linux Python 各 432 项通过，Linux/macOS 的 JS 各 63 项通过、Windows 62 项通过及 1 项 POSIX 跳过；三平台各 9 项真实接入通过。Windows/MSVC、跳过原因与目标文件不变证据见[验证记录](docs/testing-v0.6-2026-11-05.md) |
 | v0.5 本地跨语言与原生集成测试 | 2026-11-04，Python 377 项中 376 项通过、1 项跳过；JavaScript 44 项及真实 CLI 接入 5 项全部通过，见[范围与打包验证](docs/testing-v0.5-2026-11-04.md) |
 | v0.4 本地功能与原生集成测试 | 2026-10-20，331 项中 330 项通过、1 项因 `/proc/self/smaps` 不可用跳过；[详细范围与 Frida 受阻记录](docs/testing-v0.4-2026-10-20.md) |

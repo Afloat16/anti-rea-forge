@@ -1,4 +1,4 @@
-# 🛡️ Anti-REA Forge
+# 🛡️ Anti-REA Forge v0.7.0
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -18,7 +18,7 @@ The tooling retains the **Open Release Guard** Python distribution name `open-re
 
 **New here?** Start with the [community guide and runnable examples](docs/community/README.md), read the [project story](docs/community/PROJECT_STORY.md), or share the [English/Chinese introductions](docs/community/SHARE_COPY.md) with developers interested in software protection. Small contributions are welcome.
 
-## v0.7: keep source maps available to developers and out of public releases
+## v0.7.0: keep source maps available to developers and out of public releases
 
 Craft Anything v0.5.0 recovered the exact original source of our minified JS fixture from a sibling `app.js.map`, even though the script contained no map URL. With only the split public directory, the same tool completed its inspection and reformatted the same JS, but returned **zero original-source files**. Giving it the private map again restored the matching original. [Three-way observation](docs/results/craft-source-map-2026-11-09.json) · [REA and Craft source review](docs/research-source-maps-2026-11-09.md).
 
@@ -88,6 +88,7 @@ See the [English integration and threat mapping](docs/crypto-protection.md), [�
 
 | Evaluation | Observed result |
 | --- | --- |
+| v0.7.0 · Private source maps | On the same minified JS, Craft Anything restored **1 original file** with the map, **0** from the public release, and **1** when the private map was supplied again. REA reported **1 → 0** map-backed original-source nodes with complete coverage. [Usage and scope](docs/private-source-maps.md) · [Verified tool run](https://github.com/Afloat16/anti-rea-forge/actions/runs/42572504515/job/129012835263) |
 | v0.6 committed cross-platform validation | **All six CI jobs passed**; both Linux Python versions passed 432 tests, JS passed 63 unit/process tests on Linux/macOS and 62 with 1 POSIX skip on Windows, with 9 real bridge integrations on every platform. Windows/MSVC, skip counts and unchanged-target controls are recorded in [validation](docs/testing-v0.6-2026-11-05.md) |
 | v0.5 local portable/native integration | **377 Python tests: 376 passed, 1 skipped; 44 JS tests and 5 real CLI integration tests passed**, on 2026-11-04. [Scope, package checks and limits](docs/testing-v0.5-2026-11-04.md) |
 | v0.4 local functional/native integration | **331 run: 330 passed, 1 skipped**, on 2026-10-20; the skip is unavailable `/proc/self/smaps` inspection. [Detailed scope and Frida failure](docs/testing-v0.4-2026-10-20.md) |
