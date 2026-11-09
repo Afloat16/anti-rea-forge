@@ -26,6 +26,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $env:RG_IDA_CONFIRM_FREEWARE = '1'
           $env:RG_IDA_BIN = Join-Path $env:RUNNER_TEMP 'ida50/idag.exe'
           foreach ($case in @('baseline','public','restored')) {
             python cases/ida_symbol_probe.py "cases/$case.elf" "cases/$case.json" 0x8049000 0x8049016

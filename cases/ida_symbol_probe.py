@@ -37,21 +37,99 @@ static inspect(f, ea) {
   for (cursor = ea; cursor != BADADDR && cursor < limit; cursor = NextHead(cursor, limit))
     if (isCode(GetFlags(cursor)) && GetMnem(cursor) != "") n++;
   if (n == 0) Exit(12);
-  fprintf(f, "%s\\n%d\\n", GetFunctionName(ea), n);
+  fprintf(f, "%08X\\n%s\\n%d\\n", ea, GetFunctionName(ea), n);
   for (i = 0; i < 8; i++) fprintf(f, "%02X", Byte(ea+i));
   fprintf(f, "\\n");
 }
 static main() {
-  auto f;
+  auto f, gate;
   Wait();
+  gate = LocByName("rg_public_entry");
+  if (gate == BADADDR || gate != PUBLIC_ADDRESS) Exit(14);
   f = fopen(GetInputFilePath()+".probe", "w");
   if (f == 0) Exit(13);
   inspect(f, PRIVATE_ADDRESS);
-  inspect(f, PUBLIC_ADDRESS);
+  inspect(f, gate);
   fclose(f);
   Exit(0);
 }
 """
+
+
+def windows_for_pid(pid):
+    """Inspect this IDA process only. Return visible forms and short control labels."""
+    import ctypes
+    from ctypes import wintypes
+
+    user = ctypes.WinDLL("user32", use_last_error=True)
+    callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user.IsWindowVisible.argtypes = [wintypes.HWND]
+    user.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user.EnumWindows.argtypes = [callback, wintypes.LPARAM]
+    user.EnumChildWindows.argtypes = [wintypes.HWND, callback, wintypes.LPARAM]
+    forms = []
+
+    def describe(hwnd):
+        name = ctypes.create_unicode_buffer(120)
+        cls = ctypes.create_unicode_buffer(80)
+        user.GetWindowTextW(hwnd, name, len(name))
+        user.GetClassNameW(hwnd, cls, len(cls))
+        return {"class": cls.value, "caption": " ".join(name.value.split())}
+
+    @callback
+    def top(hwnd, _):
+        owner = wintypes.DWORD()
+        user.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if owner.value != pid or not user.IsWindowVisible(hwnd):
+            return True
+        info = describe(hwnd)
+        info["controls"] = []
+        agree = []
+
+        @callback
+        def child(handle, _):
+            if user.IsWindowVisible(handle) and len(info["controls"]) < 32:
+                control = describe(handle)
+                info["controls"].append(control)
+                if control == {"class": "TButton", "caption": "I Agree"}:
+                    agree.append(handle)
+            return True
+
+        user.EnumChildWindows(hwnd, child, 0)
+        labels = {(c["class"], c["caption"]) for c in info["controls"]}
+        if (os.environ.get("RG_IDA_CONFIRM_FREEWARE") == "1"
+                and info["class"] == "TLicenseForm" and info["caption"] == "IDA Pro License"
+                and len(agree) == 1 and ("TButton", "I Disagree") in labels):
+            # Only the known vendor license form of the digest-pinned, single-user freeware.
+            user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            if not user.PostMessageW(agree[0], 0x00F5, 0, 0):  # BM_CLICK
+                raise ctypes.WinError(ctypes.get_last_error())
+            info["action"] = "I Agree clicked on IDA Pro License"
+        forms.append(info)
+        return True
+
+    user.EnumWindows(top, 0)
+    return forms
+
+
+def run_ida(cmd, work):
+    with subprocess.Popen(cmd, cwd=work) as proc:
+        try:
+            proc.wait(timeout=8)
+        except subprocess.TimeoutExpired:
+            print("IDA startup windows:", windows_for_pid(proc.pid), flush=True)
+            try:
+                proc.wait(timeout=75)
+            except subprocess.TimeoutExpired as exc:
+                forms = windows_for_pid(proc.pid)
+                proc.kill()
+                proc.wait(timeout=10)
+                log = work / "ida.log"
+                detail = log.read_text(errors="replace")[-2000:] if log.is_file() else "no log"
+                raise RuntimeError(f"IDA timed out; windows={forms!r}, log={detail}") from exc
+        return proc.returncode
 
 
 def main():
@@ -74,21 +152,21 @@ def main():
         sample.write_bytes(image)
         probe = IDC.replace("PRIVATE_ADDRESS", hex(addresses[0])).replace("PUBLIC_ADDRESS", hex(addresses[1]))
         (work / "probe.idc").write_text(probe, encoding="ascii")
-        completed = subprocess.run([str(ida), "-A", "-c", "-Lida.log", f"-S{work / 'probe.idc'}", "sample.elf"],
-                                   cwd=work, timeout=120)
+        cmd = [str(ida), "-A", "-c", f"-L{work / 'ida.log'}", f"-S{work / 'probe.idc'}", "sample.elf"]
+        status = run_ida(cmd, work)
         output = work / "sample.elf.probe"
-        if completed.returncode or not output.is_file():
+        if status or not output.is_file():
             log = work / "ida.log"
             detail = log.read_text(errors="replace")[-2500:] if log.exists() else "no log"
-            raise RuntimeError(f"IDA did not finish the probe (exit {completed.returncode}): {detail}")
+            raise RuntimeError(f"IDA did not finish the probe (exit {status}): {detail}")
         fields = output.read_text(encoding="ascii").splitlines()
-        if len(fields) != 6 or sample.read_bytes() != image:
+        if len(fields) != 8 or sample.read_bytes() != image:
             raise RuntimeError("unexpected IDA output or modified input")
         for i, key in enumerate(("private", "public")):
-            name, count, prefix = fields[3*i:3*i+3]
-            if not name or int(count) < 1 or prefix.lower() != prefixes[i]:
+            entry, name, count, prefix = fields[4*i:4*i+4]
+            if int(entry, 16) != addresses[i] or not name or int(count) < 1 or prefix.lower() != prefixes[i]:
                 raise RuntimeError(f"IDA database and {key} function bytes did not agree")
-            result[key + "_entry"] = hex(addresses[i])
+            result[key + "_entry"] = hex(int(entry, 16))
             result[key + "_name"] = name
             result[key + "_instructions"] = int(count)
             result[key + "_prefix_hex"] = prefix.lower()
