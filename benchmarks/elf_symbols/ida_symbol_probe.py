@@ -56,69 +56,6 @@ static main() {
 """
 
 
-def windows_for_pid(pid):
-    """Inspect this IDA process only. Return visible forms and short control labels."""
-    import ctypes
-    from ctypes import wintypes
-
-    user = ctypes.WinDLL("user32", use_last_error=True)
-    callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-    user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-    user.IsWindowVisible.argtypes = [wintypes.HWND]
-    user.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
-    user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
-    user.EnumWindows.argtypes = [callback, wintypes.LPARAM]
-    user.EnumChildWindows.argtypes = [wintypes.HWND, callback, wintypes.LPARAM]
-    forms = []
-
-    def describe(hwnd):
-        name = ctypes.create_unicode_buffer(120)
-        cls = ctypes.create_unicode_buffer(80)
-        user.GetWindowTextW(hwnd, name, len(name))
-        user.GetClassNameW(hwnd, cls, len(cls))
-        return {"class": cls.value, "caption": " ".join(name.value.split())}
-
-    @callback
-    def top(hwnd, _):
-        owner = wintypes.DWORD()
-        user.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
-        if owner.value != pid or not user.IsWindowVisible(hwnd):
-            return True
-        info = describe(hwnd)
-        info["controls"] = []
-
-        @callback
-        def child(handle, _):
-            if user.IsWindowVisible(handle) and len(info["controls"]) < 32:
-                info["controls"].append(describe(handle))
-            return True
-
-        user.EnumChildWindows(hwnd, child, 0)
-        forms.append(info)
-        return True
-
-    user.EnumWindows(top, 0)
-    return forms
-
-
-def run_ida(cmd, work):
-    with subprocess.Popen(cmd, cwd=work) as proc:
-        try:
-            proc.wait(timeout=8)
-        except subprocess.TimeoutExpired:
-            print("IDA startup windows:", windows_for_pid(proc.pid), flush=True)
-            try:
-                proc.wait(timeout=75)
-            except subprocess.TimeoutExpired as exc:
-                forms = windows_for_pid(proc.pid)
-                proc.kill()
-                proc.wait(timeout=10)
-                log = work / "ida.log"
-                detail = log.read_text(errors="replace")[-2000:] if log.is_file() else "no log"
-                raise RuntimeError(f"IDA timed out; windows={forms!r}, log={detail}") from exc
-        return proc.returncode
-
-
 def main():
     binary, report, private, public = sys.argv[1:]
     addresses = (int(private, 0), int(public, 0))
@@ -140,7 +77,10 @@ def main():
         probe = IDC.replace("PRIVATE_ADDRESS", hex(addresses[0])).replace("PUBLIC_ADDRESS", hex(addresses[1]))
         (work / "probe.idc").write_text(probe, encoding="ascii")
         cmd = [str(ida), "-A", "-c", f"-L{work / 'ida.log'}", f"-S{work / 'probe.idc'}", "sample.elf"]
-        status = run_ida(cmd, work)
+        try:
+            status = subprocess.run(cmd, cwd=work, timeout=120, check=False).returncode
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("IDA timed out. Open IDA interactively and finish first-run setup.") from exc
         output = work / "sample.elf.probe"
         if status or not output.is_file():
             log = work / "ida.log"

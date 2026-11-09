@@ -13,10 +13,10 @@ python -m releaseguard split-elf-debug ./build/myapp \
 
 Use fresh, separate directories under existing, trusted parents and an immutable input. Supply ASCII linker spellings for names you want checked. Repeat `--private-name` for more names or omit it to split standard static symbols and debug sections without a name policy. The check requires each selected spelling to occur in the private file and looks for its bytes throughout the public file in ASCII, UTF-16 and UTF-32 (both byte orders). A lingering diagnostic string, exported name or matching substring can block publication.
 
-Deploy only `release-linux/myapp`. Restrict access to the full build, the private symbol directory, CI artifacts and any symbol server. The public ELF retains a basename and CRC in `.gnu_debuglink`, and can retain its build ID. These let a debugger associate the release with any matching debug file it can access. On a private debugging machine, use the associated file for source-level diagnosis, for example:
+Deploy only `release-linux/myapp`. Restrict access to the full build, the private symbol directory, CI artifacts and any symbol server. The public ELF retains a basename and CRC in `.gnu_debuglink`, and can retain its build ID. These let a debugger associate the release with any matching debug file it can access. On a private debugging machine, use the associated file for source-level diagnosis. Pass a link-time address from the matching release.
 
 ```sh
-addr2line -f -C -e private-symbols/myapp.debug 0xLINK_TIME_ADDRESS
+addr2line -f -C -e private-symbols/myapp.debug 0x08049000
 ```
 
 For PIEs and shared libraries, use the link-time address after accounting for the load bias. Run the split before signing, packaging or adding file capabilities. Preserve your normal end-to-end tests for each produced artifact. The tool checks the program headers and loadable segment contents, allowing the ELF header fields that describe the new section table to differ. It leaves the build input intact. The application carries no new runtime component. Build scanning and copying take time and memory.
@@ -50,7 +50,7 @@ python benchmarks/native_symbol_controls.py ghidra /tmp/rg-corpus \
   --archive /path/to/ghidra_12.2_PUBLIC_20261016.zip --out /tmp/rg-ghidra.json
 ```
 
-For the pinned IDA Freeware 5.0 observation, use a Windows workstation licensed for the intended use. The [vendor-authorized distribution](https://www.scummvm.org/news/20180331/) is for noncommercial use. The installer SHA-256 is `e3a5e1f2334f68f14f5ee81c3fcc44121cb24f514be78dfc30805ceee0de6029`. The adapter also checks the installed program and kernel hashes. Copy the three fixture ELFs and their manifest to the Windows workstation. Point the adapter to the local installation and use a fresh output directory.
+For the pinned IDA Freeware 5.0 observation, use a Windows workstation licensed for the intended use. The [vendor-authorized distribution](https://www.scummvm.org/news/20180331/) is for noncommercial use. The installer SHA-256 is `e3a5e1f2334f68f14f5ee81c3fcc44121cb24f514be78dfc30805ceee0de6029`. The adapter also checks the installed program and kernel hashes. Open IDA interactively before the first batch job, complete its license dialog and dismiss the one-time About panel. Then close IDA. Copy the three fixture ELFs and their manifest to the Windows workstation. Point the adapter to the local installation and use a fresh output directory.
 
 ```powershell
 $env:RG_IDA_BIN = 'C:\IDA Free\idag.exe'
@@ -72,3 +72,8 @@ python benchmarks/native_symbol_controls.py compare \
 ```
 
 The unstripped, public and deliberately restored ELFs must have identical machine code, identical test exits and matching per-case hashes across both analyzers. The restored control adds back just the name recovered from the private debug file. Each analyzer receives the private entry address to isolate the name-recovery question. The receipt test uses a fresh request, ephemeral keys and two local subprocesses modeling different trust policies. The test driver verifies the signatures on every receipt and counts real handler calls. It does not simulate a compromised service, a full network transport, an arbitrary analyst or current commercial IDA versions.
+
+
+### Recorded run
+
+On the project-owned November 9, 2026 fixture, Ghidra 12.2 ran from its SHA-256-verified official archive using the Java headless entry point. IDA Freeware 5.0.0.879 analyzed identical input hashes on Windows. A fresh scratch database was used for each input. QEMU i386 executed the ELFs during the recorded Linux replay. The [Windows observation log](https://github.com/Afloat16/anti-rea-forge/actions/runs/42617577454/job/129161188137), [pinned one-off observer and exact fixture files](https://github.com/Afloat16/anti-rea-forge/tree/e8c2386dab4b2930ce6430fcc54765480ad174aa/cases), and [paired report with measured names, addresses, hashes and receipt outcomes](results/native-elf-controls.json) identify the evidence behind the README. The checked-in Windows adapter performs the same IDA queries after first-run setup. It analyzes locally using the owner's installation.

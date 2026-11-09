@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   ghidra-token:
-    name: Ghidra native-token controls / Linux
+    name: Ghidra native token, private symbols and patched client / Linux
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 25

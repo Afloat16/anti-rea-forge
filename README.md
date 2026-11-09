@@ -1,46 +1,61 @@
-# Anti-REA Forge v0.8.0
+# Anti-REA Forge v0.9.0
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [MIT license](LICENSE)
 
-**Ship the native unlock check without shipping the token that passes it.**
+**Ship native code with private debug symbols kept in-house. Keep restricted operations behind a service you control.**
 
-A binary that carries the correct answer can give that answer to an analyst. Anti-REA Forge issues a token with **256 random bits**, delivers it separately to its holder, and generates C++ headers containing only a public SHA-256 verifier. At unlock time the application hashes the supplied token and compares two fixed-size digests.
+A user can patch a local client to report success. Anti-REA Forge separates private symbol metadata at build time and lets a Python service require a one-use signed capability before calling a sensitive handler. The programs, credentials and services below are project-owned simulations. Both analysis tools ran on the same three ELF files.
 
-## What could Ghidra actually recover?
+## Can the analyzers recover the developer's function name?
 
-We ran official **Ghidra 12.2** on three project-owned Linux x86-64 ELFs. The same script decompiled the actual admission gate, extracted token-shaped candidates from the loaded image and selected functions' pseudocode, then a test driver replayed every candidate against the **unchanged** program.
+We gave each analyzer the private function address so it could inspect the same instructions in every case. The source identifier contained a fresh random value. A separate public entry remained exported for both tools to locate independently.
 
-| Program supplied to Ghidra | Distinct candidates extracted | Candidates that unlocked it |
-| --- | ---: | ---: |
-| Ordinary program with an embedded plaintext reference | 2 | **1** |
-| Program containing only the public verifier | 1 | **0** |
-| Same verifier, with the original token deliberately leaked in diagnostic data | 2 | **1** |
+| Linux i386 ELF supplied | Ghidra 12.2 | IDA Freeware 5.0 |
+| --- | --- | --- |
+| Original symbols and debugging information | Exact source name | Exact source name |
+| Public ELF alone | `FUN_08049000` | `sub_8049000` |
+| Public ELF with just the name restored from the private debug file | Exact source name again | Exact source name again |
 
-Decompilation succeeded on every run. All three programs accepted the legitimate token. In the middle case Ghidra found the invalid decoy and read the **actual referenced 32-byte digest**. Submitting that digest as a correctly shaped token still failed. Putting the plaintext back made recovery possible again. [Local evidence](benchmarks/ghidra_token/observation-2026-11-09.json) · [Independent CI observation](docs/results/ghidra-token-ci-2026-11-09.json) · [Reproduce the experiment](benchmarks/ghidra_token/README.md)
+The three programs had identical `.text` hashes and gave identical results for three inputs. Ghidra decompiled the function and IDA disassembled it. An analyst can still infer behavior from the instructions. This control measures recovery of the developer's exact name from the distributed metadata. [Paired tool observations](docs/results/native-elf-controls.json)
 
-A separate wrong-input experiment observed the comparison calls. A reversibly masked reference passed to `strcmp` disclosed one reusable value; the verifier compared two digests, neither of which unlocked the unchanged program when replayed as a token. [Comparison observation](docs/results/native-token-comparison-2026-11-09.json)
+## Can a patched client perform a restricted operation?
 
-**Scope: extracting and replaying the credential.** This is not a block on decompilation, local branch patching, or observing a legitimate user's input. The fast verifier is for issuer-generated random tokens, never human passwords or short serial numbers.
+Both tools located the same exported entry by name. At each tool's reported address, the harness patched six bytes in a disposable copy. Its return code changed from `39` to the fixture's approval value, `42`. Two separate service processes then exercised different trust policies. The harness verified the signature on every receipt.
 
-## Try it in a native application
+| Service decision | Observed outcome |
+| --- | --- |
+| Trust the client status | The original client was denied. The patched client obtained a signed receipt. |
+| Verify on the service, with a missing grant, an attacker-signed grant or a changed request | All three attempts produced zero handler calls. |
+| Verify a genuine capability for the exact request from the same patched client | One signed receipt. Reusing that capability was denied. |
 
-This Linux example needs Python 3.10+, a C++17 compiler and the OpenSSL development library. Ghidra is needed only to reproduce the analysis.
+Run the restricted operation on an independently controlled service. An offline client can still be patched. The joint observation covers these tool versions and project-owned 32-bit x86 fixtures. [Design and reproduction](docs/private-elf-debug.md#reproduce-the-two-engine-observation)
+
+## Use it in a build
+
+Install on a Linux build machine with GNU binutils and Python 3.10+. This example assumes you have a linked, symbol-bearing `build/myapp` and want to check the internal name `calculate_internal_quote`.
 
 ```sh
 git clone https://github.com/Afloat16/anti-rea-forge.git
-cd anti-rea-forge
-python -m pip install .
-mkdir -m 700 ../myapp-issuer
-python -m releaseguard native-token-issue --public-dir generated --secret-out ../myapp-issuer/demo.rg-token
-c++ -std=c++17 -O2 -Igenerated examples/native-token/check.cpp -lcrypto -o check-token
-./check-token < ../myapp-issuer/demo.rg-token
+python -m pip install ./anti-rea-forge
+python -m releaseguard split-elf-debug build/myapp \
+  --public release-linux --private private-symbols \
+  --private-name calculate_internal_quote
 ```
 
-- **For the build:** use the headers in `generated/` and call `releaseguard::verify_issued_token(candidate)` at the unlock point. Only that explicit check hashes and compares the input. No background scanner or anti-debugger runs in your app.
-- **For the authorized holder:** deliver the `.rg-token` file privately; never bundle it with the program. Release scanning flags complete token-shaped values in files and supported ZIP members by default. [Integration, rotation and boundaries](docs/native-tokens.md)
+**Deploy only `release-linux/myapp`.** Keep `private-symbols/myapp.debug` for internal crash diagnosis. If the selected name survives in an export, diagnostic string or wide string, the command reports the name and refuses publication. Splitting happens at build time and adds no application runtime component. [Supported inputs and private debugging](docs/private-elf-debug.md)
 
-## Shipping JavaScript too?
+On the service, supply the trusted issuer key, authenticated user and route. The handler receives the exact request bytes after the capability has been verified and consumed.
 
-`split-source-maps` keeps public JS byte-identical and separates external maps for private debugging. On the same minified fixture, Craft Anything restored **1 exact original** with the map, **0** from the public directory and **1** when the private map was supplied again. REA's map-backed original-source node count went from **1 to 0**. [Build command and evidence](docs/private-source-maps.md)
+```python
+from releaseguard.capabilities import run_authorized_operation
 
-If this solves a release problem for your team, **star Anti-REA Forge**. Have a different extraction path to test? [Contribute a reproducible, project-owned fixture](CONTRIBUTING.en.md).
+receipt = run_authorized_operation(
+    grant, trusted_issuer_public_key, replay_store,
+    subject=authenticated_user, audience="exports", product="myapp",
+    operation="create-export", request=request_bytes, handler=create_export,
+)
+```
+
+[Service integration example](docs/private-elf-debug.md#put-the-restricted-operation-behind-a-service-side-check)
+
+Other release tools cover [external C++ unlock tokens](docs/native-tokens.md) and [private JavaScript source maps](docs/private-source-maps.md). If this solves a release problem for your team, **star the project** or [contribute a reproducible fixture of your own](CONTRIBUTING.en.md).

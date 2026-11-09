@@ -1,46 +1,61 @@
-# Anti-REA Forge v0.8.0
+# Anti-REA Forge v0.9.0
 
 [简体中文](README.zh-CN.md) · [English](README.md) · [MIT 许可证](LICENSE)
 
-**把校验函数编进程序，把能解锁的令牌留在二进制之外。**
+**发布原生程序时把私有符号留在构建端；执行受限操作时，把决定权留在服务端。**
 
-如果程序自带“正确答案”，分析者可以提取它，再交给未修改的程序。Anti-REA Forge 为 C++ 应用生成一枚含 **256 位随机量**的令牌：持有人单独领取令牌，开发者只把公开的 SHA-256 校验摘要编进程序。申请解锁时，程序计算输入的摘要并进行定长比较。
+如果用户能修改自己的客户端，把本地判断改成“通过”并不难。Anti-REA Forge 为 Linux 构建拆分私有调试信息，并为 Python 服务提供一次性签名授权检查。下面的程序、凭据和服务都是本项目生成的模拟样本。Ghidra 和 IDA 实际运行并分析了同一组三份 ELF。
 
-## Ghidra 实际提取到了什么？
+## Ghidra 和 IDA 能恢复内部函数的原名吗？
 
-我们用官方 **Ghidra 12.2** 自动分析三个自有 Linux x86-64 ELF，反编译实际决定放行的函数，从加载的数据和选定函数的伪代码中提取符合格式的候选，再把每个候选交给**未修改的原程序**。
+我们给两个分析器相同的私有函数地址，让它们直接查看同一段机器码。函数原名带有每次实验新生成的随机值。公开入口则始终保留名称，供分析器独立定位。
 
-| 交给 Ghidra 的程序 | 提取的不同候选 | 能解锁的候选 |
-| --- | ---: | ---: |
-| 内置明文参考令牌的普通程序 | 2 | **1** |
-| 只编入公开校验摘要的程序 | 1 | **0** |
-| 同一校验机制，但故意把原令牌误放进诊断数据 | 2 | **1** |
+| 交给分析器的 i386 Linux 程序 | Ghidra 12.2 | IDA Freeware 5.0 |
+| --- | --- | --- |
+| 带原始符号和调试信息 | 找到原名 | 找到原名 |
+| 只提供公开 ELF | 显示 `FUN_08049000` | 显示 `sub_8049000` |
+| 从私有调试文件取回名称，重新加入公开 ELF | 再次找到原名 | 再次找到原名 |
 
-三次反编译都成功，三个程序都接受真正的令牌。第二组中，Ghidra 找到了预置的无效诱饵，还读出了程序引用的 **32 字节真实摘要**；把摘要拼成格式正确的令牌，原程序仍然拒绝。补回泄漏的原文后，又能提取并解锁。[本机原始证据](benchmarks/ghidra_token/observation-2026-11-09.json) · [CI 独立复测](docs/results/ghidra-token-ci-2026-11-09.json) · [复现实验](benchmarks/ghidra_token/README.md)
+三份程序的 `.text` 哈希相同，三组输入的运行结果也相同。Ghidra 成功反编译了目标函数，IDA 成功反汇编了目标函数。分析者仍能读懂指令和推断函数用途；这个对照测的是发行文件是否直接交出了开发者的原名。[双工具原始记录](docs/results/native-elf-controls.json)
 
-另一次独立实验只提交错误输入并观察比较函数：使用可逆文字掩码和 `strcmp` 时能取回一个有效参考值；改用新验证器后，比较点看到的是两个摘要，重放没有一个能解锁。[比较点记录](docs/results/native-token-comparison-2026-11-09.json)
+## 修改客户端能拿到受限结果吗？
 
-**保护范围是提取并重放令牌。** 这项实测不代表不能反编译程序、不能打补丁跳过本地判断，或不能在合法持有人输入时截获令牌。该接口只用于签发器生成的高熵随机值，不用于人选口令或短序列号。
+两个分析器都从公开符号独立找到了同一个入口。实验脚本按各自报告的地址修改测试程序副本中的六个字节，客户端返回值从 `39` 变成了模拟“通过”的 `42`。随后两个独立运行的模拟服务收到测试请求，实验逐份核验服务端回执的签名。
 
-## 在自己的项目里试用
+| 服务如何决定是否执行 | 实际结果 |
+| --- | --- |
+| 直接相信客户端返回值 | 原客户端被拒绝，打补丁后拿到了有效回执 |
+| 服务端验签，已修改的客户端缺少授权、使用自签授权或篡改请求 | 三种请求都未执行受限操作 |
+| 同一已修改客户端提交针对原请求签发的有效授权 | 拿到一份有效回执；再次使用同一授权被拒绝 |
 
-下面是 Linux 示例：需要 Python 3.10+、C++17 编译器和 OpenSSL 开发库。Ghidra 只用于复现实验，使用工具时无需安装。
+需要保护的操作应在你控制的服务上执行。纯离线功能的本地判断仍可修改。两款工具的联合结论限于这组 32 位 x86 模拟程序和表中版本。[实验设计与复现](docs/private-elf-debug.md#reproduce-the-two-engine-observation)
+
+## 接入自己的软件
+
+在有 GNU binutils 和 Python 3.10+ 的 Linux 构建机上安装。下例假定你已有带符号的 `build/myapp`，并想检查内部函数名 `calculate_internal_quote`。
 
 ```sh
 git clone https://github.com/Afloat16/anti-rea-forge.git
-cd anti-rea-forge
-python -m pip install .
-mkdir -m 700 ../myapp-issuer
-python -m releaseguard native-token-issue --public-dir generated --secret-out ../myapp-issuer/demo.rg-token
-c++ -std=c++17 -O2 -Igenerated examples/native-token/check.cpp -lcrypto -o check-token
-./check-token < ../myapp-issuer/demo.rg-token
+python -m pip install ./anti-rea-forge
+python -m releaseguard split-elf-debug build/myapp \
+  --public release-linux --private private-symbols \
+  --private-name calculate_internal_quote
 ```
 
-- **给构建系统**：`generated/` 中的头文件。业务入口调用 `releaseguard::verify_issued_token(candidate)`；只有主动校验时才做哈希与比较，没有后台扫描或反调试线程。
-- **给授权持有人**：通过私有渠道交付 `.rg-token`，不要随程序发布。现有发布扫描默认拦截文件或受支持 ZIP 成员里完整的令牌格式，帮助发现误打包。[接入、轮换与使用边界](docs/native-tokens.md)
+**只部署 `release-linux/myapp`。** 私有的 `private-symbols/myapp.debug` 可用于内部崩溃定位。如果指定的名称仍藏在导出表、日志或宽字符串里，命令会指出名称并拒绝发布。拆分只在构建时执行，应用无需加载额外运行库。[输入限制和调试用法](docs/private-elf-debug.md)
 
-## 如果你还发布 JavaScript
+如果软件需要执行受限操作，在服务端固定签发公钥、用户身份和处理函数。授权绑定请求的原始字节，验签并消费授权之后才调用 `create_export`。
 
-`split-source-maps` 保持公开 JS 的字节不变，把外部 source map 单独留给开发者。对同一份压缩 JS，Craft Anything 在普通包中恢复了 **1 份源码原文**，只给公开目录时恢复 **0 份**，补回私有 map 后又恢复 **1 份**。REA 目录分析的 map 源码节点从 **1 个降到 0 个**。[构建命令与实测记录](docs/private-source-maps.md)
+```python
+from releaseguard.capabilities import run_authorized_operation
 
-如果这解决了你的发布问题，欢迎给项目一个 **Star**。也欢迎[贡献一个自有样本](CONTRIBUTING.md)，让下一种提取方式也能用同样的对照检验。
+receipt = run_authorized_operation(
+    grant, trusted_issuer_public_key, replay_store,
+    subject=authenticated_user, audience="exports", product="myapp",
+    operation="create-export", request=request_bytes, handler=create_export,
+)
+```
+
+[服务端接入示例](docs/private-elf-debug.md#put-the-restricted-operation-behind-a-service-side-check)
+
+项目也支持 [C++ 外部随机令牌](docs/native-tokens.md) 和 [JavaScript 私有 source map](docs/private-source-maps.md)。如果这解决了你的发布问题，欢迎给项目一个 **Star**，或[贡献一个可复现的自有样本](CONTRIBUTING.md)。

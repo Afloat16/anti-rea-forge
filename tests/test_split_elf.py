@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import json
 import os
 from pathlib import Path
 import shutil
@@ -127,6 +128,19 @@ class SplitElfTests(unittest.TestCase):
         self.build()
         with self.assertRaises(GuardError):
             split_elf_debug(self.app, self.public, self.private, PRIVATE)
+        self.assert_no_outputs()
+
+    def test_cli_returns_distinct_findings_and_error_codes(self):
+        self.build("-rdynamic")
+        cmd = [sys.executable, "-m", "releaseguard", "split-elf-debug", str(self.app),
+               "--public", str(self.public), "--private", str(self.private), "--private-name"]
+        found = subprocess.run([*cmd, "public_quote"], capture_output=True, timeout=20)
+        self.assertEqual(found.returncode, 3, found.stderr)
+        self.assertEqual(json.loads(found.stdout)["findings"][0]["code"], "private_name_in_public")
+        self.assert_no_outputs()
+        missing = subprocess.run([*cmd, "unknown_private_symbol"], capture_output=True, timeout=20)
+        self.assertEqual(missing.returncode, 2, missing.stdout)
+        self.assertIn("error", json.loads(missing.stderr))
         self.assert_no_outputs()
 
     def test_unknown_marker_fails_without_output(self):
