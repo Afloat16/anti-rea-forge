@@ -92,6 +92,8 @@ def parser() -> argparse.ArgumentParser:
     )
     distribution.add_argument("--root", type=Path, required=True, help="Trusted, immutable release staging directory")
     distribution.add_argument("--policy", type=Path, required=True, help="Portable release-scan JSON policy")
+    distribution.add_argument("--asset-key-file", type=Path, action="append", default=[],
+                              help="External raw32-byte key to check for release exposure (repeatable)")
 
     split = commands.add_parser(
         "split-source-maps", help="Separate external source maps from a public release without rewriting bundles"
@@ -153,6 +155,11 @@ def parser() -> argparse.ArgumentParser:
         for name in ("product", "release", "purpose", "asset-id"):
             asset.add_argument("--" + name, required=True, help="Expected context from trusted application configuration")
         asset.add_argument("--out", type=Path, required=True, help="New output file; existing files are never replaced")
+    native_asset = commands.add_parser("native-asset-export", help="Export a sealed envelope as keyless C++17/OpenSSL headers")
+    native_asset.add_argument("input", type=Path)
+    for name in ("product", "release", "purpose", "asset-id"):
+        native_asset.add_argument("--" + name, required=True, help="Trusted asset context fixed by the application")
+    native_asset.add_argument("--out", type=Path, required=True, help="New include directory")
     replay_init = commands.add_parser("replay-store-init", help="Initialize a NEW persistent replay database in the trusted server environment")
     replay_init.add_argument("--out", type=Path, required=True)
     for command, description in (("capability-issue", "Issuer only: sign a short-lived capability for exact request bytes"),
@@ -294,6 +301,11 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
         document = parse_json(_crypto_input(args.verifier, 4096))
         passed = verify_password(_user_password(), document)
         return {"ok": passed, "password_verified": passed}, 0 if passed else 3
+    if args.command == "native-asset-export":
+        from .native_asset import export_native_asset
+        document = parse_json(_crypto_input(args.input, 2 * MAX_ASSET_BYTES))
+        return export_native_asset(document, args.out, args.product, args.release,
+                                   args.purpose, args.asset_id), 0
     if args.command == "asset-keygen":
         generate_asset_key(args.out)
         return {"ok": True, "key_file": str(args.out), "key_bits": 256}, 0
@@ -316,7 +328,7 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
         result = gate(args.artifact, args.policy, args.root)
         return result, 0 if result["ok"] else 3
     if args.command == "scan-release":
-        result = scan_release(args.root, args.policy)
+        result = scan_release(args.root, args.policy, asset_key_files=args.asset_key_file)
         return result, 0 if result["ok"] else 3
     if args.command == "audit":
         report = audit_pe(args.path)

@@ -44,6 +44,7 @@ _NONCE_BYTES = 12
 _TAG_BYTES = 16
 _FIELDS = {"format", "salt", "nonce", "ciphertext"}
 _DOMAIN = b"OpenReleaseGuard\x00sealed-asset\x00v1\x00"
+_HKDF_INFO_PREFIX = _DOMAIN + b"HKDF-SHA256/AES-256-GCM\x00"
 
 
 def _key(value: bytes) -> bytes:
@@ -69,7 +70,7 @@ def _context(product: str, release: str, purpose: str, asset_id: str) -> bytes:
 def _derive(key: bytes, salt: bytes, aad: bytes) -> bytes:
     return HKDF(
         algorithm=hashes.SHA256(), length=ASSET_KEY_BYTES, salt=salt,
-        info=_DOMAIN + b"HKDF-SHA256/AES-256-GCM\x00" + aad,
+        info=_HKDF_INFO_PREFIX + aad,
     ).derive(key)
 
 
@@ -87,6 +88,19 @@ def _decode(value: Any, minimum: int, maximum: int) -> bytes:
     if not minimum <= len(raw) <= maximum or _encode(raw) != value:
         raise GuardError("Invalid sealed asset encoding or length")
     return raw
+
+
+def _envelope(document: dict) -> tuple[bytes, bytes, bytes]:
+    """Validate and decode one bounded v1 package without requiring its key."""
+    if (type(document) is not dict or any(type(name) is not str for name in document)
+            or set(document) != _FIELDS):
+        raise GuardError("Invalid sealed asset fields")
+    if type(document["format"]) is not str or document["format"] != SEALED_FORMAT:
+        raise GuardError("Unsupported sealed asset format")
+    salt = _decode(document["salt"], _SALT_BYTES, _SALT_BYTES)
+    nonce = _decode(document["nonce"], _NONCE_BYTES, _NONCE_BYTES)
+    ciphertext = _decode(document["ciphertext"], _TAG_BYTES, MAX_ASSET_BYTES + _TAG_BYTES)
+    return salt, nonce, ciphertext
 
 
 def seal_asset(plaintext: bytes, key: bytes, product: str, release: str,
@@ -116,14 +130,7 @@ def open_asset(document: dict, key: bytes, product: str, release: str,
     """
     master = _key(key)
     aad = _context(product, release, purpose, asset_id)
-    if (type(document) is not dict or any(type(name) is not str for name in document)
-            or set(document) != _FIELDS):
-        raise GuardError("Invalid sealed asset fields")
-    if type(document["format"]) is not str or document["format"] != SEALED_FORMAT:
-        raise GuardError("Unsupported sealed asset format")
-    salt = _decode(document["salt"], _SALT_BYTES, _SALT_BYTES)
-    nonce = _decode(document["nonce"], _NONCE_BYTES, _NONCE_BYTES)
-    ciphertext = _decode(document["ciphertext"], _TAG_BYTES, MAX_ASSET_BYTES + _TAG_BYTES)
+    salt, nonce, ciphertext = _envelope(document)
     try:
         return AESGCM(_derive(master, salt, aad)).decrypt(nonce, ciphertext, aad)
     except InvalidTag:

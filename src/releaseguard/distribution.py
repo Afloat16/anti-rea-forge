@@ -7,6 +7,7 @@ A release and its ancestor directories must remain under trusted build control.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 import os
@@ -21,6 +22,7 @@ from typing import Any, BinaryIO
 from .core import MAX_FILES, GuardError, _inventory, _is_link, _root, read_document, safe_relative_path
 from .native import _assert_scanned_identity, _component_findings
 from .native_token import NATIVE_TOKEN_HEX_DIGITS, NATIVE_TOKEN_PREFIX
+from .sealed import load_asset_key
 
 _CHUNK_BYTES = 1024 * 1024
 _MAX_BYTES = 512 * 1024 * 1024
@@ -138,7 +140,7 @@ def _validate_zip_extra(extra: bytes) -> None:
 
 
 class _Scanner:
-    def __init__(self, policy: dict[str, Any]):
+    def __init__(self, policy: dict[str, Any], asset_keys: tuple[bytes, ...] = ()):
         self.policy = policy
         self.total_bytes = 0
         self.archive_entries = 0
@@ -154,6 +156,14 @@ class _Scanner:
         for code, strings in groups:
             for index, literal in enumerate(strings):
                 self.patterns.extend((code, index, encoding, literal.encode(encoding)) for encoding in _ENCODINGS)
+        for index, key in enumerate(asset_keys):
+            self.patterns.append(("asset_key_exposure", index, "raw", key))
+            encoded = {key.hex(), key.hex().upper(), base64.b64encode(key).decode("ascii"),
+                       base64.urlsafe_b64encode(key).decode("ascii")}
+            encoded |= {value.rstrip("=") for value in encoded}
+            for text in sorted(encoded):
+                for encoding in _ENCODINGS:
+                    self.patterns.append(("asset_key_exposure", index, encoding, text.encode(encoding)))
         self.overlap = max((len(pattern[3]) for pattern in self.patterns), default=1) - 1
         self.token_rules = _TOKEN_RULES if policy["check_native_tokens"] else ()
         if self.token_rules:
@@ -423,7 +433,8 @@ class _Scanner:
         return name
 
 
-def scan_release(root: Path | str, policy_path: Path | str) -> dict[str, Any]:
+def scan_release(root: Path | str, policy_path: Path | str, *,
+                 asset_key_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
     """Inspect an entire release with no requirement for a native entry point.
 
     Unsupported, disabled, malformed or over-budget containers never produce a
@@ -431,6 +442,9 @@ def scan_release(root: Path | str, policy_path: Path | str) -> dict[str, Any]:
     ZIP member, including nested archives. Checks use builder-controlled paths;
     ordinary identity checks are not an atomic snapshot or a race-proof sandbox.
     """
+    if not isinstance(asset_key_files, (list, tuple)) or len(asset_key_files) > 16:
+        raise GuardError("Expected up to 16 external asset-key files")
+    asset_keys = tuple(load_asset_key(path) for path in asset_key_files)
     policy = load_distribution_policy(policy_path)
     release_root = _root(root)
     candidates = _inventory(release_root)
@@ -438,7 +452,7 @@ def scan_release(root: Path | str, policy_path: Path | str) -> dict[str, Any]:
         raise GuardError("Cannot inspect an empty release")
     if len(candidates) > policy["max_files"]:
         raise GuardError("Release file count exceeds max_files")
-    scanner = _Scanner(policy)
+    scanner = _Scanner(policy, asset_keys)
     files: list[dict[str, Any]] = []
     identities: list[tuple[Path, tuple[int, ...]]] = []
     for relative, path in sorted(candidates.items()):
@@ -488,6 +502,7 @@ def scan_release(root: Path | str, policy_path: Path | str) -> dict[str, Any]:
             "private_key_markers_checked": policy["check_private_keys"],
             "source_map_markers_checked": policy["check_source_maps"],
             "native_token_format_checked": policy["check_native_tokens"],
+            "asset_keys_checked": len(asset_keys),
             "release_allowlist_applied": policy["allowed_release_files"] is not None,
         },
         "notes": [
