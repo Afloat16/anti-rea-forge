@@ -22,6 +22,8 @@ The tooling retains the **Open Release Guard** Python distribution name `open-re
 
 Craft Anything v0.5.0 recovered the exact original source of our minified JS fixture from a sibling `app.js.map`, even though the script contained no map URL. With only the split public directory, the same tool completed its inspection and reformatted the same JS, but returned **zero original-source files**. Giving it the private map again restored the matching original. [Three-way observation](docs/results/craft-source-map-2026-11-09.json) · [REA and Craft source review](docs/research-source-maps-2026-11-09.md).
 
+The published REA 6.8.0 directory analyzer also parsed the same JS on both sides. It reported one map-backed original with the correct content digest in the ordinary release, and **zero** in the public release. Both graphs were complete and untruncated. [Recorded CLI evidence](docs/results/source-map-recovery-2026-11-09.json).
+
 ```bash
 python -m releaseguard split-source-maps --root build --public release-web --private debug-symbols
 ```

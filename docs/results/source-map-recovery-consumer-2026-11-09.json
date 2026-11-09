@@ -3,7 +3,7 @@
   "ok": true,
   "mode": "trace-mapping-only",
   "rea_cli_executed": false,
-  "recorded_at": "2026-11-09T06:11:43.565Z",
+  "recorded_at": "2026-11-09T06:20:08.983Z",
   "node": "v24.22.1",
   "host": "linux/x64",
   "dependency_lock_sha256": "46624340a37566964fdbe23f1e570bf9925de8777c0ddf57f4a22afab5239853",
@@ -108,6 +108,16 @@
         }
       ]
     }
+  },
+  "repacked_js_control": {
+    "input": "repacked.mjs",
+    "sha256": "7ff2d69cd66b3d1bc012d2e228b4df7bd2aa405e64bfa365d8500b4d4f5a2410",
+    "original_marker_present": true,
+    "bare_sources_content_key": true,
+    "exit_code": 3,
+    "finding": "sources_content_literal",
+    "public_output_absent": true,
+    "private_output_absent": true
   },
   "scope": "Exact embedded original source recovery through a shipped external v3 map, on this fixture only.",
   "limitations": [

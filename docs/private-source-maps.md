@@ -52,6 +52,14 @@ there as usual. Keep your private maps out of that signed public release.
   release scanner, and blocks recognized data such as map markers, disguised
   v3 JSON maps and private-key PEM markers. It also compares public file hashes
   with embedded source text to catch an exact loose copy.
+- The split profile also rejects the literal token `sourcesContent` in public
+  files, in UTF-8, UTF-16 LE/BE and UTF-32 LE/BE. This catches a real packaging
+  mistake: bundling the map as a JavaScript object can leave all source text in
+  a normal module, even after removing the external file. The check is deliberately
+  conservative: a library or documentation that merely mentions this property
+  can also be rejected. Inspect the reported path; ordinary `scan-release`
+  policies have not changed. Computed property names, transformed source and
+  arbitrary encodings are outside this check.
 - Operates **before compression**. Recognized archives/disabled archive
   inspection and precompressed assets covered by the policy block publication.
   It is not a decoder for every container or arbitrary encoding.
@@ -59,6 +67,13 @@ there as usual. Keep your private maps out of that signed public release.
   bounded input and fixed checks. Keep the inputs and ancestor directories
   trusted for the duration of the build. Protect private maps with appropriate
   filesystem permissions or ACLs; they may contain the full source.
+
+The current profile allows 64 MiB per input file, 256 MiB total and 8 MiB for
+a JSON-like file inspected as a possible map. It rejects unsupported inputs
+instead of giving partial success. On POSIX, the private directories and files
+are created with permissions at most 0700/0600. Ordinary rwx bits of public
+files and directories are preserved; privileged bits and platform ACLs are not
+copied. Set the intended deployment ACLs explicitly on Windows.
 
 Exit **0** means both checked outputs were produced. Exit **3** means findings
 blocked the split. Exit **2** means invalid/unsupported input, an I/O error or
@@ -91,9 +106,24 @@ It reformatted the same bundle on every run, with complete coverage:
 | Split public release, with the same `app.js` | 0 files |
 | Same public release, with the private map supplied again | 1 file with the original SHA-256 |
 
+The published **REA 6.8.0** CLI was also exercised through
+`analyze-javascript-application` on both directories, without an AI model.
+The ordinary graph had 9 nodes including a map and an original-source node
+with the known source digest. The public graph had 7 nodes, no map and no
+map-backed original. Both explicitly reported complete, untruncated graphs,
+one parsed JS file with the same digest, and zero JS skips or parse errors.
+REA reports the embedded source's digest in this operation; Craft and the
+independent consumer below check the actual text. [REA report](results/source-map-recovery-2026-11-09.json)
+· [successful paired tool job](https://github.com/Afloat16/anti-rea-forge/actions/runs/42571984269/job/129011199994)
+at [the measured revision](https://github.com/Afloat16/anti-rea-forge/commit/1ee3fa82e9f6f80f63af4a3a5ced956e003b1706).
+
 The [trace-mapping observation](results/source-map-recovery-consumer-2026-11-09.json)
 also checks the actual source text and restores the original location from the
-private map. The generated JavaScript is byte-identical and gives the same
+private map. In a separate negative control Terser compiles the same map into
+a JavaScript module containing its source text and the unquoted key
+`sourcesContent`. Splitting that build returns exit 3, identifies
+`repacked.mjs`, and leaves neither output directory. The normal generated
+JavaScript is byte-identical and gives the same
 results for four fixture inputs. This is **exact source recovery through a
 specific shipped artifact**. Generated logic remains available to the user;
 the experiment does not establish resistance to behavioral reconstruction,

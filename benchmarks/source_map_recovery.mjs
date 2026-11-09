@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -50,10 +50,10 @@ const { minify } = localRequire("terser");
 const mapping = localRequire("@jridgewell/trace-mapping");
 const reaEntry = join(tools, "node_modules/rea-agents/scripts/rea.mjs");
 
-function run(program, argv, cwd) {
+function run(program, argv, cwd, expectedExit = 0) {
   const p = spawnSync(program, argv, { cwd, encoding: "utf8", timeout: 120_000,
     maxBuffer: 16 * 1024 * 1024, killSignal: "SIGKILL", shell: false });
-  if (p.error || p.signal || p.status !== 0) {
+  if (p.error || p.signal || p.status !== expectedExit) {
     // A host/provider failure, timeout or bad output must never count as a protected result.
     throw new Error("Command did not complete: " + program + " " + argv[0] + " (exit " +
       p.status + ", signal " + p.signal + "): " +
@@ -61,6 +61,26 @@ function run(program, argv, cwd) {
       (p.stderr ?? "").slice(0, 1000));
   }
   return p.stdout;
+}
+
+// A separate build accidentally republishes the map as a minified ESM data export.
+// Check the real minifier output: ordinary JSON-key matching misses the bare key.
+async function rejectRepackedMap(work, baseline, mapText) {
+  const source = join(work, "repacked-build"), publicDir = join(work, "repacked-public");
+  const privateDir = join(work, "repacked-private");
+  const { code } = await minify("export const debugMap=" + mapText + ";", { module: true });
+  assert.match(code, /[,{]sourcesContent:\[/);
+  assert(code.includes(MARKER));
+  await cp(baseline, source, { recursive: true, force: false, errorOnExist: true });
+  await writeFile(join(source, "repacked.mjs"), code, { flag: "wx" });
+  const denied = JSON.parse(run(args.python, ["-I", "-m", "releaseguard", "split-source-maps",
+    "--root", source, "--public", publicDir, "--private", privateDir], work, 3));
+  assert.equal(denied.ok, false);
+  assert(denied.findings.some(f => f.code === "sources_content_literal" && f.path === "repacked.mjs"));
+  for (const dir of [publicDir, privateDir]) await assert.rejects(lstat(dir), { code: "ENOENT" });
+  return { input: "repacked.mjs", sha256: sha(code), original_marker_present: true,
+    bare_sources_content_key: true, exit_code: 3, finding: "sources_content_literal",
+    public_output_absent: true, private_output_absent: true };
 }
 
 // Enumerate all supplied artifacts. This fixture is deliberately flat and uncompressed.
@@ -191,6 +211,7 @@ try {
     recorded_at: new Date().toISOString(), node: process.version, host: process.platform + "/" + process.arch,
     dependency_lock_sha256: sha(await readFile(join(tools, "package-lock.json"))), tools: toolsUsed,
     original_sha256: EXPECTED_SOURCE, sides: results,
+    repacked_js_control: await rejectRepackedMap(work, baseline, built.map),
     scope: "Exact embedded original source recovery through a shipped external v3 map, on this fixture only.",
     limitations: ["REA's CLI reports the embedded original's digest, which this probe compares to the known source; trace-mapping returns the actual text.",
       "Generated JavaScript remains analyzable. No claim about recovering equivalent logic, an AI session, remote CDN/header exposure, or unrelated formats."] };

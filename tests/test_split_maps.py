@@ -98,9 +98,12 @@ class SplitMapsTests(unittest.TestCase):
         self.addCleanup(self.assets.chmod, 0o700)
         real_chmod = os.chmod
         observed = []
+        # The implementation uses canonical output parents. macOS temporary
+        # paths can be spelled /var/... while the actual path is /private/var/...
+        canonical_public = self.public.resolve()
 
         def failing(path, mode):
-            if path == self.public and mode == 0o751:
+            if path == canonical_public and mode == 0o751:
                 observed.append(stat.S_IMODE((self.public / "assets").stat().st_mode))
                 raise OSError("synthetic final metadata failure")
             return real_chmod(path, mode)
@@ -115,6 +118,29 @@ class SplitMapsTests(unittest.TestCase):
         (self.root / "unrelated.txt").write_bytes(self.content.encode())
         r = self.split()
         self.assertIn({"code": "embedded_source_copy", "path": "unrelated.txt"}, r["findings"])
+        self.assert_rolled_back()
+
+    def test_js_module_cannot_embed_the_original_using_non_json_property_syntax(self):
+        path = self.root / "debug.mjs"
+        for key in ("sourcesContent", "'sourcesContent'"):
+            with self.subTest(key=key):
+                script = ("export const map = {version: 3, sources: ['a.ts'], "
+                          + key + "  :  [" + json.dumps(self.content)
+                          + "], names: [], mappings: 'AAAA'};\n")
+                path.write_text(script, encoding="utf-8")
+                result = self.split()
+                self.assertFalse(result["ok"])
+                self.assertIn(("sources_content_literal", "debug.mjs", "utf-8"),
+                              [(f["code"], f["path"], f.get("encoding")) for f in result["findings"]])
+                self.assertNotIn(self.content, json.dumps(result))
+                self.assert_rolled_back()
+
+    def test_split_documentation_text_is_conservatively_flagged_in_wide_encoding(self):
+        (self.root / "debug-guide.txt").write_bytes("inspect map.sourcesContent if supplied".encode("utf-16-le"))
+        result = self.split()
+        self.assertFalse(result["ok"])
+        self.assertTrue(any(f["code"] == "sources_content_literal" and f.get("encoding") == "utf-16-le"
+                            for f in result["findings"]))
         self.assert_rolled_back()
 
     def test_renamed_regular_and_indexed_maps_checked_semantically(self):

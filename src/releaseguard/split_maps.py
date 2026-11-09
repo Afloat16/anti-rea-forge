@@ -29,7 +29,11 @@ _MAX_FILE = 64 << 20
 _MAX_TOTAL = 256 << 20
 _MAX_SOURCES = 100_000
 _DIGITS = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")}
-_POLICY = {"version": 1, "scan_zip_archives": False,
+# Unlike ordinary portable scanning, this strict split profile also rejects the
+# literal key without JSON quotes: a JS module can embed the original source in
+# an object using a bare or single-quoted key. This intentionally flags benign
+# uses of the same token; it is not a JavaScript parser or decoder for computed keys.
+_POLICY = {"version": 1, "scan_zip_archives": False, "forbid_literals": ["sourcesContent"],
            "forbid_extensions": [".map", ".pdb", ".ilk", ".br", ".gzip", ".zstd"]}
 
 
@@ -254,7 +258,12 @@ def split_source_maps(root: Path | str, public: Path | str, private: Path | str)
             policy = Path(temp) / "policy.json"
             write_new(policy, json.dumps(_POLICY).encode("ascii"))
             scan = scan_release(published, policy)
-        findings.extend(scan["findings"])
+        for finding in scan["findings"]:
+            if finding["code"] == "forbidden_literal":
+                # The fixed split policy has exactly one literal; make the reason
+                # actionable without copying any potentially sensitive matched data.
+                finding = {**finding, "code": "sources_content_literal"}
+            findings.append(finding)
         if public_digests != {f["path"]: f["sha256"] for f in scan["files"]}:
             raise GuardError("Public files changed between copying and verification")
         if set(inventory) != set(_inventory(source)):

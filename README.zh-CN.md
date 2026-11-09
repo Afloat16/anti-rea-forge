@@ -20,6 +20,8 @@
 
 实测官方 **Craft Anything v0.5.0**：普通发布包中，即使 JS 没有写映射地址，工具仍从同目录的 `app.js.map` 恢复出与原文哈希一致的源码。只提供分离后的公开目录时，同一工具仍正常完成、仍能格式化同一份 JS，但返回 **0 份原始源码**。重新提供私有图，又恢复了同一份原文。[三组原始结果](docs/results/craft-source-map-2026-11-09.json) · [REA 与 Craft 源码依据](docs/research-source-maps-2026-11-09.md)。
 
+**REA 6.8.0** 官方 CLI 的目录分析也完整解析了两侧同一份 JS：普通包中有 1 个来自 map、内容摘要与原文一致的源码节点，公开包中为 **0 个**；两侧都没有截断或跳过 JS。[实际 CLI 记录](docs/results/source-map-recovery-2026-11-09.json)。
+
 ```bash
 python -m releaseguard split-source-maps --root build --public release-web --private debug-symbols
 ```
