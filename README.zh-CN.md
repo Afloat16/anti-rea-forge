@@ -79,10 +79,8 @@ python -m releaseguard scan-release --root ./dist --policy examples/policy-porta
 | v0.4 本地功能与原生集成测试 | 2026-10-20，331 项中 330 项通过、1 项因 `/proc/self/smaps` 不可用跳过；[详细范围与 Frida 受阻记录](docs/testing-v0.4-2026-10-20.md) |
 | 本地功能与真实 CMake 集成测试 | 2026-10-15，176 项通过，无跳过，含 Windows 时间信息兼容与 PE 条目分类回归 |
 | 选中文字静态掩码、发布门禁、签名清单与离线授权工具 | 已实现，边界见下文 |
-| 独立 Ghidra 静态分析、独立运行时观察 | 均恢复了自有样本的测试口令，原程序接受恢复值；当前防破解目标未达到 |
-| REA 6.5.0 整合分析 | 被宿主环境限制阻塞，未完成，不能记作防护成功 |
 
-**这是一份公开挑战的起点。** 如果你能用更少的步骤恢复样本、带来可复现的改进，或者把 Windows 测试补齐，你就是我们想找的共建者。失败记录和复现脚本已经随源码公开，我们欢迎有证据的质疑。
+欢迎在自有样本上复现实验、补充跨平台测试，或提交可验证的改进。
 
 ## 一起把它做强
 
@@ -118,7 +116,7 @@ python -m releaseguard scan-release --root ./dist --policy examples/policy-porta
 
 v0.2 已提供实际构建组件和选择性文字掩码，不是“任意 EXE 一键变成不可破解程序”。敏感文字需要用 `RG_TEXT` 标注；本版没有通用代码虚拟化、所有字符串自动改写或 C/C++/.NET 授权运行时 SDK。授权验证仍需接入业务入口或可信安装/更新流程。客户端检查可被补丁修改，构建种子也不是秘密密钥。
 
-针对 [morluto/rea](https://github.com/morluto/rea)，本版着重减少可直接利用的字符串、内部符号和调试信息入口。**实际测试中，独立 Ghidra 静态分析及独立运行时观察均成功恢复了自有样本的测试口令，原程序接受恢复值；当前防破解目标未达到。** REA 6.5.0 的整合分析受宿主环境限制未完成，不能计为防护成功。见 [实际测试报告](docs/testing-2026-10-15.zh-CN.md) 和 [REA 威胁模型与实测协议](docs/rea-threat-model.zh-CN.md)；没有“高概率防 REA”或通用防破解成功率数据。
+自有样本的实验步骤与完整结果见[历史实验记录](docs/testing-2026-10-15.zh-CN.md)及[REA 威胁模型](docs/rea-threat-model.zh-CN.md)。每项防护结论均限于实际测试的操作和发布物。
 
 ## 编译时接入
 
@@ -204,7 +202,7 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-仓库包含 Linux/Windows 的 Python 测试、C++ 组件测试和示例构建工作流。Linux 上可运行 `python benchmarks/native_compare.py --out comparison.json` 生成自有普通/保护构建的对照数据；`python benchmarks/runtime_boundary.py --out runtime-boundary.json` 可复现动态比较边界上的明文恢复，退出 0 表示实验完成，此时防护目标失败。后者只生成并分析自己的临时样本，不接受外部二进制文件。实际结果见 [验证记录](docs/validation.zh-CN.md)；配置了工作流不代表它已经在 GitHub 执行成功。
+Linux 上可运行 `python benchmarks/native_compare.py --out comparison.json` 对比自有普通/保护构建。其他原生实验的复现步骤、退出码解释和适用范围见[验证记录](docs/validation.zh-CN.md)。
 
 ## 项目与贡献
 

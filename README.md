@@ -82,10 +82,8 @@ See the [English integration and threat mapping](docs/crypto-protection.md), [�
 | Local functional and real CMake integration tests | **176 passed, none skipped**, on 2026-10-15, including Windows timestamp compatibility and PE debug-entry classification regressions; see the [validation record (Chinese)](docs/validation.zh-CN.md) |
 | GitHub CI | Linux and Windows/MSVC jobs have passed; see the [run history](https://github.com/Afloat16/anti-rea-forge/actions). These runs are separate from the local test count; Windows DLL ABI compatibility remains untested |
 | Selected literal masking, release gates, signed manifests, offline license tools | Implemented within the boundaries described below |
-| Independent Ghidra static analysis and independent runtime observation | Both recovered a synthetic sample’s test secret; the unmodified original accepted it. The anti-cracking goal failed |
-| REA 6.5.0 integrated analysis | Blocked by the test host environment and not completed; this is **not** evidence of successful protection |
 
-Passing tests or release gates does not measure resistance to cracking. REA’s integrated analysis was blocked by process inspection and temporary-directory limitations; standalone Ghidra successfully analyzed the protected sample. The [test report (Chinese)](docs/testing-2026-10-15.zh-CN.md) separates these outcomes and preserves the evidence. We have no credible “high probability of stopping REA” or general cracking-resistance rate.
+The [historical experiment report](docs/testing-2026-10-15.zh-CN.md) records the original fixtures, methods and outcomes. Protection claims are specific to the operation and release artifacts tested.
 
 ## Help build and challenge it
 
@@ -212,7 +210,7 @@ ctest --test-dir build -C Release --output-on-failure
 
 The CMake commands above target Windows/MSVC. Linux GCC examples and integration tests are covered in the [contribution guide (Chinese)](CONTRIBUTING.md); set `RELEASEGUARD_CMAKE` if CMake is not on PATH. Local results and GitHub CI are recorded separately. CI has exercised Linux and Windows/MSVC builds, but Windows DLL ABI, real business applications, and Windows reverse-engineering resistance remain outside the completed validation.
 
-On Linux, run `python benchmarks/native_compare.py --out comparison.json` for the project-owned ordinary/protected build comparison. Run `python benchmarks/runtime_boundary.py --out runtime-boundary.json` to reproduce plaintext recovery at a dynamic comparison boundary. For the latter, exit 0 means the experiment completed with successful recovery, so the protection goal failed. It generates and analyzes only its own temporary sample and accepts no external binary input. See the [validation record (Chinese)](docs/validation.zh-CN.md) and [full test report (Chinese)](docs/testing-2026-10-15.zh-CN.md) for evidence and limitations.
+For the ordinary/protected native build comparison, run `python benchmarks/native_compare.py --out comparison.json` on Linux. See the [reproduction notes](docs/validation.zh-CN.md) for the separate native experiments, how to interpret their exit codes and their limitations.
 
 ## Project and contributions
 
