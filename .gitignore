@@ -20,3 +20,4 @@ node_modules/
 issuer-private*
 *.license.json
 *.analysis-grant.json
+*.rg-token

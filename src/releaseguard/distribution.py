@@ -20,6 +20,7 @@ from typing import Any, BinaryIO
 
 from .core import MAX_FILES, GuardError, _inventory, _is_link, _root, read_document, safe_relative_path
 from .native import _assert_scanned_identity, _component_findings
+from .native_token import NATIVE_TOKEN_HEX_DIGITS, NATIVE_TOKEN_PREFIX
 
 _CHUNK_BYTES = 1024 * 1024
 _MAX_BYTES = 512 * 1024 * 1024
@@ -28,7 +29,7 @@ _ENCODINGS = ("utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be")
 _FIELDS = {
     "version", "forbid_literals", "forbid_extensions", "forbid_path_components",
     "forbid_file_sha256", "allowed_release_files", "check_private_keys",
-    "check_source_maps", "scan_zip_archives", "max_file_bytes", "max_total_bytes",
+    "check_source_maps", "check_native_tokens", "scan_zip_archives", "max_file_bytes", "max_total_bytes",
     "max_archive_depth", "max_archive_entries", "max_files",
 }
 _ZIP_EXTENSIONS = {".zip", ".jar", ".war", ".ear", ".whl", ".nupkg", ".vsix", ".apk", ".aab"}
@@ -39,6 +40,21 @@ _KEY_MARKERS = ("-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY
                 "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN EC PRIVATE KEY-----",
                 "-----BEGIN DSA PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----")
 _MAP_MARKERS = ("sourceMappingURL", '"sourcesContent"')
+
+
+def _native_token_rules():
+    """Fixed-size byte expressions: no Unicode decoding or token material retained."""
+    for encoding in _ENCODINGS:
+        prefix = NATIVE_TOKEN_PREFIX.encode(encoding)
+        unit = "X".encode(encoding)
+        # Preserve the NUL bytes in the UTF-16/32 code unit; only its ASCII
+        # digit position may vary. The token can be unaligned in a binary.
+        hex_unit = unit.replace(b"X", b"[0-9a-f]")
+        expression = re.compile(re.escape(prefix) + b"(?:%s){%d}" % (hex_unit, NATIVE_TOKEN_HEX_DIGITS))
+        yield encoding, prefix, expression, len(prefix) + len(unit) * NATIVE_TOKEN_HEX_DIGITS
+
+
+_TOKEN_RULES = tuple(_native_token_rules())
 
 
 def _strings(value: Any, label: str, maximum: int) -> list[str]:
@@ -58,7 +74,8 @@ def load_distribution_policy(path: Path | str) -> dict[str, Any]:
         "version": 1, "forbid_literals": [], "forbid_extensions": [".pdb", ".ilk", ".map"],
         "forbid_path_components": [".git", ".svn", ".hg", ".env"],
         "forbid_file_sha256": [], "allowed_release_files": None,
-        "check_private_keys": True, "check_source_maps": True, "scan_zip_archives": True,
+        "check_private_keys": True, "check_source_maps": True, "check_native_tokens": True,
+        "scan_zip_archives": True,
         "max_file_bytes": 64 * 1024 * 1024, "max_total_bytes": 256 * 1024 * 1024,
         "max_archive_depth": 2, "max_archive_entries": 10000, "max_files": MAX_FILES,
     }
@@ -91,7 +108,7 @@ def load_distribution_policy(path: Path | str) -> dict[str, Any]:
             safe_relative_path(item)
         if len({item.casefold() for item in allowed}) != len(allowed):
             raise GuardError("Duplicate case-insensitive allowed release files")
-    for field in ("check_private_keys", "check_source_maps", "scan_zip_archives"):
+    for field in ("check_private_keys", "check_source_maps", "check_native_tokens", "scan_zip_archives"):
         if type(policy[field]) is not bool:
             raise GuardError(f"{field} must be a boolean")
     for field, maximum in (("max_file_bytes", _MAX_BYTES), ("max_total_bytes", _MAX_BYTES),
@@ -138,6 +155,9 @@ class _Scanner:
             for index, literal in enumerate(strings):
                 self.patterns.extend((code, index, encoding, literal.encode(encoding)) for encoding in _ENCODINGS)
         self.overlap = max((len(pattern[3]) for pattern in self.patterns), default=1) - 1
+        self.token_rules = _TOKEN_RULES if policy["check_native_tokens"] else ()
+        if self.token_rules:
+            self.overlap = max(self.overlap, max(length for _, _, _, length in self.token_rules) - 1)
         self.digests = {value: index for index, value in enumerate(policy["forbid_file_sha256"])}
         self.components = {value.casefold(): index for index, value in enumerate(policy["forbid_path_components"])}
 
@@ -180,6 +200,16 @@ class _Scanner:
                 key = (code, index, encoding)
                 if key not in seen and pattern in window:
                     self.add(code, path, members, rule_index=index, encoding=encoding)
+                    seen.add(key)
+            for encoding, prefix, expression, _ in self.token_rules:
+                key = ("native_token_exposure", 0, encoding)
+                if key in seen:
+                    continue
+                # Most payloads have no prefix. Only invoke the bounded regex
+                # when needed, and report at most once per encoding/payload.
+                first = window.find(prefix)
+                if first >= 0 and expression.search(window, first) is not None:
+                    self.add("native_token_exposure", path, members, encoding=encoding)
                     seen.add(key)
             tail = window[-self.overlap:] if self.overlap else b""
         if total != size:
@@ -457,11 +487,13 @@ def scan_release(root: Path | str, policy_path: Path | str) -> dict[str, Any]:
             "literal_rules": len(policy["forbid_literals"]), "encodings": list(_ENCODINGS),
             "private_key_markers_checked": policy["check_private_keys"],
             "source_map_markers_checked": policy["check_source_maps"],
+            "native_token_format_checked": policy["check_native_tokens"],
             "release_allowlist_applied": policy["allowed_release_files"] is not None,
         },
         "notes": [
             "Static exposure checks only; passing does not measure REA or cracking resistance.",
             "PEM and source-map markers are heuristics. Undeclared secrets and encoded data can remain undetected.",
+            "Native-token findings identify the public token format, not proof of validity. Reports retain file paths and archive member names.",
             "Only stored/deflated ZIP containers are expanded; detected other archives fail policy. ZIP64, Unicode Path aliases, prefixed/concatenated archives and unindexed gaps are unsupported.",
             "scan_completed means the scan plan finished; archive_scan_completed is false for detected unexpanded archives.",
             "The byte budget counts disk bytes and all expanded ZIP members. No members are extracted or executed.",

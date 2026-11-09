@@ -31,6 +31,7 @@ _DEFAULT_POLICY = {
     "forbid_extensions": [".pdb", ".ilk", ".map"],
     "forbid_path_components": [".git", ".svn", ".hg", ".env"],
     "check_private_keys": True,
+    "check_native_tokens": True,
     "check_source_maps": True,
     "scan_zip_archives": True,
     "max_file_bytes": 67108864,

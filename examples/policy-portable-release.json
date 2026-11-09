@@ -4,6 +4,7 @@
   "forbid_extensions": [".pdb", ".ilk", ".map"],
   "forbid_path_components": [".git", ".svn", ".hg", ".env"],
   "check_private_keys": true,
+  "check_native_tokens": true,
   "check_source_maps": true,
   "scan_zip_archives": true,
   "max_file_bytes": 67108864,
