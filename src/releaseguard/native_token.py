@@ -32,7 +32,7 @@ def _new_path(value: Path | str) -> Path:
         path.lstat()  # Includes dangling links; never overwrite one.
     except FileNotFoundError:
         return path
-    raise GuardError("Native token outputs must be new; existing files and directories are not replaced")
+    raise GuardError("Native outputs must use new paths")
 
 
 def _portable_parts(path: Path) -> tuple[str, ...]:

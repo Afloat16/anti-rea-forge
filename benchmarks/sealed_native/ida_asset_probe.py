@@ -18,8 +18,74 @@ ENGINE_HASHES = {
 
 IDC = r'''
 #include <idc.idc>
+static load_missing_ranges(f) {
+  auto input, length, phoff, phsize, phcount, p, kind, offset, address, size;
+  auto cursor, stop, begin, limit, next, created, total, added, first;
+  input = fopen(GetInputFilePath(), "rb");
+  if (input == 0) Exit(20);
+  length = filelength(input);
+  if (length < 52 || length > 2097152) Exit(21);
+  fseek(input, 28, 0);
+  phoff = readlong(input, 0);
+  fseek(input, 42, 0);
+  phsize = readshort(input, 0);
+  phcount = readshort(input, 0);
+  if (phoff < 52 || phsize != 32 || phcount <= 0 || phcount > 128
+      || phoff + phsize*phcount > length) Exit(22);
+  fprintf(f, "\"supplemental_file_ranges\":[");
+  first = 1;
+  total = 0;
+  added = 0;
+  for (p = 0; p < phcount; p++) {
+    fseek(input, phoff+p*phsize, 0);
+    kind = readlong(input, 0);
+    offset = readlong(input, 0);
+    address = readlong(input, 0);
+    fseek(input, phoff+p*phsize+16, 0);
+    size = readlong(input, 0);
+    if (kind != 1 || size == 0) continue;
+    if (offset < 0 || size < 0 || size > 2097152 || offset+size > length
+        || address <= 0 || address+size <= address) Exit(23);
+    total = total+size;
+    if (total > 2097152) Exit(24);
+    stop = address+size;
+    cursor = address;
+    while (cursor < stop) {
+      while (cursor < stop && isLoaded(cursor)) cursor++;
+      if (cursor == stop) break;
+      begin = cursor;
+      created = 0;
+      limit = stop;
+      if (SegStart(cursor) == BADADDR) {
+        next = NextSeg(cursor);
+        if (next != BADADDR && next < limit) limit = next;
+        if (limit <= cursor || !SegCreate(cursor, limit, 0, 1, saRelByte, scPub)) Exit(25);
+        if (!SetSegmentType(cursor, SEG_DATA)) Exit(26);
+        created = 1;
+      } else {
+        if (GetSegmentAttr(cursor, SEGATTR_TYPE) == SEG_XTRN) Exit(27);
+        if (SegEnd(cursor) < limit) limit = SegEnd(cursor);
+      }
+      while (cursor < limit && !isLoaded(cursor)) cursor++;
+      if (cursor <= begin || !loadfile(input, offset+begin-address, begin, cursor-begin)) Exit(28);
+      added = added+cursor-begin;
+      if (!first) fprintf(f, ",");
+      first = 0;
+      fprintf(f, "{\"start\":\"0x%08X\",\"size\":%d,\"file_offset\":%d,\"created_segment\":%d}",
+              begin, cursor-begin, offset+begin-address, created);
+    }
+  }
+  fprintf(f, "],\"supplemental_loaded_bytes\":%d,", added);
+  fclose(input);
+}
+
 static main() {
   auto f, gate, stop, cursor, n, i, prefix, seg, end, begin, count, total, first;
+  Wait();
+  f = fopen(GetInputFilePath()+".probe", "w");
+  if (f == 0) Exit(14);
+  fprintf(f, "{");
+  load_missing_ranges(f);
   Wait();
   gate = LocByName("rg_asset_gate");
   if (gate == BADADDR || GetFunctionAttr(gate, FUNCATTR_START) != gate) Exit(11);
@@ -29,9 +95,7 @@ static main() {
   for (cursor = gate; cursor != BADADDR && cursor < stop; cursor = NextHead(cursor, stop))
     if (isCode(GetFlags(cursor)) && GetMnem(cursor) != "") n++;
   if (n == 0) Exit(13);
-  f = fopen(GetInputFilePath()+".probe", "w");
-  if (f == 0) Exit(14);
-  fprintf(f, "{\"gate_name\":\"rg_asset_gate\",\"gate_entry\":\"0x%08X\",", gate);
+  fprintf(f, "\"gate_name\":\"rg_asset_gate\",\"gate_entry\":\"0x%08X\",", gate);
   fprintf(f, "\"gate_size\":%d,\"gate_instructions\":%d,\"gate_prefix_hex\":\"", stop-gate, n);
   prefix = stop-gate;
   if (prefix > 16) prefix = 16;
@@ -113,6 +177,7 @@ def main():
         require(sample.read_bytes() == image, "IDA input changed during analysis")
         verify_loaded_bytes(image, record)
     record.update(tool="IDA", version="5.0.0.879 Freeware", input_sha256=sha256(image),
+                  loader_mode="ELF loader with IDC loadfile for missing PT_LOAD bytes",
                   loader_options={"IDA_NORELOC": "1", "IDA_ELF_PATCH_MODE": "0"})
     with report.open("x", encoding="utf-8") as stream:
         json.dump(record, stream, separators=(",", ":"))

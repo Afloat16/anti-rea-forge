@@ -31,7 +31,7 @@ def export_native_asset(document: dict, public_dir: Path | str, product: str,
     """
     aad = _context(product, release, purpose, asset_id)
     if len(aad) > MAX_NATIVE_AAD_BYTES:
-        raise GuardError("Native asset context exceeds the OpenSSL 1024-byte HKDF info profile")
+        raise GuardError("Native asset context exceeds the 1024-byte HKDF info profile")
     salt, nonce, ciphertext = _envelope(document)
     public = _new_path(public_dir)
     helper = (resources.files("releaseguard") / "data" / "include" / "releaseguard" / _HELPER).read_bytes()

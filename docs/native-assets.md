@@ -38,7 +38,7 @@ The last command prints the original data. The example uses binary stdin for the
 
 The issuer performs `asset-seal` with the key. The build performs `native-asset-export` using only the envelope and the expected context. These steps can run in separate environments. Export validates the envelope's structure. Authentication happens when the native reader receives the external key.
 
-Keep all four context values fixed by trusted application configuration. Changing the product, release, purpose or asset identifier causes authentication to fail. The identifiers use the existing format's NFC and length rules. The native profile additionally limits the complete HKDF info to 1,024 bytes, matching the EVP interface used here. [Format implementation](../src/releaseguard/sealed.py)
+Keep all four context values fixed by trusted application configuration. Changing the product, release, purpose or asset identifier causes authentication to fail. The identifiers use the existing format's NFC and length rules. This native profile additionally limits the complete HKDF info to 1,024 bytes. [Format implementation](../src/releaseguard/sealed.py)
 
 ## Call the reader
 
@@ -85,6 +85,8 @@ These are exact-representation checks. Fragmented keys, mixed-case hexadecimal, 
 
 ## Reproduce the native controls
 
+The paired ELF32 run completed with Ghidra 12.2 and IDA Freeware 5.0.0.879. Both recovered the plaintext control and the intentionally embedded key, including a successful native replay. For the encrypted-only program, Ghidra tested 18,024 distinct contiguous 32-byte candidates and IDA tested 18,121. Both recorded zero exact payload recoveries. The same programs passed the actual patch and forced-authentication-success comparisons. [Machine-readable observation](results/native-asset-controls.json) · [Completed workflow](https://github.com/Afloat16/anti-rea-forge/actions/runs/42624953223)
+
 The fixture generator creates three complete programs with fresh synthetic values. One contains the original 32-byte data, one contains only its encrypted representation, and one deliberately includes the actual key. All three accept the legitimate key and return the exact original bytes. A public decoy verifies that each analyzer can read ordinary 32-byte data.
 
 Each analyzer receives only an isolated program and the extraction script. The script locates the exported gate itself and exports initialized database bytes. A separate verifier checks the bytes against the ELF mappings and requires coverage of every allocated, file-backed section. It joins adjacent blocks and tries every distinct contiguous 32-byte window as a payload and as a decryption key. A recovered key must open the public envelope and succeed against the unmodified native program.
@@ -120,7 +122,7 @@ python benchmarks/native_asset_controls.py compare \
   --out native-asset-controls.json
 ```
 
-Ghidra runs automatic analysis and decompiles the gate. IDA 5.0 runs automatic analysis and disassembles it. To preserve original ELF bytes for exact comparison, the Ghidra loader uses `applyRelocations=false`, and the IDA loader uses `IDA_NORELOC=1` and `IDA_ELF_PATCH_MODE=0`. IDA's synthetic external-symbol segment is recorded separately. The coverage checker continues to require all original allocated file-backed sections. [Ghidra extraction](../benchmarks/sealed_native/ExtractAssetBytes.java) · [IDA adapter](../benchmarks/sealed_native/ida_asset_probe.py) · [Shared byte verifier](../benchmarks/sealed_native/elf_bytes.py) · [IDA loader options](https://docs.hex-rays.com/8.4/user-guide/user-interface/menu-bar/windows/environment-variables)
+Ghidra runs automatic analysis and decompiles the gate. IDA 5.0 runs automatic analysis and disassembles it. To preserve original ELF bytes for exact comparison, the Ghidra loader uses `applyRelocations=false`, and the IDA loader uses `IDA_NORELOC=1` and `IDA_ELF_PATCH_MODE=0`. IDA 5.0 omits some ELF metadata by default. The IDC adapter reads the input's bounded program-header table and uses IDA's documented segment creation and `loadfile` APIs to import only missing file-backed `PT_LOAD` ranges into its database. Existing loaded bytes are preserved. The report records each added address range and file offset, and the final extraction reads bytes back through IDA's `Byte` API. Its synthetic external-symbol segment is recorded separately. The coverage checker continues to require all original allocated file-backed sections. [Ghidra extraction](../benchmarks/sealed_native/ExtractAssetBytes.java) · [IDA adapter](../benchmarks/sealed_native/ida_asset_probe.py) · [Shared byte verifier](../benchmarks/sealed_native/elf_bytes.py) · [IDA loader options](https://docs.hex-rays.com/8.4/user-guide/user-interface/menu-bar/windows/environment-variables)
 
 ## Cost and scope
 
