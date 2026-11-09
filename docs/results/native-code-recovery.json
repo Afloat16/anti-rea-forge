@@ -1,0 +1,1062 @@
+{
+  "schema": "releaseguard.native-function-recovery-observation/v1",
+  "date": "2026-11-09",
+  "scope": "Project-owned generated uint32 function, Linux x86-64, the specified transformations and recorded recovery attempts",
+  "ghidra_distribution_sha256": "2c2cd776db3c1f6a097ba418922378ac3649cadd5e844a6f5f088ae628a7be67",
+  "eshard_commit": "be910da9267b40cbe6ae8c946eb2ef008f6e55f4",
+  "eshard_plugin_sha256": "cd3bf3945e3e1ac025454d312673c33e2b174432dd7277974d5c997cea377552",
+  "amice_commit": "19b6c473ee8a59d66a91d3b7c2d460bb6af7c99e",
+  "amice_release": "v0.1.6-beta.1",
+  "amice_plugin_sha256": "aa4527516a03ddbdc4034e68dece3190110dfe8ff34a4d1a8284e896a733a882",
+  "functional_comparisons": {
+    "flatten": {
+      "profile": "flatten",
+      "inputs": 81924,
+      "output_length": 327696,
+      "expected_length": 327696,
+      "mismatches": 0,
+      "stderr_bytes": 0,
+      "build_elapsed_seconds": 0.218594,
+      "binary_sha256": "d21a86d9a67c660da5dc1982255d6cfec8c1c4db6d8cb8b0d1c4e42f5883ddc1",
+      "binary_bytes": 16136,
+      "object_sha256": "76fb808772029f0d60dff1c98b57fa360ed9c30da732a869852aa1a214a117b0",
+      "object_bytes": 1576,
+      "functions": [
+        {
+          "name": "rg_compute",
+          "requested": true,
+          "changed": true,
+          "dispatcher": true,
+          "new_dispatchers": 1,
+          "before_sha256": "a6229d3f0dac3539ef7fdd70ac5814e1d14ca1df05ddcb608f7b7d8d330c484b",
+          "after_sha256": "a10aa451ea4b3fc9acf3e4a805ea3eca240aac5dffd5b9fcd243e5a6932f23aa",
+          "blocks_before": 11,
+          "blocks_after": 18
+        }
+      ],
+      "plugin_sha256": "cd3bf3945e3e1ac025454d312673c33e2b174432dd7277974d5c997cea377552",
+      "seed": "25a1a5627b7c435c807caf102f4e4c31"
+    },
+    "mixed": {
+      "profile": "split-flatten-substitution",
+      "inputs": 81924,
+      "output_length": 327696,
+      "expected_length": 327696,
+      "mismatches": 0,
+      "stderr_bytes": 0,
+      "build_elapsed_seconds": 0.212489,
+      "binary_sha256": "7f70fe21cb73c601be0b0d0847f1256fe752313937a09e8de97bb1a53a41d3c9",
+      "binary_bytes": 16136,
+      "object_sha256": "fba5f7e7995cba54f02223c04cb12456dd016a8e35163f269217d82894de729b",
+      "object_bytes": 2112,
+      "functions": [
+        {
+          "name": "rg_compute",
+          "requested": true,
+          "changed": true,
+          "dispatcher": true,
+          "new_dispatchers": 1,
+          "before_sha256": "a6229d3f0dac3539ef7fdd70ac5814e1d14ca1df05ddcb608f7b7d8d330c484b",
+          "after_sha256": "d4bdcdcded3fe94b2af2a2f2d94bcd9236925f6e1fe82914c96b9f4abc375071",
+          "blocks_before": 11,
+          "blocks_after": 27
+        }
+      ],
+      "plugin_sha256": "cd3bf3945e3e1ac025454d312673c33e2b174432dd7277974d5c997cea377552",
+      "seed": "70f3620b29ca45ad9b05b37804ed7951"
+    }
+  },
+  "vm_functional_comparison": {
+    "profile": "amice-vm",
+    "plugin_release": "v0.1.6-beta.1",
+    "plugin_sha256": "aa4527516a03ddbdc4034e68dece3190110dfe8ff34a4d1a8284e896a733a882",
+    "input_attribute_adjustment": "removed used attribute to satisfy upstream direct-call use precondition; algorithm source unchanged",
+    "inputs": 81924,
+    "mismatches": 0,
+    "output_bytes": 327696,
+    "expected_bytes": 327696,
+    "exit": 0,
+    "stderr_bytes": 0,
+    "binary_bytes": 40712,
+    "binary_sha256": "26722514d8efde13a38042daab2140e53c38f0868a005420fa5b0b3087ba9a6c",
+    "object_bytes": 88872,
+    "ir_bytes": 652418
+  },
+  "protocol": {
+    "workers": "Each reconstruction used a fresh conversation and was instructed to read only the corresponding public binary and genuine Ghidra output. File access restrictions were enforced through task instructions within a shared filesystem.",
+    "hidden_score": "Root compiled each submitted C implementation and compared it with the original on 81924 held-back inputs plus 1000000 additional draws. Counts are evaluations, with possible duplicate values.",
+    "accepted_reconstruction": "Standalone C with correct uint32 outputs. Original binary calls, linking and x86-machine-code emulation were excluded.",
+    "publication": "Fixture source and recovered C were published after all three independent recovery workers completed.",
+    "time_scope": "Recorded worker durations are single observations. Each worker also performed its own chosen-input comparisons."
+  },
+  "cases": {
+    "baseline": {
+      "binary_sha256": "1af84b1d33a3cf4528d48d80e9572ffde607ccb1148c5e9938182d4640c970d6",
+      "binary_bytes": 16136,
+      "ghidra": {
+        "ghidra_version": "12.2",
+        "analysis_timed_out": false,
+        "loader_apply_relocations": true,
+        "file_bytes_and_instruction_coverage_verified": true,
+        "headless_exit": 0,
+        "target_entry": "0x401210",
+        "instruction_count": 43,
+        "cfg_block_count": 13,
+        "undecoded_bytes": 0,
+        "export_script_sha256": "3416bbe49eae8f84eccafb9a33694d24844e3911f4cbc2a90c2c2549c4ecc332",
+        "runner_sha256": "4c223992e876a8f908ea8fefdc3422db2adf3a8534adae9bdf5ffd25da90c3ff",
+        "output_sha256": {
+          "decompiled.c": "09774a22a3ef130b2b6f99336e23558e02cf62b735d5ae16fb1d30f56cacf784",
+          "function.json": "bbc8f675154f38dcdd510c2fd51c1ba422897a9843cc2051c50946be8946dd77"
+        }
+      },
+      "reconstruction_status": "independent_reconstruction_verified",
+      "hidden_score": {
+        "schema": "releaseguard.native-code-recovery-score.v1",
+        "condition": "baseline",
+        "inputs": 1081924,
+        "private_existing_inputs": 81924,
+        "new_independent_inputs": 1000000,
+        "input_sha256": "0791eeed3fbb99286235f8aa3228c587f1df1b18a192c3deb4ad74a3aa6ecae1",
+        "expected_sha256": "db02c85c5aa7c376b29a9c8fb97b5e147cf392afcbf323b3e240cc2c8c789c06",
+        "candidate_sha256": "904a673c458acda668c05221486e446d06da76fdd6455631deccf754eb014943",
+        "candidate_output_sha256": "db02c85c5aa7c376b29a9c8fb97b5e147cf392afcbf323b3e240cc2c8c789c06",
+        "expected_bytes": 4327696,
+        "actual_bytes": 4327696,
+        "mismatches": 0,
+        "reconstruction_verified": true
+      },
+      "worker_record": {
+        "agent": "a",
+        "profile": "baseline",
+        "started_utc": "2026-11-09T14:10:59Z",
+        "completed_utc": "2026-11-09T14:12:24.217381+00:00",
+        "public_abi": "uint32_t rg_compute(uint32_t x)",
+        "implementation": "/workspace/scratch/0d6a04e6117d/v11-recovery/a/recovered.c",
+        "information_used": [
+          "/workspace/scratch/0d6a04e6117d/v11-study/analysis/baseline/decompiled.c",
+          "/workspace/scratch/0d6a04e6117d/v11-study/analysis/baseline/function.json",
+          "/workspace/scratch/0d6a04e6117d/v11-study/analysis/baseline/run.json",
+          "/workspace/scratch/0d6a04e6117d/v11-study/public/baseline (black-box execution only)"
+        ],
+        "method": "Manual semantic reconstruction of the decompiled arithmetic, conditions, rotations, and three-round loop. The supplied instruction descriptions were read to confirm those semantics. No binary linking, embedding, calling from recovered.c, or machine-code emulation is used.",
+        "analysis_notes": [
+          "The decompiler uses uint, which was expressed as standard uint32_t.",
+          "The multiplication constant -0x0deb4f79 was represented by its equivalent unsigned 32-bit value 0xf214b087.",
+          "All data arithmetic is unsigned 32-bit and rotations use fixed nonzero shift counts.",
+          "The function metadata reports 43 decoded instructions, zero undecoded bytes, no dependencies, and no decompiler message.",
+          "run.json reports nonfatal Ghidra FileCache free-space-check warnings and a successful headless exit. These did not require changes to the reconstruction."
+        ],
+        "analysis_problems": [],
+        "compilation": [
+          {
+            "command": "gcc -std=c11 -O2 -Wall -Wextra -Werror -pedantic recovered.c test_driver.c -o recovered_test",
+            "exit_code": 0,
+            "diagnostics": ""
+          },
+          {
+            "command": "gcc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic -fsanitize=undefined -fno-sanitize-recover=all recovered.c test_driver.c -o recovered_ubsan",
+            "exit_code": 0,
+            "diagnostics": ""
+          }
+        ],
+        "compilation_problems": [],
+        "self_test": {
+          "raw_group_input_counts": {
+            "all_low_16_bit_values": 65536,
+            "all_high_16_bit_values_with_low_bits_zero": 65536,
+            "bit_boundaries_and_complements": 576,
+            "alternating_and_repeated_byte_patterns": 12,
+            "deterministic_uniform_random_draws": 1000000
+          },
+          "random_seed": "0xA110C",
+          "unique_input_count": 1131310,
+          "baseline_input_count": 1131310,
+          "total_candidate_comparisons": 2262620,
+          "input_payload_sha256": "722ab12e88d81b33a134dd914a2dc0d0bd401eedfc769f2f3dac86c983e2a7db",
+          "baseline_output_sha256": "b80c0bc5f7b2bf4e5b5476839587f255d2d335d25bf47858529f5c1e6a0024d2",
+          "baseline_stderr": "",
+          "results": [
+            {
+              "executable": "recovered_test",
+              "inputs_compared": 1131310,
+              "all_outputs_equal": true,
+              "first_mismatches": [],
+              "stderr": "",
+              "exit_code": 0
+            },
+            {
+              "executable": "recovered_ubsan",
+              "inputs_compared": 1131310,
+              "all_outputs_equal": true,
+              "first_mismatches": [],
+              "stderr": "",
+              "exit_code": 0
+            }
+          ]
+        },
+        "unresolved_difficulties": [],
+        "evidence_limit": "Local tests cover the stated sample only. The 32-bit input domain was not exhaustively tested and independent hidden-test results are unknown."
+      }
+    },
+    "flatten": {
+      "binary_sha256": "d21a86d9a67c660da5dc1982255d6cfec8c1c4db6d8cb8b0d1c4e42f5883ddc1",
+      "binary_bytes": 16136,
+      "ghidra": {
+        "ghidra_version": "12.2",
+        "analysis_timed_out": false,
+        "loader_apply_relocations": true,
+        "file_bytes_and_instruction_coverage_verified": true,
+        "headless_exit": 0,
+        "target_entry": "0x401210",
+        "instruction_count": 144,
+        "cfg_block_count": 36,
+        "undecoded_bytes": 0,
+        "export_script_sha256": "3416bbe49eae8f84eccafb9a33694d24844e3911f4cbc2a90c2c2549c4ecc332",
+        "runner_sha256": "adc633e3eb4c56ba15de306296f3300169b985c15a2d11c6667eace7f3ff8544",
+        "output_sha256": {
+          "decompiled.c": "7fd5a444d11ab4fff5eb3d421a3b06d3b5d73c007f2ad5b9895037597513ca44",
+          "function.json": "52f96c212b8ce4ff7190fb38dd5ec87545750d5af59c5a8569940196bd99eff0"
+        }
+      },
+      "reconstruction_status": "not_attempted_independently"
+    },
+    "mixed": {
+      "binary_sha256": "7f70fe21cb73c601be0b0d0847f1256fe752313937a09e8de97bb1a53a41d3c9",
+      "binary_bytes": 16136,
+      "ghidra": {
+        "ghidra_version": "12.2",
+        "analysis_timed_out": false,
+        "loader_apply_relocations": true,
+        "file_bytes_and_instruction_coverage_verified": true,
+        "headless_exit": 0,
+        "target_entry": "0x401210",
+        "instruction_count": 224,
+        "cfg_block_count": 57,
+        "undecoded_bytes": 0,
+        "export_script_sha256": "3416bbe49eae8f84eccafb9a33694d24844e3911f4cbc2a90c2c2549c4ecc332",
+        "runner_sha256": "adc633e3eb4c56ba15de306296f3300169b985c15a2d11c6667eace7f3ff8544",
+        "output_sha256": {
+          "decompiled.c": "a74f2e2397b5ccb35c17fd423e0ac5697f12a6385d685b3bbf889ff3d79420f1",
+          "function.json": "032f18e6a5bde8c402bdec0f032ec1eed8d54058c88dccd70dc3056b7f2202ea"
+        }
+      },
+      "reconstruction_status": "independent_reconstruction_verified",
+      "hidden_score": {
+        "schema": "releaseguard.native-code-recovery-score.v1",
+        "condition": "split-flatten-substitution",
+        "inputs": 1081924,
+        "private_existing_inputs": 81924,
+        "new_independent_inputs": 1000000,
+        "input_sha256": "0791eeed3fbb99286235f8aa3228c587f1df1b18a192c3deb4ad74a3aa6ecae1",
+        "expected_sha256": "db02c85c5aa7c376b29a9c8fb97b5e147cf392afcbf323b3e240cc2c8c789c06",
+        "candidate_sha256": "d2399a0a22e61e3e62c0ec23d89ae6d59ad3a9b708b45f2833ffff581d719999",
+        "candidate_output_sha256": "db02c85c5aa7c376b29a9c8fb97b5e147cf392afcbf323b3e240cc2c8c789c06",
+        "expected_bytes": 4327696,
+        "actual_bytes": 4327696,
+        "stderr_bytes": 0,
+        "mismatches": 0,
+        "reconstruction_verified": true
+      },
+      "worker_record": {
+        "schema": "independent-functional-recovery-report.v1",
+        "variant": "mixed",
+        "public_signature": "uint32_t rg_compute(uint32_t x)",
+        "started_utc": "2026-11-09T14:17:20+00:00",
+        "completed_utc": "2026-11-09T14:19:12.168618+00:00",
+        "elapsed_seconds": 112.168618,
+        "start_time_basis": "First UTC clock reading immediately before enumerating the permitted inputs.",
+        "status": "recovered_and_selftested",
+        "recovered_source": "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/recovered.c",
+        "recovered_source_sha256": "d2399a0a22e61e3e62c0ec23d89ae6d59ad3a9b708b45f2833ffff581d719999",
+        "information_used": [
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/analysis/mixed/decompiled.c",
+            "use": "Primary basis for the algorithm, arithmetic constants, predicates, loop bounds and final output."
+          },
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/analysis/mixed/function.json",
+            "use": "Ghidra 12.2 target, input hash, dependency and analysis metadata. The initial combined read also exposed instruction and byte-range listings. No instruction emulator was constructed."
+          },
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/analysis/mixed/run.json",
+            "use": "Confirmed successful completed analysis, coverage verification and absence of unresolved computed transfers."
+          },
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/public/mixed",
+            "use": "Executed once as a black-box oracle with the self-selected input corpus. No code from this executable is embedded or linked into the recovery."
+          }
+        ],
+        "input_binary_sha256_from_ghidra": "7f70fe21cb73c601be0b0d0847f1256fe752313937a09e8de97bb1a53a41d3c9",
+        "independence": {
+          "other_versions_or_agents_algorithms_consulted": false,
+          "private_or_original_source_templates_read": false,
+          "writes_confined_to_own_output_directory": true,
+          "binary_linking_embedding_or_machine_code_emulation": false
+        },
+        "reconstruction": [
+          "Collapsed the flattened state dispatcher by following assignments to local_84.",
+          "Simplified (x XOR 0xffffefbe) AND x to x AND 0x1041.",
+          "Recovered a conditional initialization after XOR with 0x9fce3e75, using either a four-bit left rotation or addition of 0x5780e43f.",
+          "Recovered a four-way transformation selected by bits 4 and 5 of x.",
+          "Recovered exactly three rounds. A clear bit at the current round index selects the multiply/add transformation, while a set bit selects XOR followed by a six-bit left rotation.",
+          "Recovered the final XOR with the eight-bit right shift. Arithmetic is explicitly uint32_t modular arithmetic."
+        ],
+        "analysis_difficulties": [
+          "Flattened dispatch produced deeply nested decompiler loops and many state-only variables. Tracing the reachable state transitions recovered structured control flow.",
+          "The bit-test predicate tests a toggled bit, which reverses the apparent branch polarity. It was simplified to a direct test for a clear bit.",
+          "A multiplication constant appeared as negative hexadecimal in the decompiler output. It was converted to its uint32_t representative 0xf214b087.",
+          "The initial combined file print was truncated by the output budget. The complete decompiled C was reread separately before implementation."
+        ],
+        "remaining_difficulties": [],
+        "validation_scope": {
+          "black_box_input_count": 1131268,
+          "distinct_black_box_input_count": 1131046,
+          "recovered_binary_comparisons_per_input": 3,
+          "all_recorded_comparisons_match": true,
+          "entire_uint32_domain_exhausted": false,
+          "hidden_scoring_seen": false
+        },
+        "selftest": {
+          "started_utc": "2026-11-09T14:18:23.547291+00:00",
+          "input_count": 1131268,
+          "unique_input_count": 1131046,
+          "input_sha256": "2a4ab310db3b4d7136835b386f21eb71fa2ca39cc3aa8668643cd65955b3f5c9",
+          "corpus": {
+            "exhaustive_low_16_bits": 65536,
+            "exhaustive_high_16_bits": 65536,
+            "targeted_values": 196,
+            "uniform_random_count": 1000000,
+            "random_generator": "Python random.Random.getrandbits(32)",
+            "random_seed": "0x4d49584544"
+          },
+          "compilations": [
+            {
+              "configuration": "optimized",
+              "command": [
+                "gcc",
+                "-std=c11",
+                "-Wall",
+                "-Wextra",
+                "-Wpedantic",
+                "-Werror",
+                "-O2",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/recovered.c",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/harness.c",
+                "-o",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/selftest_optimized"
+              ],
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "configuration": "unoptimized",
+              "command": [
+                "gcc",
+                "-std=c11",
+                "-Wall",
+                "-Wextra",
+                "-Wpedantic",
+                "-Werror",
+                "-O0",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/recovered.c",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/harness.c",
+                "-o",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/selftest_unoptimized"
+              ],
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "configuration": "ubsan",
+              "command": [
+                "gcc",
+                "-std=c11",
+                "-Wall",
+                "-Wextra",
+                "-Wpedantic",
+                "-Werror",
+                "-O1",
+                "-fsanitize=undefined",
+                "-fno-sanitize-recover=all",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/recovered.c",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/harness.c",
+                "-o",
+                "/workspace/scratch/0d6a04e6117d/v11-recovery/mixed/selftest_ubsan"
+              ],
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": ""
+            }
+          ],
+          "comparisons": [
+            {
+              "configuration": "optimized",
+              "exit_code": 0,
+              "stderr": "",
+              "output_bytes": 4525072,
+              "output_sha256": "943149fe6f4922bec9eebbeb8b6d00b6b3f408c620a80815e1548357e1a0bf80",
+              "input_count": 1131268,
+              "mismatch_count": 0,
+              "first_mismatches": []
+            },
+            {
+              "configuration": "unoptimized",
+              "exit_code": 0,
+              "stderr": "",
+              "output_bytes": 4525072,
+              "output_sha256": "943149fe6f4922bec9eebbeb8b6d00b6b3f408c620a80815e1548357e1a0bf80",
+              "input_count": 1131268,
+              "mismatch_count": 0,
+              "first_mismatches": []
+            },
+            {
+              "configuration": "ubsan",
+              "exit_code": 0,
+              "stderr": "",
+              "output_bytes": 4525072,
+              "output_sha256": "943149fe6f4922bec9eebbeb8b6d00b6b3f408c620a80815e1548357e1a0bf80",
+              "input_count": 1131268,
+              "mismatch_count": 0,
+              "first_mismatches": []
+            }
+          ],
+          "reference": {
+            "command": [
+              "/workspace/scratch/0d6a04e6117d/v11-study/public/mixed"
+            ],
+            "exit_code": 0,
+            "stderr": "",
+            "output_bytes": 4525072,
+            "output_sha256": "943149fe6f4922bec9eebbeb8b6d00b6b3f408c620a80815e1548357e1a0bf80"
+          },
+          "completed_utc": "2026-11-09T14:18:25.222855+00:00"
+        },
+        "limitations": [
+          "The measured corpus contains 1,131,268 inputs and does not exhaust all 2^32 possible inputs.",
+          "No result from the independent hidden scorer was available to this recovery agent."
+        ],
+        "outcome": "A standalone structured C implementation compiled without diagnostics in all three tested configurations and matched every selected black-box output. No unresolved semantic discrepancy was found."
+      }
+    },
+    "virtualized": {
+      "binary_sha256": "26722514d8efde13a38042daab2140e53c38f0868a005420fa5b0b3087ba9a6c",
+      "binary_bytes": 40712,
+      "ghidra": {
+        "ghidra_version": "12.2",
+        "analysis_timed_out": false,
+        "loader_apply_relocations": true,
+        "file_bytes_and_instruction_coverage_verified": true,
+        "headless_exit": 0,
+        "target_entry": "0x4048e0",
+        "instruction_count": 24,
+        "cfg_block_count": 1,
+        "undecoded_bytes": 0,
+        "export_script_sha256": "d417fb1d5597bf8fb084ec94b450501bfba74fabb690801304ddd3950962a5be",
+        "runner_sha256": "3ea87ca1dc3a46377f721d39c836899339946bf95584e46d60371eb322342948",
+        "output_sha256": {
+          "console.log": "2f7229405fec453592bbc33f893ad2f9243db5a409e901e29d2596486f5b0176",
+          "decompiled.c": "dab67138daa1c38f910a38dfe72494159240e85eb7326652521f285d73510c98",
+          "function.json": "ee76dcbf2f1aee361301d37c0709526baad514c74023c829da4e572ab57f1a65",
+          "headless.log": "64929c2f60e59024dc5198e415e133a38b7d9ccce8235eb41c269c93a2f129f6",
+          "program-memory.json": "a82a4ed1cc1642bb3c85354427f64a3cad56751ff18171a77d09361cc3736957",
+          "program.c": "c918fa14461680d41b94f14b1d47d1b5598b3c52b51a394254fb5744f351bc52",
+          "program.elf": "26722514d8efde13a38042daab2140e53c38f0868a005420fa5b0b3087ba9a6c",
+          "program.json": "e1255cc95721d698bbf38f95b92b8195bbec82c385aab18391bff892274ec3a4",
+          "script.log": "7a7f9f8434e8c17f8eda88995838b2952cedce9c71cf007222db5e4ebaad1f0e"
+        }
+      },
+      "reconstruction_status": "independent_reconstruction_verified",
+      "hidden_score": {
+        "schema": "releaseguard.native-code-recovery-score.v1",
+        "condition": "amice-vm",
+        "inputs": 1081924,
+        "private_existing_inputs": 81924,
+        "new_independent_inputs": 1000000,
+        "input_sha256": "0791eeed3fbb99286235f8aa3228c587f1df1b18a192c3deb4ad74a3aa6ecae1",
+        "expected_sha256": "db02c85c5aa7c376b29a9c8fb97b5e147cf392afcbf323b3e240cc2c8c789c06",
+        "candidate_sha256": "0e4c4b58a7310ec8115403dfee9ce96adee5d676a7113692c60db00b6226d8ba",
+        "candidate_output_sha256": "db02c85c5aa7c376b29a9c8fb97b5e147cf392afcbf323b3e240cc2c8c789c06",
+        "expected_bytes": 4327696,
+        "actual_bytes": 4327696,
+        "stderr_bytes": 0,
+        "mismatches": 0,
+        "reconstruction_verified": true
+      },
+      "worker_record": {
+        "schema": "independent-functional-recovery.v1",
+        "variant": "vm",
+        "actual_start_utc": "2026-11-09T14:24:53Z",
+        "actual_end_utc": "2026-11-09T14:30:03Z",
+        "elapsed_seconds": 310,
+        "status": "completed_independent_high_level_rewrite",
+        "completion_condition": "The independent rewrite completed before the approximately 20-minute working budget.",
+        "public_abi": "uint32_t rg_compute(uint32_t x)",
+        "output_file": "/workspace/scratch/0d6a04e6117d/v11-recovery/vm/recovered.c",
+        "recovered_c_sha256": "0e4c4b58a7310ec8115403dfee9ce96adee5d676a7113692c60db00b6226d8ba",
+        "input_materials_actually_used": [
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/public/vm",
+            "sha256": "26722514d8efde13a38042daab2140e53c38f0868a005420fa5b0b3087ba9a6c",
+            "use": "ELF static disassembly, read-only descriptor/table/bytecode/constant extraction, and black-box stdin/stdout tests."
+          },
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/analysis/vm/program.c",
+            "use": "Initial interpreter and descriptor analysis."
+          },
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/analysis/vm/function.json",
+            "use": "Published ABI and wrapper instructions."
+          },
+          {
+            "path": "/workspace/scratch/0d6a04e6117d/v11-study/analysis/vm/run.json",
+            "use": "Analysis completion and coverage metadata."
+          }
+        ],
+        "external_references": [],
+        "input_scope_compliance": {
+          "private_source_or_expected_outputs_read": false,
+          "other_variants_read": false,
+          "other_agents_algorithms_read": false,
+          "original_function_templates_read": false,
+          "all_written_artifacts_under": "/workspace/scratch/0d6a04e6117d/v11-recovery/vm"
+        },
+        "obstacles": [
+          {
+            "observation": "Ghidra reported all 24 recognized functions decompiled, but the interpreter decompilation stopped at an indirect jump at 0x401cf9, with the large switch unresolved.",
+            "resolution": "Derived reachable VM handler semantics from the public ELF's static objdump disassembly and jump table at 0x405010."
+          },
+          {
+            "observation": "The operand reader at 0x4012e0 and constant-table helper at 0x401420 were absent as separate functions in program.c.",
+            "resolution": "Read their public native instruction sequences and independently implemented their encoded-data semantics in decode.py."
+          },
+          {
+            "observation": "The wrapper was shown with a void return, despite the supplied uint32_t ABI.",
+            "resolution": "Followed the interpreter return-value load and observed the public wrapper retaining EAX."
+          },
+          {
+            "observation": "Bytecode descriptors, per-position encrypted bytes, nested variable-length operands, aliased handlers, and padding obscured the actual control flow.",
+            "resolution": "Decoded the descriptor values, all 144 reachable VM instructions including 84 non-padding instructions, and nine constants. Simplified their 32-bit arithmetic into the final ordinary C function."
+          }
+        ],
+        "extracted_program": {
+          "bytecode_virtual_address": "0x40777a",
+          "bytecode_bytes": 2652,
+          "constants_virtual_address": "0x407750",
+          "constants_encoded_bytes": 42,
+          "key": "0x95d00d17e98765a6",
+          "reachable_vm_instructions": 144,
+          "reachable_non_padding_instructions": 84,
+          "distinct_reachable_handler_targets": 42,
+          "constants": [
+            4161,
+            14054075,
+            396296759,
+            403242993,
+            1280855273,
+            1468064831,
+            1822181993,
+            2681093749,
+            4061442183
+          ],
+          "algorithm_summary": "32-bit XOR initialization, conditional rotate/add, four-way selection on input bits 4 and 5, three conditional mixing rounds, and a final XOR with a right shift by 8."
+        },
+        "final_implementation": {
+          "language": "standard C11",
+          "native_original_code_linked_or_called": false,
+          "original_machine_code_embedded": false,
+          "original_x86_machine_code_emulated": false,
+          "encrypted_vm_embedded": false,
+          "form": "Direct high-level arithmetic implementation"
+        },
+        "compilation": [
+          {
+            "compiler": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+            "flags": "-std=c11 -Wall -Wextra -Wconversion -Wshadow -Werror -pedantic -O2",
+            "source_files": [
+              "recovered.c",
+              "driver.c"
+            ],
+            "exit_code": 0,
+            "diagnostics": "",
+            "log": "compile.log"
+          },
+          {
+            "compiler": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+            "flags": "-std=c11 -Wall -Wextra -Wconversion -Wshadow -Werror -pedantic -O0 -fsanitize=undefined -fno-sanitize-recover=all",
+            "source_files": [
+              "recovered.c",
+              "driver.c"
+            ],
+            "exit_code": 0,
+            "diagnostics": "",
+            "log": "compile-ubsan.log"
+          }
+        ],
+        "self_tests": {
+          "independent_distinct_input_count": 262164,
+          "public_input_output_protocol": "Little-endian uint32_t, four bytes per input and output.",
+          "test_input_seed": "0x26722514d8efde13",
+          "input_groups": [
+            "all 65536 low 16-bit inputs",
+            "highest 65536 uint32_t values",
+            "single-bit and single-cleared-bit inputs",
+            "131072 seeded random uint32_t values"
+          ],
+          "input_sha256": "8dcb33ed8d675923f1dd1902599983d62903856a085df817677a36df53e9c74c",
+          "public_and_recovered_output_sha256": "e710f811ac4ec011e8d086f9e697615717347dca1b73877b95ea770d16c27794",
+          "optimized_build": {
+            "cases": 262164,
+            "mismatches": 0,
+            "details": "selftest.json"
+          },
+          "undefined_behavior_sanitized_build": {
+            "cases": 262164,
+            "mismatches": 0,
+            "runtime_diagnostics": "",
+            "details": "sanitizer-selftest.json"
+          },
+          "note": "Both builds were tested on the same distinct input set, counted once."
+        },
+        "unresolved_blockers": [],
+        "tool_failures": [],
+        "residual_limits": [
+          "Self-tests are finite. Independent hidden-input scoring remains for the parent."
+        ],
+        "assessment": "The function's behavior was independently recoverable from the permitted public binary and analysis outputs. A completed rewrite and successful tests are available for hidden evaluation."
+      }
+    }
+  },
+  "vm_warning_review": {
+    "schema": "releaseguard.program-warnings.v1",
+    "input_sha256": "26722514d8efde13a38042daab2140e53c38f0868a005420fa5b0b3087ba9a6c",
+    "program_c_sha256": "c918fa14461680d41b94f14b1d47d1b5598b3c52b51a394254fb5744f351bc52",
+    "source_program_report_sha256": "e1255cc95721d698bbf38f95b92b8195bbec82c385aab18391bff892274ec3a4",
+    "recognized_functions": 24,
+    "api_completed_functions": 24,
+    "completion_semantics": "Ghidra decompileCompleted() API status",
+    "function_failures": [],
+    "functions_with_warnings": 14,
+    "warning_counts": {
+      "bad_instruction_data": 6,
+      "decompiler_warning": 20,
+      "halt_baddata_call": 6,
+      "indirect_jump_as_call": 1,
+      "truncated_control_flow": 6,
+      "unrecovered_jump_table": 1
+    },
+    "function_warnings": [
+      {
+        "entry": "0x401030",
+        "name": "ferror",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 2,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          }
+        ]
+      },
+      {
+        "entry": "0x401040",
+        "name": "fread",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 2,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          }
+        ]
+      },
+      {
+        "entry": "0x401050",
+        "name": "fflush",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 2,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          }
+        ]
+      },
+      {
+        "entry": "0x401060",
+        "name": "fwrite",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 2,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          }
+        ]
+      },
+      {
+        "entry": "0x401070",
+        "name": "_start",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 9,
+            "text": "/* WARNING: Do nothing block with infinite loop */"
+          }
+        ]
+      },
+      {
+        "entry": "0x4010b0",
+        "name": "deregister_tm_clones",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 2,
+            "text": "/* WARNING: Removing unreachable block (ram,0x004010bd) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 3,
+            "text": "/* WARNING: Removing unreachable block (ram,0x004010c7) */"
+          }
+        ]
+      },
+      {
+        "entry": "0x4010e0",
+        "name": "register_tm_clones",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 2,
+            "text": "/* WARNING: Removing unreachable block (ram,0x004010ff) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 3,
+            "text": "/* WARNING: Removing unreachable block (ram,0x00401109) */"
+          }
+        ]
+      },
+      {
+        "entry": "0x4014b0",
+        "name": "FUN_004014b0",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "decompiler_warning",
+            "c_line": 2,
+            "text": "/* WARNING: Removing unreachable block (ram,0x00401b2d) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 3,
+            "text": "/* WARNING: Removing unreachable block (ram,0x00401981) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 4,
+            "text": "/* WARNING: Removing unreachable block (ram,0x0040178d) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 5,
+            "text": "/* WARNING: Removing unreachable block (ram,0x004018b4) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 6,
+            "text": "/* WARNING: Removing unreachable block (ram,0x00401a4a) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 7,
+            "text": "/* WARNING: Removing unreachable block (ram,0x00401be0) */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 8,
+            "text": "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"
+          },
+          {
+            "kind": "unrecovered_jump_table",
+            "c_line": 112,
+            "text": "/* WARNING: Could not recover jumptable at 0x00401cf9. Too many branches */"
+          },
+          {
+            "kind": "indirect_jump_as_call",
+            "c_line": 113,
+            "text": "/* WARNING: Treating indirect jump as call */"
+          }
+        ]
+      },
+      {
+        "entry": "0x40b000",
+        "name": "__libc_start_main",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "bad_instruction_data",
+            "c_line": 2,
+            "text": "/* WARNING: Control flow encountered bad instruction data */"
+          },
+          {
+            "kind": "truncated_control_flow",
+            "c_line": 7,
+            "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+          },
+          {
+            "kind": "halt_baddata_call",
+            "c_line": 9,
+            "text": "halt_baddata();"
+          }
+        ]
+      },
+      {
+        "entry": "0x40b010",
+        "name": "ferror",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "bad_instruction_data",
+            "c_line": 2,
+            "text": "/* WARNING: Control flow encountered bad instruction data */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 3,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          },
+          {
+            "kind": "truncated_control_flow",
+            "c_line": 8,
+            "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+          },
+          {
+            "kind": "halt_baddata_call",
+            "c_line": 10,
+            "text": "halt_baddata();"
+          }
+        ]
+      },
+      {
+        "entry": "0x40b018",
+        "name": "fread",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "bad_instruction_data",
+            "c_line": 2,
+            "text": "/* WARNING: Control flow encountered bad instruction data */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 3,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          },
+          {
+            "kind": "truncated_control_flow",
+            "c_line": 8,
+            "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+          },
+          {
+            "kind": "halt_baddata_call",
+            "c_line": 10,
+            "text": "halt_baddata();"
+          }
+        ]
+      },
+      {
+        "entry": "0x40b028",
+        "name": "__gmon_start__",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "bad_instruction_data",
+            "c_line": 2,
+            "text": "/* WARNING: Control flow encountered bad instruction data */"
+          },
+          {
+            "kind": "truncated_control_flow",
+            "c_line": 7,
+            "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+          },
+          {
+            "kind": "halt_baddata_call",
+            "c_line": 8,
+            "text": "halt_baddata();"
+          }
+        ]
+      },
+      {
+        "entry": "0x40b030",
+        "name": "fflush",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "bad_instruction_data",
+            "c_line": 2,
+            "text": "/* WARNING: Control flow encountered bad instruction data */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 3,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          },
+          {
+            "kind": "truncated_control_flow",
+            "c_line": 8,
+            "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+          },
+          {
+            "kind": "halt_baddata_call",
+            "c_line": 10,
+            "text": "halt_baddata();"
+          }
+        ]
+      },
+      {
+        "entry": "0x40b038",
+        "name": "fwrite",
+        "api_status": "completed",
+        "warnings": [
+          {
+            "kind": "bad_instruction_data",
+            "c_line": 2,
+            "text": "/* WARNING: Control flow encountered bad instruction data */"
+          },
+          {
+            "kind": "decompiler_warning",
+            "c_line": 3,
+            "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+          },
+          {
+            "kind": "truncated_control_flow",
+            "c_line": 8,
+            "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+          },
+          {
+            "kind": "halt_baddata_call",
+            "c_line": 10,
+            "text": "halt_baddata();"
+          }
+        ]
+      }
+    ]
+  },
+  "cost": {
+    "schema": "releaseguard.native-code-cost.v1",
+    "clock": "CLOCK_MONOTONIC",
+    "timed_scope": "1000000 dependent native function calls and uint32 loop addition; excludes process startup, IO, compilation and checksum comparison",
+    "checksums_equal": true,
+    "host": {
+      "machine": "x86_64",
+      "system": "Linux",
+      "release": "6.18.57"
+    },
+    "driver_sha256": "e21866f088e595d2eabf8b9844c3eddbc472c1c612c671881092844932f0e23b",
+    "variants": {
+      "baseline": {
+        "iterations_per_round": 1000000,
+        "warmups": 3,
+        "measured_rounds": 7,
+        "nanoseconds_per_call": {
+          "median": 16.908192,
+          "samples": [
+            16.712669,
+            20.599804,
+            17.269984,
+            15.841243,
+            17.024467,
+            16.320331,
+            16.908192
+          ]
+        },
+        "checksum": 3252545021,
+        "object_bytes": 1008,
+        "binary_bytes": 16128
+      },
+      "flatten": {
+        "iterations_per_round": 1000000,
+        "warmups": 3,
+        "measured_rounds": 7,
+        "nanoseconds_per_call": {
+          "median": 35.240989,
+          "samples": [
+            34.64146,
+            34.888241,
+            35.309452,
+            35.240989,
+            35.619227,
+            34.163444,
+            35.490093
+          ]
+        },
+        "checksum": 3252545021,
+        "object_bytes": 1576,
+        "binary_bytes": 16128
+      },
+      "mixed": {
+        "iterations_per_round": 1000000,
+        "warmups": 3,
+        "measured_rounds": 7,
+        "nanoseconds_per_call": {
+          "median": 47.344719,
+          "samples": [
+            46.569489,
+            44.981021,
+            45.309709,
+            48.720188,
+            50.585182,
+            47.344719,
+            48.553527
+          ]
+        },
+        "checksum": 3252545021,
+        "object_bytes": 2112,
+        "binary_bytes": 16128
+      },
+      "vm": {
+        "iterations_per_round": 1000000,
+        "warmups": 3,
+        "measured_rounds": 7,
+        "nanoseconds_per_call": {
+          "median": 4425.941544,
+          "samples": [
+            5091.58171,
+            4752.570881,
+            4161.415415,
+            4463.3944,
+            4067.80039,
+            4329.682694,
+            4425.941544
+          ]
+        },
+        "checksum": 3252545021,
+        "object_bytes": 88872,
+        "binary_bytes": 40704
+      }
+    }
+  },
+  "fixture_sources": {
+    "fixture.c": "574bf3f7535ad0a63c79af4a8f3a6f97d8bfd5322ebd936fa613884cc838ff04",
+    "driver.c": "d06ac4dbbf8f5e901d41b0f121d9f58f466aca7b1b7c310b30057b97ea337ba8",
+    "baseline.c": "904a673c458acda668c05221486e446d06da76fdd6455631deccf754eb014943",
+    "mixed.c": "d2399a0a22e61e3e62c0ec23d89ae6d59ad3a9b708b45f2833ffff581d719999",
+    "virtualized.c": "0e4c4b58a7310ec8115403dfee9ce96adee5d676a7113692c60db00b6226d8ba"
+  },
+  "conclusion": "The combined flattening/substitution build and the publicly bundled VM code were independently reconstructed and passed the hidden functional score. Their observed code transformations did not establish function confidentiality.",
+  "ida9_execution": "not_performed_engine_unavailable",
+  "production_virtualize_reproduction": {
+    "same_object_bytes": true,
+    "same_executable_bytes": true,
+    "binary_sha256": "26722514d8efde13a38042daab2140e53c38f0868a005420fa5b0b3087ba9a6c",
+    "functional_inputs": 81924,
+    "exact_outputs": true
+  },
+  "base_revision": "6143e7989d16fe0ea596890bc59929f468c4de6b"
+}

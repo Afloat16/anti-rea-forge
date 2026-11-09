@@ -78,6 +78,25 @@ def parser() -> argparse.ArgumentParser:
     native.add_argument("--out", type=Path, required=True, help="Fresh generated directory, or unchanged output to reuse")
     native.add_argument("--seed", help="Optional 16 hexadecimal digits for reproducible builds; not a secret key")
 
+    obfuscation = commands.add_parser(
+        "native-obfuscate", help="Build Linux x86/x86-64 objects with a trusted LLVM 18 pass plugin"
+    )
+    obfuscation.add_argument("--input", type=Path, required=True, help="Trusted LLVM 18 IR or bitcode for one translation unit")
+    obfuscation.add_argument("--out", type=Path, required=True, help="New directory for protected.o and report.json")
+    obfuscation.add_argument("--llvm-bin", type=Path, required=True, help="Trusted LLVM 18 bin directory containing opt and llc")
+    obfuscation.add_argument("--plugin", type=Path, required=True,
+                             help="Trusted eshard plugin, or Amice for experimental VM profiles")
+    obfuscation.add_argument("--plugin-sha256", required=True, help="Previously verified SHA-256 of the plugin")
+    obfuscation.add_argument("--function", action="append", required=True,
+                             help="LLVM symbol requiring coverage. Repeat for additional functions. The plugin processes the whole translation unit")
+    obfuscation.add_argument("--seed", help="Optional 32 hexadecimal digits for reproducible transforms. Unsupported by VM profiles")
+    obfuscation.add_argument("--profile", choices=("flatten", "split-flatten-substitution", "virtualize", "sealed-virtualize"),
+                             default="flatten", help="VM profiles are experimental and require Linux x86-64")
+    obfuscation.add_argument("--key-file", type=Path, help="External raw 32-byte key file, required by sealed-virtualize")
+    obfuscation.add_argument("--product", help="Trusted product context, required by sealed-virtualize")
+    obfuscation.add_argument("--release", help="Trusted release context, required by sealed-virtualize")
+    obfuscation.add_argument("--module-id", help="Trusted module context, required by sealed-virtualize")
+
     token = commands.add_parser("native-token-issue", help="Generate an external random unlock token and C++ verification headers")
     token.add_argument("--public-dir", type=Path, required=True, help="New build include directory; contains no usable token")
     token.add_argument("--secret-out", type=Path, required=True, help="New private token file outside the release; never ship with your application")
@@ -238,6 +257,18 @@ def _crypto_input(path: Path, limit: int) -> bytes:
 
 
 def _run(args: argparse.Namespace) -> tuple[dict, int]:
+    if args.command == "native-obfuscate":
+        from .native_obfuscation import obfuscate_native_ir
+        context = {}
+        if args.profile == "sealed-virtualize":
+            if any(value is None for value in (args.key_file, args.product, args.release, args.module_id)):
+                raise GuardError("sealed-virtualize requires --key-file, --product, --release and --module-id")
+            context = {"code_key": load_asset_key(args.key_file), "product": args.product,
+                       "release": args.release, "module_id": args.module_id}
+        elif any(value is not None for value in (args.key_file, args.product, args.release, args.module_id)):
+            raise GuardError("Code key and context options require the sealed-virtualize profile")
+        return obfuscate_native_ir(args.input, args.out, args.llvm_bin, args.plugin,
+                                   args.plugin_sha256, args.function, seed=args.seed, profile=args.profile, **context), 0
     if args.command == "native-token-issue":
         from .native_token import issue_native_token
         return issue_native_token(args.public_dir, args.secret_out), 0

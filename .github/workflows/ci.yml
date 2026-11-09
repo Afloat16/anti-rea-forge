@@ -9,6 +9,80 @@ permissions:
   contents: read
 
 jobs:
+  native-obfuscation:
+    name: LLVM 18 native function transformations / Linux
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Build the pinned LLVM pass plugin
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 llvm-18-dev cmake ninja-build g++ libssl-dev
+          git init "$RUNNER_TEMP/obfuscator"
+          git -C "$RUNNER_TEMP/obfuscator" remote add origin https://github.com/eshard/obfuscator-llvm.git
+          git -C "$RUNNER_TEMP/obfuscator" fetch --depth 1 origin be910da9267b40cbe6ae8c946eb2ef008f6e55f4
+          git -C "$RUNNER_TEMP/obfuscator" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/obfuscator" rev-parse HEAD)" = be910da9267b40cbe6ae8c946eb2ef008f6e55f4
+          cmake -S "$RUNNER_TEMP/obfuscator" -B "$RUNNER_TEMP/obfuscator-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm
+          cmake --build "$RUNNER_TEMP/obfuscator-build" --parallel 2
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/amice.so" https://github.com/fuqiuluo/amice/releases/download/v0.1.6-beta.1/libamice-llvm18-linux-x86_64.so
+          echo 'aa4527516a03ddbdc4034e68dece3190110dfe8ff34a4d1a8284e896a733a882' "$RUNNER_TEMP/amice.so" | sha256sum --check --status
+          python -m pip install .
+      - name: Require real compiler, CLI and semantic regression tests
+        env:
+          RELEASEGUARD_LLVM_BIN: /usr/lib/llvm-18/bin
+          RELEASEGUARD_OBF_PLUGIN: ${{ runner.temp }}/obfuscator-build/libLLVMObfuscator.so
+          RELEASEGUARD_AMICE_PLUGIN: ${{ runner.temp }}/amice.so
+          RELEASEGUARD_REQUIRE_NATIVE_OBFUSCATION: '1'
+          RELEASEGUARD_REQUIRE_NATIVE_VIRTUALIZATION: '1'
+        run: |
+          python -m unittest tests.test_native_obfuscation tests.test_native_obfuscation_cli tests.test_native_virtualization tests.test_native_virtualization_cli tests.test_native_vm_integers tests.test_native_code_obfuscation tests.test_native_code_seal tests.test_native_code_controls tests.test_sealed_code_controls tests.test_ghidra_function_probe -v
+          python -m unittest discover -s benchmarks/ida_function -p 'test_*.py' -v
+      - name: Compare all generated native functions and their in-process costs
+        run: |
+          RG_PLUGIN="$RUNNER_TEMP/obfuscator-build/libLLVMObfuscator.so"
+          RG_PLUGIN_SHA="$(sha256sum "$RG_PLUGIN" | cut -d ' ' -f 1)"
+          python benchmarks/native_code_controls.py prepare "$RUNNER_TEMP/code-corpus" --llvm-bin /usr/lib/llvm-18/bin --plugin "$RG_PLUGIN" --plugin-sha256 "$RG_PLUGIN_SHA" --vm-plugin "$RUNNER_TEMP/amice.so" --vm-plugin-sha256 aa4527516a03ddbdc4034e68dece3190110dfe8ff34a4d1a8284e896a733a882 --out "$RUNNER_TEMP/code-prepare.json"
+          python benchmarks/native_code_controls.py cost "$RUNNER_TEMP/code-corpus" --llvm-bin /usr/lib/llvm-18/bin --out "$RUNNER_TEMP/code-cost.json"
+          python benchmarks/sealed_code_controls.py prepare "$RUNNER_TEMP/sealed-code-corpus" --llvm-bin /usr/lib/llvm-18/bin --plugin "$RUNNER_TEMP/amice.so" --plugin-sha256 aa4527516a03ddbdc4034e68dece3190110dfe8ff34a4d1a8284e896a733a882
+      - name: Export genuine Ghidra functions, helpers and all initialized data
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/ghidra.zip" https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.2_build/ghidra_12.2_PUBLIC_20261016.zip
+          for variant in baseline flatten split-flatten-substitution vm; do
+            python benchmarks/ghidra_function/probe.py "$RUNNER_TEMP/code-corpus/public/$variant" --archive "$RUNNER_TEMP/ghidra.zip" --include-program --out "$RUNNER_TEMP/code-analysis/$variant"
+          done
+          for variant in plaintext encrypted key_leak; do
+            python benchmarks/ghidra_function/probe.py "$RUNNER_TEMP/sealed-code-corpus/public/$variant" --archive "$RUNNER_TEMP/ghidra.zip" --include-program --out "$RUNNER_TEMP/sealed-code-analysis/$variant"
+          done
+      - name: Check exported-key extraction and native patch controls
+        run: python benchmarks/sealed_code_controls.py analyze "$RUNNER_TEMP/sealed-code-corpus" --observations "$RUNNER_TEMP/sealed-code-analysis" --out "$RUNNER_TEMP/sealed-code-result.json"
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: native-function-observations
+          path: |
+            ${{ runner.temp }}/code-prepare.json
+            ${{ runner.temp }}/code-cost.json
+            ${{ runner.temp }}/code-corpus/public
+            ${{ runner.temp }}/code-analysis
+            ${{ runner.temp }}/sealed-code-corpus/public
+            ${{ runner.temp }}/sealed-code-corpus/fixture.json
+            ${{ runner.temp }}/sealed-code-corpus/envelope.json
+            ${{ runner.temp }}/sealed-code-analysis
+            ${{ runner.temp }}/sealed-code-result.json
+          retention-days: 14
+          if-no-files-found: error
+
   ghidra-token:
     name: Ghidra native assets, tokens, symbols and patched clients / Linux
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
