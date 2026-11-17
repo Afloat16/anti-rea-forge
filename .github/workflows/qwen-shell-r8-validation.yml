@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           repository: Afloat16/qwen-code
-          ref: '7ae8ce49e1971b036f544c05893bcef640090e71'
+          ref: 'bce3f4665dc7aca4a8025122e9ff35e1b14a89ca'
           persist-credentials: false
           fetch-depth: 1
       - name: Set up Node.js
@@ -31,14 +31,14 @@ jobs:
           package-manager-cache: false
       - name: Install the pinned workspace dependencies
         run: |
-          test "$(git rev-parse HEAD)" = '7ae8ce49e1971b036f544c05893bcef640090e71'
+          test "$(git rev-parse HEAD)" = 'bce3f4665dc7aca4a8025122e9ff35e1b14a89ca'
           corepack enable
           corepack pnpm install --frozen-lockfile
       - name: Check formatting and changed-file lint
         run: |
-          corepack pnpm exec prettier --write packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
+          corepack pnpm exec prettier --write packages/core/src/permissions/permission-manager.ts packages/core/src/utils/shell-command-prefixes.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
           git diff --exit-code -- packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
-          corepack pnpm exec eslint --max-warnings 0 packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts
+          corepack pnpm exec eslint --max-warnings 0 packages/core/src/utils/shell-command-prefixes.ts packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts
       - name: Build and typecheck the actual core workspace
         run: |
           node scripts/build.js --preflight
@@ -50,7 +50,7 @@ jobs:
       - name: Require each reported defect to fail on the preceding implementation
         run: |
           git fetch --no-tags --depth=1 origin 0263003726e9a34f617e725492d9a0bdbd01f3e5
-          for source in packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/utils/shell-word-tokenizer.ts; do
+          for source in packages/core/src/utils/shell-command-prefixes.ts packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/utils/shell-word-tokenizer.ts; do
             git show "0263003726e9a34f617e725492d9a0bdbd01f3e5:$source" > "$source"
           done
           npm run build --workspace=@qwen-code/qwen-code-core
@@ -66,7 +66,7 @@ jobs:
           const result = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/r8-baseline.json', 'utf8'));
           const assertions = result.testResults.flatMap((suite) => suite.assertionResults ?? []);
           const failed = assertions.filter((test) => test.status === 'failed');
-          for (const family of ['expanded argument from hiding a redirect', 'R8 execution entries', 'R8 expanded file paths', 'R8 heredoc body', 'bare home target']) {
+          for (const family of ['expanded argument from hiding a redirect', 'R8 execution entries', 'R8 expanded file paths', 'R8 heredoc body', 'bare home target', 'R8 home environment', 'R8 unresolved file arguments']) {
             assert(failed.some((test) => test.fullName.includes(family)), 'missing expected failing family: ' + family);
           }
           assert.equal(result.numFailedTests, failed.length);
@@ -76,8 +76,8 @@ jobs:
       - name: Restore exact candidate source
         if: always()
         run: |
-          git restore --source='7ae8ce49e1971b036f544c05893bcef640090e71' -- .
-          test "$(git rev-parse HEAD)" = '7ae8ce49e1971b036f544c05893bcef640090e71'
+          git restore --source='bce3f4665dc7aca4a8025122e9ff35e1b14a89ca' -- .
+          test "$(git rev-parse HEAD)" = 'bce3f4665dc7aca4a8025122e9ff35e1b14a89ca'
           git diff --exit-code
       - name: Rebuild restored core and rerun the regression suites
         run: |
