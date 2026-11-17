@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           repository: Afloat16/qwen-code
-          ref: 'bce3f4665dc7aca4a8025122e9ff35e1b14a89ca'
+          ref: '48d07b70f31416fbc3a7a9fd773e16ccab35f023'
           persist-credentials: false
           fetch-depth: 1
       - name: Set up Node.js
@@ -31,13 +31,13 @@ jobs:
           package-manager-cache: false
       - name: Install the pinned workspace dependencies
         run: |
-          test "$(git rev-parse HEAD)" = 'bce3f4665dc7aca4a8025122e9ff35e1b14a89ca'
+          test "$(git rev-parse HEAD)" = '48d07b70f31416fbc3a7a9fd773e16ccab35f023'
           corepack enable
           corepack pnpm install --frozen-lockfile
       - name: Check formatting and changed-file lint
         run: |
           corepack pnpm exec prettier --write packages/core/src/permissions/permission-manager.ts packages/core/src/utils/shell-command-prefixes.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
-          git diff --exit-code -- packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
+          git diff --exit-code -- packages/core/src/utils/shell-command-prefixes.ts packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
           corepack pnpm exec eslint --max-warnings 0 packages/core/src/utils/shell-command-prefixes.ts packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts
       - name: Build and typecheck the actual core workspace
         run: |
@@ -76,8 +76,8 @@ jobs:
       - name: Restore exact candidate source
         if: always()
         run: |
-          git restore --source='bce3f4665dc7aca4a8025122e9ff35e1b14a89ca' -- .
-          test "$(git rev-parse HEAD)" = 'bce3f4665dc7aca4a8025122e9ff35e1b14a89ca'
+          git restore --source='48d07b70f31416fbc3a7a9fd773e16ccab35f023' -- .
+          test "$(git rev-parse HEAD)" = '48d07b70f31416fbc3a7a9fd773e16ccab35f023'
           git diff --exit-code
       - name: Rebuild restored core and rerun the regression suites
         run: |
