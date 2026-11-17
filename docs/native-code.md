@@ -210,7 +210,7 @@ Additional real LLVM execution checked 24 signed/unsigned multiplication, divisi
 
 Machine-readable results record the source hashes, exact local toolchain and remaining engine coverage. [Protected-mapping results](results/native-code-memory.json)
 
-The initial local validation batch for the v2 mapping implementation completed the following checks.
+The v2 mapping implementation completed the following local and CI checks.
 
 | Check | Completed result |
 | --- | --- |
@@ -218,7 +218,21 @@ The initial local validation batch for the v2 mapping implementation completed t
 | `secure_buffer` regressions | 16 tests passed |
 | Native asset reader and direct-buffer decryption regressions | 21 tests passed |
 | IDA report adapter and validator | 10 engine-independent tests passed |
+| Mandatory LLVM 18/Amice regression suite in CI | 145 tests passed with zero skips |
+| Full CI matrix | Nine jobs passed, including Windows native tests and genuine Ghidra analysis |
 
 The LLVM 19 experiment replaced only the compiled test class's object-emission method. It retained the real C++ compiler, linker, loaded functions and existing assertions. Its coverage includes aligned read-only, locked and dump-excluded storage, process-write faults, revoked bindings, cleanup, integer ABIs, forked-child zeroing, both global-object link orders and ten loader OS-failure scenarios. The IDA validator now requires every completed function's entry to belong to its verified byte ranges and to match a verified instruction start. [Loader regressions](../tests/test_native_code_seal.py) · [Memory regressions](../tests/test_secure_buffer.py) · [IDA validator regressions](../benchmarks/ida_function/test_validation.py)
 
-The LLVM 18/Amice integration run and genuine Ghidra v2 observations are pending completion. Modern IDA/Hex-Rays engine execution also remains pending. The historical recovery records above retain their original sample identities and outcomes.
+The preserved v2 Ghidra controls were built from commit `f8f9df6528cd1a1e2a996ca657a74df7a8a08f18` in the first successful CI run for this change. The encrypted ELF has SHA-256 `06a7beea6437001a73d5a6cb0ddefec82c11041d008b5416d08d5ef502fe73e0`. Each case evaluated 82,014 inputs, containing 81,968 distinct values. [CI run](https://github.com/Afloat16/anti-rea-forge/actions/runs/44092281985) · [Preserved v2 controls](results/native-code-memory-controls.json)
+
+| v2 case | Distinct contiguous 32-byte candidates | Successful key decryptions | Correct-key output differences |
+| --- | --- | --- | --- |
+| Plaintext VM | 23,268 | 0 | 0 |
+| Encrypted VM with external key | 34,646 | 0 | 0 |
+| Deliberately embedded-key control | 34,711 | 1 | 0 |
+
+The recovered control key reproduced all 82,014 reference outputs. Patching the outer gate with a wrong key left all encrypted outputs locked at zero. Forced GCM-final success with a wrong key, modified ciphertext and wrong context were rejected. Ghidra completed its decompilation API for 136 recognized functions in each encrypted program, with warnings retained in the raw report. This API count describes returned decompiler objects.
+
+A subsequent validation regression rejects `speculatable` helpers and affected callers, because nullable storage bindings invalidate that promise. The machine-readable record binds the final local source hashes separately from the preserved CI sample. [Change and final CI status](https://github.com/Afloat16/anti-rea-forge/pull/9)
+
+Modern IDA/Hex-Rays engine execution and independent reconstruction of v2 remain pending. The historical recovery records above retain their original sample identities and outcomes.

@@ -194,7 +194,8 @@ class NativeCodeSealValidation(unittest.TestCase):
                                      "%wide = load i64, ptr @descriptors, align 8")
         with self.assertRaisesRegex(GuardError, "wrapper has unsupported global dependencies"):
             self.seal(source=source)
-        for attribute in ("readnone", "argmemonly", "memory(none)", "memory(argmem: readwrite)"):
+        for attribute in ("readnone", "argmemonly", "memory(none)", "memory(argmem: readwrite)",
+                          "speculatable memory(read)"):
             source = self.source.replace("ptr %arguments) {", "ptr %arguments) #99 {")
             source += "\nattributes #99 = { " + attribute + " }\n"
             with self.subTest(attribute=attribute), self.assertRaisesRegex(GuardError, "helper memory attributes"):

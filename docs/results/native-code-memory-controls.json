@@ -1,0 +1,4822 @@
+{
+  "schema": "releaseguard-sealed-code-observation/v1",
+  "ok": true,
+  "completed_utc": "2026-11-17T13:27:29.086946+00:00",
+  "scope": {
+    "subject": "Function-instruction confidentiality in the release before external key delivery",
+    "authorized_process_contains_plaintext_vm_storage": true,
+    "candidate_search": "Every distinct contiguous 32-byte window in exported initialized loaded bytes",
+    "gate_patch_target": "rg_code_gate",
+    "inner_wrapper_ready_guard_patch_evaluated": false,
+    "arbitrary_key_search_or_authorized_memory_extraction_evaluated": false
+  },
+  "fixture_sha256": "2838ccb53d45928a20240ed425d596620a68a16b75e27365a6e3bbfd40d8afb4",
+  "context": {
+    "product": "SealedCodeFixture",
+    "release": "v1",
+    "purpose": "vm-code",
+    "asset_id": "compute"
+  },
+  "input_count": 82014,
+  "reference_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+  "cases": {
+    "plaintext": {
+      "tool": "Ghidra",
+      "version": "12.2",
+      "input_sha256": "f0944bddac02b82dd422b8d4fed20b1fc649d171382e37545ef63a4f90dea928",
+      "run_sha256": "f5a7058c51c9327e39930cab49d5f24a34b7f5b05b81037313547c5af766c0fd",
+      "observation_hashes": {
+        "console.log": "0890fff5d1081105164945d8907df91ab703410986fabbe4957fc0fae41e3223",
+        "decompiled.c": "b69511dc4a0be848288b70f2613c9baf4bbb7ae7ed123e5aee0cdd4681b8fe60",
+        "function.json": "f9fbd6dede3ed366fa0ffead6e9842ac0596b2fad806638d1ba0a046faf9bdde",
+        "headless.log": "517f4e30174fd5b3ebd87103ffc8230cded6a1af901b3b7fad7ff3ba8d387207",
+        "program-memory.json": "a35ec9fc77314cf55e76b8f2f0a9cc08d7cf78bbbc466f6252bf26982296967a",
+        "program-warnings.json": "2d5457109c20bed740d17765398566fe53aa5143a23d44a8f57d9727464ffff6",
+        "program.c": "0aa82162a7c6de0ec98890c3eeb8fbadca9c29f39d73e1569d07384772a69372",
+        "program.elf": "f0944bddac02b82dd422b8d4fed20b1fc649d171382e37545ef63a4f90dea928",
+        "program.json": "ca52762381212a804dc351353d4969c529641c9d1e87bfa81c4e9cf43c8eafda",
+        "script.log": "e75abceddd4daeb2757faaec132c37defc4f1164c0081ef6c2693e5bd2a7613e"
+      },
+      "recognized_functions": 27,
+      "api_completed_functions": 27,
+      "completion_semantics": "Ghidra decompileCompleted() API status",
+      "function_failures": [],
+      "functions_with_warnings": 16,
+      "warning_counts": {
+        "bad_instruction_data": 7,
+        "decompiler_warning": 21,
+        "halt_baddata_call": 7,
+        "indirect_jump_as_call": 1,
+        "truncated_control_flow": 7,
+        "unrecovered_jump_table": 1
+      },
+      "function_warnings": [
+        {
+          "entry": "0x401030",
+          "name": "ferror",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x401040",
+          "name": "fread",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x401060",
+          "name": "fflush",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x401070",
+          "name": "fwrite",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x401080",
+          "name": "main",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 42,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x401170",
+          "name": "_start",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 9,
+              "text": "/* WARNING: Do nothing block with infinite loop */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4011b0",
+          "name": "deregister_tm_clones",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x004011bd) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x004011c7) */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4011e0",
+          "name": "register_tm_clones",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x004011ff) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00401209) */"
+            }
+          ]
+        },
+        {
+          "entry": "0x401510",
+          "name": "FUN_00401510",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00401b8d) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x004019e1) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 4,
+              "text": "/* WARNING: Removing unreachable block (ram,0x004017ed) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 5,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00401914) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 6,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00401aaa) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 7,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00401c40) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 8,
+              "text": "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"
+            },
+            {
+              "kind": "unrecovered_jump_table",
+              "c_line": 112,
+              "text": "/* WARNING: Could not recover jumptable at 0x00401d59. Too many branches */"
+            },
+            {
+              "kind": "indirect_jump_as_call",
+              "c_line": 113,
+              "text": "/* WARNING: Treating indirect jump as call */"
+            }
+          ]
+        },
+        {
+          "entry": "0x40b000",
+          "name": "__libc_start_main",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40b008",
+          "name": "ferror",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40b010",
+          "name": "fread",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40b018",
+          "name": "__stack_chk_fail",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40b020",
+          "name": "__gmon_start__",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 8,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40b028",
+          "name": "fflush",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40b030",
+          "name": "fwrite",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        }
+      ],
+      "initialized_loaded_bytes": 30018,
+      "file_backed_bytes": 29986,
+      "unbacked_bytes": 32,
+      "loaded_byte_changes": 15,
+      "allocated_file_bytes_verified": 29194,
+      "distinct_32byte_candidates": 23268,
+      "candidate_set_sha256": "c8c99a794bdf428c79a1787576cbe7c3f72b255605efa940eefa7c37bd615ebd",
+      "candidate_test_seconds": 0.7425712690000523,
+      "all_candidates_tested_with_public_envelope": true,
+      "successful_key_decryptions": 0,
+      "candidate_inputs": [
+        "exported initialized loaded bytes",
+        "public envelope",
+        "trusted context"
+      ],
+      "correct_key": {
+        "ok": true,
+        "returncode": 0,
+        "stdout_bytes": 328056,
+        "stdout_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_output_bytes": 328056,
+        "length_matches": true,
+        "input_count": 82014,
+        "compared_inputs": 82014,
+        "different_values": 0,
+        "missing_values": 0,
+        "difference_count": 0,
+        "extra_output_bytes": 0
+      },
+      "native_recovered_key_replays": 0,
+      "recovered_payloads": [],
+      "patched": {
+        "gate_name": "rg_code_gate",
+        "gate_entry": "0x401260",
+        "gate_file_offset": 4704,
+        "patch_hex": "b801000000c3",
+        "original_prefix_sha256": "4b2d00204acd9242ea06561f4023dd492b0b75200dc9bc44b5a687140d67dfb7",
+        "patched_sha256": "f95987dcad833c3eadc5fae659130fe6fa1357d740bfccc039dc89883d319117",
+        "wrong_key_original": {
+          "ok": true,
+          "returncode": 0,
+          "stdout_bytes": 328056,
+          "stdout_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_output_bytes": 328056,
+          "length_matches": true,
+          "input_count": 82014,
+          "compared_inputs": 82014,
+          "different_values": 0,
+          "missing_values": 0,
+          "difference_count": 0,
+          "extra_output_bytes": 0
+        },
+        "wrong_key_patched": {
+          "ok": true,
+          "returncode": 0,
+          "stdout_bytes": 328056,
+          "stdout_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_output_bytes": 328056,
+          "length_matches": true,
+          "input_count": 82014,
+          "compared_inputs": 82014,
+          "different_values": 0,
+          "missing_values": 0,
+          "difference_count": 0,
+          "extra_output_bytes": 0
+        },
+        "all_patched_outputs_zero": false
+      }
+    },
+    "encrypted": {
+      "tool": "Ghidra",
+      "version": "12.2",
+      "input_sha256": "06a7beea6437001a73d5a6cb0ddefec82c11041d008b5416d08d5ef502fe73e0",
+      "run_sha256": "3bb722a7959f92c9ab7a4ccc31d8b0973039eca39b6bfb1458cffcaa909acc3e",
+      "observation_hashes": {
+        "console.log": "aa05955dabddfb5f30817e999ac3488b0aec6af15e141292998e0bd16138f071",
+        "decompiled.c": "ea90d458d584a7b1c402de896eed4052dec27943a23c3bd44618843bbbee16f1",
+        "function.json": "430153af650ae274da55af3348ba08e2ed49ef60998ae5f993384048a860082a",
+        "headless.log": "5f13c694ee5f11f7a623e4aff693c5a12c96337e6965ba80b383e96b664fe46a",
+        "program-memory.json": "c395e4bedd1e3c567e8b2c481806177b4a394ce345a949113d9062ff85d11c29",
+        "program-warnings.json": "d7b159ee32c993778c56271145188f2145b221700b022bedb91b99504b1e9537",
+        "program.c": "47d9d956599ba4dd3aee2fec334e98bff1416248892584bd90eba6f2975b586d",
+        "program.elf": "06a7beea6437001a73d5a6cb0ddefec82c11041d008b5416d08d5ef502fe73e0",
+        "program.json": "d5b26ef26eedf7a5e9c8b4d049e3507661abb04820ee7d68a2907ee2b63f836a",
+        "script.log": "0d041b7c0617ed08cd473b71b13cccd72aa8709589e4d16351e724bcf2356ec9"
+      },
+      "recognized_functions": 136,
+      "api_completed_functions": 136,
+      "completion_semantics": "Ghidra decompileCompleted() API status",
+      "function_failures": [],
+      "functions_with_warnings": 102,
+      "warning_counts": {
+        "bad_instruction_data": 57,
+        "decompiler_warning": 92,
+        "halt_baddata_call": 57,
+        "indirect_jump_as_call": 1,
+        "truncated_control_flow": 57,
+        "unrecovered_jump_table": 1
+      },
+      "function_warnings": [
+        {
+          "entry": "0x402030",
+          "name": "__errno_location",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402040",
+          "name": "EVP_DecryptInit_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402050",
+          "name": "EVP_DecryptFinal_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402080",
+          "name": "strlen",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020b0",
+          "name": "generic_category",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020c0",
+          "name": "munmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020d0",
+          "name": "OPENSSL_cleanse",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020e0",
+          "name": "EVP_Digest",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020f0",
+          "name": "EVP_DecryptUpdate",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402100",
+          "name": "EVP_CIPHER_CTX_new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402120",
+          "name": "sysconf",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402140",
+          "name": "memcpy",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402160",
+          "name": "operator.new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402180",
+          "name": "operator.delete",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402190",
+          "name": "EVP_PKEY_derive",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4021b0",
+          "name": "EVP_CIPHER_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4021f0",
+          "name": "fflush",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402200",
+          "name": "madvise",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402210",
+          "name": "_M_dispose",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402230",
+          "name": "mlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402260",
+          "name": "EVP_CIPHER_CTX_ctrl",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402270",
+          "name": "fread",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402280",
+          "name": "_M_replace",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022a0",
+          "name": "EVP_aes_256_gcm",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022b0",
+          "name": "mprotect",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022c0",
+          "name": "EVP_PKEY_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022f0",
+          "name": "EVP_sha256",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402320",
+          "name": "CRYPTO_memcmp",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402330",
+          "name": "mmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402350",
+          "name": "ferror",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402360",
+          "name": "munlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402370",
+          "name": "EVP_PKEY_derive_init",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402380",
+          "name": "fwrite",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402390",
+          "name": "EVP_PKEY_CTX_new_id",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4023c7",
+          "name": "FUN_004023c7",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 15,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4023e0",
+          "name": "main",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 43,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402500",
+          "name": "_start",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 9,
+              "text": "/* WARNING: Do nothing block with infinite loop */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402540",
+          "name": "deregister_tm_clones",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x0040254d) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402557) */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402570",
+          "name": "register_tm_clones",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x0040258f) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402599) */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4025f0",
+          "name": "rg_code_gate",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 21,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4028f0",
+          "name": "FUN_004028f0",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402e64) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402cc0) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 4,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402bee) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 5,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402d86) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 6,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402f28) */"
+            },
+            {
+              "kind": "unrecovered_jump_table",
+              "c_line": 116,
+              "text": "/* WARNING: Could not recover jumptable at 0x0040303a. Too many branches */"
+            },
+            {
+              "kind": "indirect_jump_as_call",
+              "c_line": 117,
+              "text": "/* WARNING: Treating indirect jump as call */"
+            }
+          ]
+        },
+        {
+          "entry": "0x405c40",
+          "name": "initialize_native_code",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 144,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x405ff0",
+          "name": "open_native_asset_into",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 188,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4064c0",
+          "name": "system_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 128,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x406780",
+          "name": "secure_buffer",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 41,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 57,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 70,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 86,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 101,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 122,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d000",
+          "name": "__errno_location",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d008",
+          "name": "EVP_DecryptInit_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d010",
+          "name": "EVP_DecryptFinal_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d018",
+          "name": "EVP_PKEY_CTX_set_hkdf_mode",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d020",
+          "name": "__cxa_begin_catch",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d028",
+          "name": "strlen",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d030",
+          "name": "EVP_PKEY_CTX_add1_hkdf_info",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d038",
+          "name": "__cxa_allocate_exception",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d040",
+          "name": "generic_category",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d048",
+          "name": "munmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d050",
+          "name": "OPENSSL_cleanse",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d058",
+          "name": "EVP_Digest",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d060",
+          "name": "EVP_DecryptUpdate",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d068",
+          "name": "EVP_CIPHER_CTX_new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d070",
+          "name": "__cxa_guard_release",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d078",
+          "name": "sysconf",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d080",
+          "name": "__cxa_free_exception",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d088",
+          "name": "__libc_start_main",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d090",
+          "name": "memcpy",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d098",
+          "name": "__cxa_atexit",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0a0",
+          "name": "operator.new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0a8",
+          "name": "operator.delete",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0b0",
+          "name": "EVP_PKEY_derive",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0b8",
+          "name": "EVP_CIPHER_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0c0",
+          "name": "EVP_PKEY_CTX_set1_hkdf_key",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0c8",
+          "name": "__stack_chk_fail",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0d0",
+          "name": "length_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0d8",
+          "name": "fflush",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0e0",
+          "name": "madvise",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0e8",
+          "name": "_M_dispose",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 11,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0f0",
+          "name": "runtime_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0f8",
+          "name": "mlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d100",
+          "name": "EVP_PKEY_CTX_set1_hkdf_salt",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d108",
+          "name": "__cxa_rethrow",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d110",
+          "name": "EVP_CIPHER_CTX_ctrl",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d118",
+          "name": "fread",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d120",
+          "name": "_M_replace",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 11,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d128",
+          "name": "EVP_PKEY_CTX_set_hkdf_md",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d130",
+          "name": "EVP_aes_256_gcm",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d138",
+          "name": "mprotect",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d140",
+          "name": "EVP_PKEY_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d148",
+          "name": "__cxa_end_catch",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d150",
+          "name": "EVP_sha256",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d158",
+          "name": "__cxa_throw",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d160",
+          "name": "_Unwind_Resume",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d168",
+          "name": "CRYPTO_memcmp",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d170",
+          "name": "mmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d178",
+          "name": "__cxa_guard_acquire",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d180",
+          "name": "ferror",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d188",
+          "name": "munlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d190",
+          "name": "__gmon_start__",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 8,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d198",
+          "name": "EVP_PKEY_derive_init",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1a0",
+          "name": "fwrite",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1a8",
+          "name": "EVP_PKEY_CTX_new_id",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1b0",
+          "name": "~system_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1b8",
+          "name": "~length_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1c0",
+          "name": "__gxx_personality_v0",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        }
+      ],
+      "initialized_loaded_bytes": 41501,
+      "file_backed_bytes": 41421,
+      "unbacked_bytes": 80,
+      "loaded_byte_changes": 116,
+      "allocated_file_bytes_verified": 40629,
+      "distinct_32byte_candidates": 34646,
+      "candidate_set_sha256": "8c35bd0e9d6f5a4c195c04c6a05aa4c8e383a4c788b75db0adcbaaeef919537f",
+      "candidate_test_seconds": 1.0901556520000213,
+      "all_candidates_tested_with_public_envelope": true,
+      "successful_key_decryptions": 0,
+      "candidate_inputs": [
+        "exported initialized loaded bytes",
+        "public envelope",
+        "trusted context"
+      ],
+      "correct_key": {
+        "ok": true,
+        "returncode": 0,
+        "stdout_bytes": 328056,
+        "stdout_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_output_bytes": 328056,
+        "length_matches": true,
+        "input_count": 82014,
+        "compared_inputs": 82014,
+        "different_values": 0,
+        "missing_values": 0,
+        "difference_count": 0,
+        "extra_output_bytes": 0
+      },
+      "native_recovered_key_replays": 0,
+      "recovered_payloads": [],
+      "patched": {
+        "gate_name": "rg_code_gate",
+        "gate_entry": "0x4025f0",
+        "gate_file_offset": 9712,
+        "patch_hex": "b801000000c3",
+        "original_prefix_sha256": "62dbb20edb5b4692f45813bd091594a2f8d1120a679309b3615521436487f460",
+        "patched_sha256": "f6148f0a026a6bccfc49a97579a5b35990c28da60ec3916f6a3499db2073b8c4",
+        "wrong_key_original": {
+          "ok": false,
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "authorization_rejected": true
+        },
+        "wrong_key_patched": {
+          "ok": false,
+          "returncode": 0,
+          "stdout_bytes": 328056,
+          "stdout_sha256": "8d3a9c65350f169dfb575430d6063b227c58f3f097e00eebbd389f0eacfc9712",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_output_bytes": 328056,
+          "length_matches": true,
+          "input_count": 82014,
+          "compared_inputs": 82014,
+          "different_values": 82014,
+          "missing_values": 0,
+          "difference_count": 82014,
+          "extra_output_bytes": 0
+        },
+        "all_patched_outputs_zero": true
+      }
+    },
+    "key_leak": {
+      "tool": "Ghidra",
+      "version": "12.2",
+      "input_sha256": "270eacac4013bbdf32cfdcf5e96019fda3867ae4749963b115fbaee32e913b73",
+      "run_sha256": "63dcbccd137b41d2cd1d871fb9dce21e5697a51dd9c1b0d3637daf8dbd8ff588",
+      "observation_hashes": {
+        "console.log": "d0141143914c4a02543fb4bf08426c98a5ee152c63dd0420a6799fbe39cba350",
+        "decompiled.c": "8a3124ba381ced8e53310cece7da9b4baffc773e7be0d7712afb9fa2c6947233",
+        "function.json": "569690fd67143c59c20856447692c11496524fcc0171bcda8cceea0c59acaf17",
+        "headless.log": "2aa31e9938daa55d2021329e39722da15b4de6553ef6d6abaa3f232312684b8f",
+        "program-memory.json": "87915aa6786157d7a55a2171b4c70aa98a32b2c600de9bb6c827de4d18925385",
+        "program-warnings.json": "7760548ae4818c36bdbd9aa1968285846751201d4ef29318ca6f2097c27e46a6",
+        "program.c": "ffbe0ea3d993360567ff39673424b58f70d1bad5f93aa49a4c7ba7208e382469",
+        "program.elf": "270eacac4013bbdf32cfdcf5e96019fda3867ae4749963b115fbaee32e913b73",
+        "program.json": "a0c733a4ae33e273968268bf5ce03e61054d34d43e6e34d23649b6a670482dd9",
+        "script.log": "77010c5ccf58028d68b3b2df9f376687f9f3aced1212938536c1fb6f513ee899"
+      },
+      "recognized_functions": 136,
+      "api_completed_functions": 136,
+      "completion_semantics": "Ghidra decompileCompleted() API status",
+      "function_failures": [],
+      "functions_with_warnings": 102,
+      "warning_counts": {
+        "bad_instruction_data": 57,
+        "decompiler_warning": 92,
+        "halt_baddata_call": 57,
+        "indirect_jump_as_call": 1,
+        "truncated_control_flow": 57,
+        "unrecovered_jump_table": 1
+      },
+      "function_warnings": [
+        {
+          "entry": "0x402030",
+          "name": "__errno_location",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402040",
+          "name": "EVP_DecryptInit_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402050",
+          "name": "EVP_DecryptFinal_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402080",
+          "name": "strlen",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020b0",
+          "name": "generic_category",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020c0",
+          "name": "munmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020d0",
+          "name": "OPENSSL_cleanse",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020e0",
+          "name": "EVP_Digest",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4020f0",
+          "name": "EVP_DecryptUpdate",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402100",
+          "name": "EVP_CIPHER_CTX_new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402120",
+          "name": "sysconf",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402140",
+          "name": "memcpy",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402160",
+          "name": "operator.new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402180",
+          "name": "operator.delete",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402190",
+          "name": "EVP_PKEY_derive",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4021b0",
+          "name": "EVP_CIPHER_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4021f0",
+          "name": "fflush",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402200",
+          "name": "madvise",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402210",
+          "name": "_M_dispose",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402230",
+          "name": "mlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402260",
+          "name": "EVP_CIPHER_CTX_ctrl",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402270",
+          "name": "fread",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402280",
+          "name": "_M_replace",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022a0",
+          "name": "EVP_aes_256_gcm",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022b0",
+          "name": "mprotect",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022c0",
+          "name": "EVP_PKEY_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4022f0",
+          "name": "EVP_sha256",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402320",
+          "name": "CRYPTO_memcmp",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402330",
+          "name": "mmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402350",
+          "name": "ferror",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402360",
+          "name": "munlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402370",
+          "name": "EVP_PKEY_derive_init",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402380",
+          "name": "fwrite",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402390",
+          "name": "EVP_PKEY_CTX_new_id",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4023c7",
+          "name": "FUN_004023c7",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 15,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4023e0",
+          "name": "main",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 43,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402500",
+          "name": "_start",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 9,
+              "text": "/* WARNING: Do nothing block with infinite loop */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402540",
+          "name": "deregister_tm_clones",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x0040254d) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402557) */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402570",
+          "name": "register_tm_clones",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x0040258f) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402599) */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4025f0",
+          "name": "rg_code_gate",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 26,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x402910",
+          "name": "FUN_00402910",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402e84) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402ce0) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 4,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402c0e) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 5,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402da6) */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 6,
+              "text": "/* WARNING: Removing unreachable block (ram,0x00402f48) */"
+            },
+            {
+              "kind": "unrecovered_jump_table",
+              "c_line": 116,
+              "text": "/* WARNING: Could not recover jumptable at 0x0040305a. Too many branches */"
+            },
+            {
+              "kind": "indirect_jump_as_call",
+              "c_line": 117,
+              "text": "/* WARNING: Treating indirect jump as call */"
+            }
+          ]
+        },
+        {
+          "entry": "0x405c60",
+          "name": "initialize_native_code",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 144,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x406010",
+          "name": "open_native_asset_into",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 2,
+              "text": "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 188,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4064e0",
+          "name": "system_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 128,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x4067a0",
+          "name": "secure_buffer",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "decompiler_warning",
+              "c_line": 41,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 57,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 70,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 86,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 101,
+              "text": "/* WARNING: Subroutine does not return */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 122,
+              "text": "/* WARNING: Subroutine does not return */"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d000",
+          "name": "__errno_location",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d008",
+          "name": "EVP_DecryptInit_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d010",
+          "name": "EVP_DecryptFinal_ex",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d018",
+          "name": "EVP_PKEY_CTX_set_hkdf_mode",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d020",
+          "name": "__cxa_begin_catch",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d028",
+          "name": "strlen",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d030",
+          "name": "EVP_PKEY_CTX_add1_hkdf_info",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d038",
+          "name": "__cxa_allocate_exception",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d040",
+          "name": "generic_category",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d048",
+          "name": "munmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d050",
+          "name": "OPENSSL_cleanse",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d058",
+          "name": "EVP_Digest",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d060",
+          "name": "EVP_DecryptUpdate",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d068",
+          "name": "EVP_CIPHER_CTX_new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d070",
+          "name": "__cxa_guard_release",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d078",
+          "name": "sysconf",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d080",
+          "name": "__cxa_free_exception",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d088",
+          "name": "__libc_start_main",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d090",
+          "name": "memcpy",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d098",
+          "name": "__cxa_atexit",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0a0",
+          "name": "operator.new",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0a8",
+          "name": "operator.delete",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0b0",
+          "name": "EVP_PKEY_derive",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0b8",
+          "name": "EVP_CIPHER_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0c0",
+          "name": "EVP_PKEY_CTX_set1_hkdf_key",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0c8",
+          "name": "__stack_chk_fail",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0d0",
+          "name": "length_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0d8",
+          "name": "fflush",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0e0",
+          "name": "madvise",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0e8",
+          "name": "_M_dispose",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 11,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0f0",
+          "name": "runtime_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d0f8",
+          "name": "mlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d100",
+          "name": "EVP_PKEY_CTX_set1_hkdf_salt",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d108",
+          "name": "__cxa_rethrow",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d110",
+          "name": "EVP_CIPHER_CTX_ctrl",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d118",
+          "name": "fread",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d120",
+          "name": "_M_replace",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 11,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d128",
+          "name": "EVP_PKEY_CTX_set_hkdf_md",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d130",
+          "name": "EVP_aes_256_gcm",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d138",
+          "name": "mprotect",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d140",
+          "name": "EVP_PKEY_CTX_free",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d148",
+          "name": "__cxa_end_catch",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d150",
+          "name": "EVP_sha256",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d158",
+          "name": "__cxa_throw",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d160",
+          "name": "_Unwind_Resume",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d168",
+          "name": "CRYPTO_memcmp",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d170",
+          "name": "mmap",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d178",
+          "name": "__cxa_guard_acquire",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d180",
+          "name": "ferror",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d188",
+          "name": "munlock",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d190",
+          "name": "__gmon_start__",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 8,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d198",
+          "name": "EVP_PKEY_derive_init",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1a0",
+          "name": "fwrite",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1a8",
+          "name": "EVP_PKEY_CTX_new_id",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "decompiler_warning",
+              "c_line": 3,
+              "text": "/* WARNING: Unknown calling convention -- yet parameter storage is locked */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 8,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 10,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1b0",
+          "name": "~system_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1b8",
+          "name": "~length_error",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        },
+        {
+          "entry": "0x40d1c0",
+          "name": "__gxx_personality_v0",
+          "api_status": "completed",
+          "warnings": [
+            {
+              "kind": "bad_instruction_data",
+              "c_line": 2,
+              "text": "/* WARNING: Control flow encountered bad instruction data */"
+            },
+            {
+              "kind": "truncated_control_flow",
+              "c_line": 7,
+              "text": "/* WARNING: Bad instruction - Truncating control flow here */"
+            },
+            {
+              "kind": "halt_baddata_call",
+              "c_line": 9,
+              "text": "halt_baddata();"
+            }
+          ]
+        }
+      ],
+      "initialized_loaded_bytes": 41565,
+      "file_backed_bytes": 41485,
+      "unbacked_bytes": 80,
+      "loaded_byte_changes": 116,
+      "allocated_file_bytes_verified": 40693,
+      "distinct_32byte_candidates": 34711,
+      "candidate_set_sha256": "4da0020054cffa42abfc508ecd474c5f449b7a335eef3c7f66dab0317477f113",
+      "candidate_test_seconds": 1.1166210949999709,
+      "all_candidates_tested_with_public_envelope": true,
+      "successful_key_decryptions": 1,
+      "candidate_inputs": [
+        "exported initialized loaded bytes",
+        "public envelope",
+        "trusted context"
+      ],
+      "correct_key": {
+        "ok": true,
+        "returncode": 0,
+        "stdout_bytes": 328056,
+        "stdout_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_output_bytes": 328056,
+        "length_matches": true,
+        "input_count": 82014,
+        "compared_inputs": 82014,
+        "different_values": 0,
+        "missing_values": 0,
+        "difference_count": 0,
+        "extra_output_bytes": 0
+      },
+      "native_recovered_key_replays": 1,
+      "recovered_payloads": [
+        {
+          "payload_bytes": 2768,
+          "payload_sha256": "7c122000ac01c12f5a688bcd5d961940ccbe216e5753e1c0d3b7a2b151cdab67",
+          "native_function": {
+            "ok": true,
+            "returncode": 0,
+            "stdout_bytes": 328056,
+            "stdout_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+            "stderr_bytes": 0,
+            "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "expected_output_bytes": 328056,
+            "length_matches": true,
+            "input_count": 82014,
+            "compared_inputs": 82014,
+            "different_values": 0,
+            "missing_values": 0,
+            "difference_count": 0,
+            "extra_output_bytes": 0
+          }
+        }
+      ],
+      "patched": {
+        "gate_name": "rg_code_gate",
+        "gate_entry": "0x4025f0",
+        "gate_file_offset": 9712,
+        "patch_hex": "b801000000c3",
+        "original_prefix_sha256": "75064c853195287f81a3948366db17cd8d5c4969c48fcbbf937f67be6f0001b8",
+        "patched_sha256": "1cfee5b232cbd8e17f5751becbe22c030ed624e83ddba36c9609aadc795d3eb4",
+        "wrong_key_original": {
+          "ok": false,
+          "returncode": 1,
+          "stdout_bytes": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "authorization_rejected": true
+        },
+        "wrong_key_patched": {
+          "ok": false,
+          "returncode": 0,
+          "stdout_bytes": 328056,
+          "stdout_sha256": "8d3a9c65350f169dfb575430d6063b227c58f3f097e00eebbd389f0eacfc9712",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_output_bytes": 328056,
+          "length_matches": true,
+          "input_count": 82014,
+          "compared_inputs": 82014,
+          "different_values": 82014,
+          "missing_values": 0,
+          "difference_count": 82014,
+          "extra_output_bytes": 0
+        },
+        "all_patched_outputs_zero": true
+      }
+    }
+  },
+  "forced_final": {
+    "wrong_key": {
+      "ok": false,
+      "returncode": 1,
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 20,
+      "stderr_sha256": "23ff9c00c8a80b56ccf60ef6be7bacef0ef31d66b5c472d3aba303c9f147034c",
+      "authorization_rejected": true
+    },
+    "good_key": {
+      "ok": true,
+      "returncode": 0,
+      "stdout_bytes": 328056,
+      "stdout_sha256": "9e4e094d67860bc3564525b4b2ca76a9f7b5b5d1c9ac0794220e0bb3a693a8bb",
+      "stderr_bytes": 20,
+      "stderr_sha256": "23ff9c00c8a80b56ccf60ef6be7bacef0ef31d66b5c472d3aba303c9f147034c",
+      "expected_output_bytes": 328056,
+      "length_matches": true,
+      "input_count": 82014,
+      "compared_inputs": 82014,
+      "different_values": 0,
+      "missing_values": 0,
+      "difference_count": 0,
+      "extra_output_bytes": 0
+    },
+    "post_authentication_payload_sha256_rejection": true
+  },
+  "negative_controls": {
+    "tampered_ciphertext": {
+      "binary": {
+        "sha256": "90ab922e39f4b77fd1d025ca232ef09e96409f3227fa002b5282129397575621",
+        "bytes": 54744
+      },
+      "native": {
+        "ok": false,
+        "returncode": 1,
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "authorization_rejected": true
+      }
+    },
+    "wrong_context": {
+      "binary": {
+        "sha256": "58e97b750002b8fd1c07722e9a7b885bb4a689b0340280c707e5781e0178979a",
+        "bytes": 54744
+      },
+      "native": {
+        "ok": false,
+        "returncode": 1,
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "authorization_rejected": true
+      }
+    }
+  }
+}

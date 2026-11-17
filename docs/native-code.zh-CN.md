@@ -125,7 +125,7 @@ python benchmarks/sealed_code_controls.py analyze code-corpus \
 
 机器可读报告保存源码哈希、本地实际工具链和剩余引擎验证状态。[受保护映射结果](results/native-code-memory.json)
 
-v2 映射实现的首批本地验证已经完成以下检查。
+v2 映射实现已经完成以下本地与 CI 检查。
 
 | 检查 | 已完成结果 |
 | --- | --- |
@@ -133,10 +133,24 @@ v2 映射实现的首批本地验证已经完成以下检查。
 | `secure_buffer` 回归 | 16 项通过 |
 | 原生资产读取与直接缓冲区解密回归 | 21 项通过 |
 | IDA 报告适配器与验证器 | 10 项引擎独立测试通过 |
+| CI 强制 LLVM 18/Amice 回归 | 145 项通过，零跳过 |
+| 完整 CI 矩阵 | 9 项任务通过，包含 Windows 原生测试和真实 Ghidra 分析 |
 
 LLVM 19 实验仅替换编译测试类的对象生成方法，后续 C++ 编译、链接、函数装载和断言均实际执行。覆盖对齐、只读、锁页与 dump exclusion 映射、进程写入故障、指针撤销、清理、整数 ABI、fork 子进程清零、两种全局对象链接顺序，以及十种加载器系统调用故障场景。IDA 验证器增加了入口检查，完整函数记录的入口必须属于已核验的字节范围，并且是已核验指令的起始地址。[Loader 回归](../tests/test_native_code_seal.py) · [内存回归](../tests/test_secure_buffer.py) · [IDA 验证器回归](../benchmarks/ida_function/test_validation.py)
 
-LLVM 18/Amice 集成运行与 v2 真实 Ghidra 对照仍待完成。现代 IDA/Hex-Rays 实机验证也处于待验证状态。上文保留了历史恢复实验各自的样本身份和结果。
+保存的 v2 Ghidra 对照来自本轮首个成功 CI 中的提交 `f8f9df6528cd1a1e2a996ca657a74df7a8a08f18`。加密 ELF 的 SHA-256 为 `06a7beea6437001a73d5a6cb0ddefec82c11041d008b5416d08d5ef502fe73e0`。每种程序比较 82,014 次计算，包含 81,968 个不同输入值。[CI 运行](https://github.com/Afloat16/anti-rea-forge/actions/runs/44092281985) · [保存的 v2 对照](results/native-code-memory-controls.json)
+
+| v2 对照 | 不同连续 32 字节候选 | 成功解密 | 正确密钥下输出差异 |
+| --- | --- | --- | --- |
+| 明文 VM | 23,268 | 0 | 0 |
+| 独立密钥的加密 VM | 34,646 | 0 | 0 |
+| 故意内嵌实际密钥 | 34,711 | 1 | 0 |
+
+恢复出的对照密钥重放了全部 82,014 次正确结果。错误密钥配合外层入口补丁仍得到全部锁定零值。错误密钥配合强制 GCM 最终成功、密文篡改和错误上下文均被拒绝。两个加密程序各有 136 个被识别函数完成 Ghidra 反编译 API，原始报告保留了警告，该计数描述反编译对象的返回情况。
+
+后续回归增加了对 `speculatable` helper 及受影响调用者的拒绝检查，因为可为空的存储绑定不满足该属性承诺。机器可读报告分别记录最终本地源码哈希与保存的 CI 样本身份。[改动及最终 CI 状态](https://github.com/Afloat16/anti-rea-forge/pull/9)
+
+现代 IDA/Hex-Rays 实机验证与 v2 独立恢复复验仍待完成。上文保留了历史恢复实验各自的样本身份和结果。
 
 ## 性能与开源实现
 

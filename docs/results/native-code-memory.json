@@ -25,8 +25,8 @@
     "amice_executed": false,
     "ghidra_executed": false,
     "input_sha256": {
-      "src/releaseguard/native_code_seal.py": "bd3e03b44e7d6f7186ac3f6273890864cad8ac373ae05859b014a2a89cca02b9",
-      "tests/test_native_code_seal.py": "b27f3983d2e95cbb7b7864771435c36dc82cd928b56ea659fa838b174b70d2fe",
+      "src/releaseguard/native_code_seal.py": "b9f672e70d0b0eaea017c5a95007127481ceddc38aead49ed976375dd06d9aa5",
+      "tests/test_native_code_seal.py": "aba99880a3519655f23501edbe74f7f2f10756b65d6d34a5b3c0ee5b3753972d",
       "src/releaseguard/data/include/releaseguard/sealed_asset.hpp": "cd890bf001fd29995a5f86ab06cf80e29d0d4b830b537555c055937e810770ad",
       "src/releaseguard/data/include/releaseguard/secure_buffer.hpp": "cf4231cd8d17c3d4cef18de02f2d44b82c2e72affb8d35b25fcf9fdc84210170"
     },
@@ -51,7 +51,7 @@
     "failures": 0,
     "errors": 0,
     "skipped": 0,
-    "seconds": 14.447409,
+    "seconds": 10.740662,
     "successful": true
   },
   "secure_buffer_tests": {
@@ -86,7 +86,22 @@
     ]
   },
   "llvm18_amice_ghidra_ci": {
-    "status": "pending"
+    "status": "completed",
+    "conclusion": "success",
+    "tested_commit": "f8f9df6528cd1a1e2a996ca657a74df7a8a08f18",
+    "workflow_run_id": 44092281985,
+    "url": "https://github.com/Afloat16/anti-rea-forge/actions/runs/44092281985",
+    "passed_jobs": 9,
+    "mandatory_native_tests": 145,
+    "mandatory_native_skipped": 0,
+    "ida_adapter_tests": 10,
+    "llvm_version": "18.1.3",
+    "ghidra_version": "12.2",
+    "artifact_id": 14333245203,
+    "artifact_sha256": "d380ddb8c15403a11d9d8e1b269ef26146cde1c338e6bd670fdfa3c4c8dee910",
+    "sealed_controls_report": "native-code-memory-controls.json",
+    "sealed_controls_sha256": "3367f09ad7c5c66a1b5bd2241a6ace3f617da6271d07818c4ba00d6162ac6dd3",
+    "sample_binary_hashes_verified_from_artifact": 3
   },
   "scope": {
     "platform": "Linux x86-64",
@@ -143,7 +158,12 @@
         "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN"
       ]
     ],
-    "seconds": 40.366,
+    "seconds": 43.965,
     "successful": true
+  },
+  "additional_attribute_regression": {
+    "rejected": "speculatable on affected VM storage consumers or their callers",
+    "reason": "Mutable nullable bindings cannot retain the original speculative-execution promise",
+    "source": "https://releases.llvm.org/18.1.6/docs/LangRef.html#function-attributes"
   }
 }

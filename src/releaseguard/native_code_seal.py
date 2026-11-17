@@ -46,7 +46,7 @@ def _references(text):
 
 def _require_global_reads(function, message):
     attributes = function["header"] + " " + function["attributes"]
-    _require(not re.search(r"\b(readnone|writeonly|argmemonly|inaccessiblememonly|"
+    _require(not re.search(r"\b(speculatable|readnone|writeonly|argmemonly|inaccessiblememonly|"
                            r"inaccessiblemem_or_argmemonly)\b", attributes)
              and all(value in ("read", "readwrite")
                      for value in re.findall(r"\bmemory\(([^)]+)\)", attributes)), message)
