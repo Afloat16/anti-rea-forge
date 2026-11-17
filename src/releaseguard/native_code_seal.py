@@ -26,6 +26,7 @@ _GLOBAL = re.compile(r"^@(" + _NAME + r") = ([^\n]*)$", re.MULTILINE)
 _TOKENS = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|@(' + _NAME + r")")
 _INTEGER = r"i(?:1|8|16|32|64)"
 _POINTER_TABLE = re.compile(r"private constant \[([1-9][0-9]*) x ptr\] zeroinitializer(?:, align [0-9]+)?")
+_FORMAT = "open-release-guard-sealed-native-code/v2"
 _FILES = ("releaseguard_native_code.hpp", "releaseguard_native_code.cpp",
           "releaseguard_native_code_asset.hpp", "releaseguard_sealed_asset.hpp",
           "releaseguard_secure_buffer.hpp")
@@ -384,7 +385,8 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
             _require(name not in associated and not re.match(r"private constant \[[0-9]+ x i(?:8|64)\]", definition),
                      "Unsealed VM storage or unsupported runtime global")
 
-    tag = _sha(aad + hashlib.sha256(after_ir_text.encode("utf-8")).digest())[:24]
+    tag = _sha(_FORMAT.encode("ascii") + b"\0" + aad
+               + hashlib.sha256(after_ir_text.encode("utf-8")).digest())[:24]
     prefix = "rg_native_code_" + tag
     cpp_namespace = "releaseguard::code_" + tag
     ready = prefix + "_ready"
@@ -494,7 +496,7 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
                      / "secure_buffer.hpp").read_bytes()
     files = dict(zip(_FILES, (header, loader, asset, helper, secure_buffer)))
     details = {
-        "format": "open-release-guard-sealed-native-code/v2", "purpose": "vm-code",
+        "format": _FORMAT, "purpose": "vm-code",
         "payload_bytes": len(payload), "payload_sha256": payload_sha256,
         "ciphertext_bytes": len(payload) + 16, "storage": storage, "ready_symbol": ready,
         "guarded_wrappers": guarded, "zero_native_call_tables": len(pointer_tables),

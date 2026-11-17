@@ -67,6 +67,8 @@ python -m releaseguard native-obfuscate \
 
 报告中的 `code_seal.format` 为 `open-release-guard-sealed-native-code/v2`。每项存储通过 `offset_bytes` 指定在认证载荷中的位置，字节码按字节对齐，描述表与预期校验表按八字节对齐。对齐填充也纳入密文和完整载荷摘要。按该格式一起重新生成并链接对象、loader 与头文件。
 
+格式标识也参与模块符号与 C++ namespace 的哈希，隔离早期未绑定格式的符号公式。实编译回归要求旧数组布局与新指针加载器的错配链接失败。更新后重新生成并成套使用对象、加载器和头文件。
+
 从 `report.json` 的 `code_seal.cpp_namespace` 读取实际 namespace，将它用于 `initialize_native_code(external_key)` 与 `clear_native_code()`。应用以 C++17 编译，链接 `protected.o`、生成的 `.cpp` 和 `-lcrypto`。英文指南给出了对应 C++ 调用片段。[C++ 调用方式](native-code.md#execute-encrypted-function-instructions)
 
 锁定 wrapper 返回零，应用需要检查初始化的布尔结果，因为正常函数也可能返回零。初始化失败会撤销旧指令的访问状态。
@@ -129,14 +131,14 @@ v2 映射实现已经完成以下本地与 CI 检查。
 
 | 检查 | 已完成结果 |
 | --- | --- |
-| LLVM 19.1.7 C API 生成对象后的 loader 测试 | 12 项编译测试通过，真实解析和验证 8 个 IR 模块，生成 8 个 PIC 对象 |
+| LLVM 19.1.7 C API 生成对象后的 loader 测试 | 13 项编译测试通过，真实解析和验证 8 个 IR 模块，生成 8 个 PIC 对象 |
 | `secure_buffer` 回归 | 16 项通过 |
 | 原生资产读取与直接缓冲区解密回归 | 21 项通过 |
 | IDA 报告适配器与验证器 | 10 项引擎独立测试通过 |
-| CI 强制 LLVM 18/Amice 回归 | 145 项通过，零跳过 |
+| 首轮 v2 CI 强制 LLVM 18/Amice 回归 | 145 项通过，零跳过 |
 | 完整 CI 矩阵 | 9 项任务通过，包含 Windows 原生测试和真实 Ghidra 分析 |
 
-LLVM 19 实验仅替换编译测试类的对象生成方法，后续 C++ 编译、链接、函数装载和断言均实际执行。覆盖对齐、只读、锁页与 dump exclusion 映射、进程写入故障、指针撤销、清理、整数 ABI、fork 子进程清零、两种全局对象链接顺序，以及十种加载器系统调用故障场景。IDA 验证器增加了入口检查，完整函数记录的入口必须属于已核验的字节范围，并且是已核验指令的起始地址。[Loader 回归](../tests/test_native_code_seal.py) · [内存回归](../tests/test_secure_buffer.py) · [IDA 验证器回归](../benchmarks/ida_function/test_validation.py)
+LLVM 19 实验仅替换编译测试类的对象生成方法，后续 C++ 编译、链接、函数装载和断言均实际执行。覆盖对齐、只读、锁页与 dump exclusion 映射、进程写入故障、指针撤销、清理、整数 ABI、fork 子进程清零、两种全局对象链接顺序，十种加载器系统调用故障场景，以及存储格式错配链接拒绝。IDA 验证器增加了入口检查，完整函数记录的入口必须属于已核验的字节范围，并且是已核验指令的起始地址。[Loader 回归](../tests/test_native_code_seal.py) · [内存回归](../tests/test_secure_buffer.py) · [IDA 验证器回归](../benchmarks/ida_function/test_validation.py)
 
 保存的 v2 Ghidra 对照来自本轮首个成功 CI 中的提交 `f8f9df6528cd1a1e2a996ca657a74df7a8a08f18`。加密 ELF 的 SHA-256 为 `06a7beea6437001a73d5a6cb0ddefec82c11041d008b5416d08d5ef502fe73e0`。每种程序比较 82,014 次计算，包含 81,968 个不同输入值。[CI 运行](https://github.com/Afloat16/anti-rea-forge/actions/runs/44092281985) · [保存的 v2 对照](results/native-code-memory-controls.json)
 
@@ -148,7 +150,7 @@ LLVM 19 实验仅替换编译测试类的对象生成方法，后续 C++ 编译�
 
 恢复出的对照密钥重放了全部 82,014 次正确结果。错误密钥配合外层入口补丁仍得到全部锁定零值。错误密钥配合强制 GCM 最终成功、密文篡改和错误上下文均被拒绝。两个加密程序各有 136 个被识别函数完成 Ghidra 反编译 API，原始报告保留了警告，该计数描述反编译对象的返回情况。
 
-后续回归增加了对 `speculatable` helper 及受影响调用者的拒绝检查，因为可为空的存储绑定不满足该属性承诺。机器可读报告分别记录最终本地源码哈希与保存的 CI 样本身份。[改动及最终 CI 状态](https://github.com/Afloat16/anti-rea-forge/pull/9)
+后续回归增加了对 `speculatable` helper 及受影响调用者的拒绝检查，因为可为空的存储绑定不满足该属性承诺。机器可读报告分别记录最终本地源码哈希与保存的 CI 样本身份。[内存映射改动与 CI 记录](https://github.com/Afloat16/anti-rea-forge/pull/9)
 
 现代 IDA/Hex-Rays 实机验证与 v2 独立恢复复验仍待完成。上文保留了历史恢复实验各自的样本身份和结果。
 
