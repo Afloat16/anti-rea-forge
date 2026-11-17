@@ -116,7 +116,8 @@ python -m unittest tests.test_release_exposure_controls -v
 
 ## 未完成的验证
 
-本地整合验证基于新合入的 `08ed341` 原生 VM 内存保护继续进行：Python 报告为
+本地整合验证已经包含 `65cba7e`：保留原生 VM 内存保护，并将存储格式绑定到生成符号。
+合并后再次运行 Python 全套回归，报告为
 `Ran 658 tests / OK (skipped=10)`；十个跳过条目需要本机未安装的 CMake、LLVM 18 或
 相关插件，不代表这些路径已实际执行。JavaScript 65 项测试、10 项真实 CLI 集成测试
 和 TypeScript 类型检查通过。[整合验证记录](results/release-hardening-validation.json)

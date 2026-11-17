@@ -23,7 +23,7 @@ from unittest.mock import patch
 from releaseguard.core import GuardError
 from releaseguard.native_asset import export_native_asset
 from releaseguard.native_code_seal import seal_virtualized_ir
-from releaseguard.sealed import SEALED_FORMAT, open_asset, seal_asset
+from releaseguard.sealed import SEALED_FORMAT, _context, open_asset, seal_asset
 
 
 CONTEXT = dict(product="code-test", release="1", module_id="integer-module")
@@ -122,6 +122,11 @@ def document_from_files(files):
     header = files["releaseguard_native_code_asset.hpp"]
     return {"format": SEALED_FORMAT, **{name: base64.b64encode(embedded_array(header, name)).decode("ascii")
                                        for name in ("salt", "nonce", "ciphertext")}}
+
+
+def legacy_tag(source):
+    return hashlib.sha256(_context(**ASSET_CONTEXT)
+                          + hashlib.sha256(source.encode()).digest()).hexdigest()[:24]
 
 
 class NativeCodeSealValidation(unittest.TestCase):
@@ -382,6 +387,7 @@ class NativeCodeSealValidation(unittest.TestCase):
         first = self.seal()[2]
         second = self.seal(module_id="second-module")[2]
         self.assertNotEqual(first["cpp_namespace"], second["cpp_namespace"])
+        self.assertNotEqual(first["cpp_namespace"], "releaseguard::code_" + legacy_tag(self.source))
         self.assertNotEqual(first["ready_symbol"], second["ready_symbol"])
         with self.assertRaises(GuardError):
             seal_virtualized_ir(self.source, self.coverage, bytes(31), **CONTEXT)
@@ -782,6 +788,25 @@ int main(int argc, char** argv) {
                 released = 0 if mode == 1 else 2 if mode == 8 else 1
                 expected = f"{released} {int(mode == 7)}\n".encode()
                 self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, b""))
+
+    def test_legacy_array_storage_cannot_link_to_the_pointer_loader(self):
+        details = self.bundle[2]
+        current_prefix = details["ready_symbol"].removesuffix("_ready")
+        old_prefix = "rg_native_code_" + legacy_tag(fixture()[0])
+        declarations = [f"unsigned char {old_prefix}_ready = 0;"]
+        for item in details["storage"]:
+            ctype = "unsigned char" if item["kind"] == "bytecode" else "std::uint64_t"
+            old_symbol = item["symbol"].replace(current_prefix, old_prefix, 1)
+            declarations.append(f"{ctype} {old_symbol}[{item['elements']}] = {{}};")
+        source = self.folder / "legacy-storage.cpp"
+        source.write_text('#include <cstdint>\nextern "C" {\n' + "\n".join(declarations)
+                          + '\n}\nint main() { return 0; }\n')
+        result = subprocess.run([self.cxx, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+                                 str(source), str(self.folder / "releaseguard_native_code.cpp"),
+                                 "-lcrypto", "-o", str(self.folder / "mixed-format")],
+                                capture_output=True, timeout=120)
+        self.assertNotEqual(result.returncode, 0, "Mixed storage ABIs linked successfully")
+        self.assertIn(details["ready_symbol"].encode(), result.stderr)
 
     def test_supported_integer_return_and_parameter_abis(self):
         source, coverage = fixture(tuple(("rg_width_" + str(width), width) for width in (1, 8, 16, 32, 64)))

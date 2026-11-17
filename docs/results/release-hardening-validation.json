@@ -1,7 +1,7 @@
 {
   "schema": "releaseguard-hardening-validation/v1",
-  "recorded_at_utc": "2026-11-17T13:45:58.615523+00:00",
-  "base_commit": "08ed341d09ebcb2b1e1dd1e8647bb62eb7badfb6",
+  "recorded_at_utc": "2026-11-17T14:00:01.704719+00:00",
+  "base_commit": "65cba7ec9719d1c61626d122f854fe57d14f1f4f",
   "python": {
     "command": "python -m unittest discover -s tests -v",
     "tests_run": 658,
@@ -71,7 +71,7 @@
     "src/releaseguard/elf.py": "4d7fe3315c53d9b0df14c228aacfc427fbbd94f8bc129775e8a54b2d7f223bf0",
     "src/releaseguard/native.py": "bff39535534ad072bbf6fbb89f347d998e982a44a20b345b16f4a065c6105829",
     "src/releaseguard/native_asset.py": "f1b3663fcf6e909e6a27b6bc9cc607f0e383e0682998799eeb1280af4041e9e6",
-    "src/releaseguard/native_code_seal.py": "4d1514f5f1761553e17f03c38f6742696e3803585440915f0b1ca114eca0881c",
+    "src/releaseguard/native_code_seal.py": "a140b7038f7b57a5e3e1a33b89d2834ed640b84110d733783594a54d15dc165e",
     "src/releaseguard/native_obfuscation.py": "665719bbb3523c8218bfce8700b908134398f74e457d72cd9ed1ea05479eeb26",
     "src/releaseguard/native_token.py": "f0bdaf5e22cd9105356d7407e12538b60efed3af857dd4f64d8ff6f17bc8e0c5",
     "src/releaseguard/passwords.py": "c8167a5a8b769d8333713601c29769b5ed614d63d26e02e17682c8cbbdbbc3f9",
@@ -89,5 +89,18 @@
     "An earlier full-suite attempt failed from temporary ENOSPC; it is not counted as a protection result.",
     "This record covers implementation and owned release-exposure controls, not a general REA resistance rate.",
     "No new local Ghidra/IDA/Hopper/Kuna/Rizin/Frida/JADX engine or full REA agent evaluation was run."
-  ]
+  ],
+  "integration_update": {
+    "previous_validated_head": "0de7535a7a0b311a6a0539b5a4bd1cd547448453",
+    "merged_main_change": "Bind sealed native symbols to their storage format (PR #11)",
+    "rerun": [
+      "python full suite"
+    ],
+    "unchanged_evidence": [
+      "JavaScript unit/integration/typecheck sources",
+      "native release-exposure report bound sources",
+      "official ASAR report bound sources"
+    ],
+    "note": "Previous successful measurements are retained for unchanged components; the complete Python suite was rerun after merging the native format binding."
+  }
 }

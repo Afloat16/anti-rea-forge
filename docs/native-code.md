@@ -59,7 +59,7 @@ The new directory contains `protected.o`, `report.json` and five generated C++ i
 | `releaseguard_sealed_asset.hpp` | HKDF/AES-GCM reader with direct-buffer decryption |
 | `releaseguard_secure_buffer.hpp` | Guarded mapping, page protections and cleanup |
 
-The report's `code_seal.format` is `open-release-guard-sealed-native-code/v2`. Each storage entry has an `offset_bytes` within the authenticated payload. Bytecode has byte alignment, while descriptor and expected-guard tables have eight-byte alignment. Padding is included in the encrypted payload and its complete digest. Regenerate and link the object, loader and headers together for this format.
+The report's `code_seal.format` is `open-release-guard-sealed-native-code/v2`. Each storage entry has an `offset_bytes` within the authenticated payload. Bytecode has byte alignment, while descriptor and expected-guard tables have eight-byte alignment. Padding is included in the encrypted payload and its complete digest. The format identifier also participates in the module-symbol and C++ namespace hash. This separates the pointer-storage ABI from bundles produced with the earlier unversioned symbol formula. A compiled regression requires mixed-layout linking to fail. Regenerate and link the object, loader and headers together for this format.
 
 Read `code_seal.cpp_namespace` from the report and use that namespace for initialization and clearing. Link the object and `releaseguard_native_code.cpp` with the application's C++17 code and `-lcrypto`.
 
@@ -222,14 +222,14 @@ The v2 mapping implementation completed the following local and CI checks.
 
 | Check | Completed result |
 | --- | --- |
-| Generated-loader tests with LLVM 19.1.7 C API | 12 compiled tests passed, with 8 IR modules parsed, verified and emitted as PIC objects |
+| Generated-loader tests with LLVM 19.1.7 C API | 13 compiled tests passed, with 8 IR modules parsed, verified and emitted as PIC objects |
 | `secure_buffer` regressions | 16 tests passed |
 | Native asset reader and direct-buffer decryption regressions | 21 tests passed |
 | IDA report adapter and validator | 10 engine-independent tests passed |
-| Mandatory LLVM 18/Amice regression suite in CI | 145 tests passed with zero skips |
+| Mandatory LLVM 18/Amice regression suite in the first v2 CI | 145 tests passed with zero skips |
 | Full CI matrix | Nine jobs passed, including Windows native tests and genuine Ghidra analysis |
 
-The LLVM 19 experiment replaced only the compiled test class's object-emission method. It retained the real C++ compiler, linker, loaded functions and existing assertions. Its coverage includes aligned read-only, locked and dump-excluded storage, process-write faults, revoked bindings, cleanup, integer ABIs, forked-child zeroing, both global-object link orders and ten loader OS-failure scenarios. The IDA validator now requires every completed function's entry to belong to its verified byte ranges and to match a verified instruction start. [Loader regressions](../tests/test_native_code_seal.py) · [Memory regressions](../tests/test_secure_buffer.py) · [IDA validator regressions](../benchmarks/ida_function/test_validation.py)
+The LLVM 19 experiment replaced only the compiled test class's object-emission method. It retained the real C++ compiler, linker, loaded functions and existing assertions. Its coverage includes aligned read-only, locked and dump-excluded storage, process-write faults, revoked bindings, cleanup, integer ABIs, forked-child zeroing, both global-object link orders, ten loader OS-failure scenarios and mixed-layout link rejection. The IDA validator now requires every completed function's entry to belong to its verified byte ranges and to match a verified instruction start. [Loader regressions](../tests/test_native_code_seal.py) · [Memory regressions](../tests/test_secure_buffer.py) · [IDA validator regressions](../benchmarks/ida_function/test_validation.py)
 
 The preserved v2 Ghidra controls were built from commit `f8f9df6528cd1a1e2a996ca657a74df7a8a08f18` in the first successful CI run for this change. The encrypted ELF has SHA-256 `06a7beea6437001a73d5a6cb0ddefec82c11041d008b5416d08d5ef502fe73e0`. Each case evaluated 82,014 inputs, containing 81,968 distinct values. [CI run](https://github.com/Afloat16/anti-rea-forge/actions/runs/44092281985) · [Preserved v2 controls](results/native-code-memory-controls.json)
 
@@ -241,6 +241,6 @@ The preserved v2 Ghidra controls were built from commit `f8f9df6528cd1a1e2a996ca
 
 The recovered control key reproduced all 82,014 reference outputs. Patching the outer gate with a wrong key left all encrypted outputs locked at zero. Forced GCM-final success with a wrong key, modified ciphertext and wrong context were rejected. Ghidra completed its decompilation API for 136 recognized functions in each encrypted program, with warnings retained in the raw report. This API count describes returned decompiler objects.
 
-A subsequent validation regression rejects `speculatable` helpers and affected callers, because nullable storage bindings invalidate that promise. The machine-readable record binds the final local source hashes separately from the preserved CI sample. [Change and final CI status](https://github.com/Afloat16/anti-rea-forge/pull/9)
+A subsequent validation regression rejects `speculatable` helpers and affected callers, because nullable storage bindings invalidate that promise. The machine-readable record binds the final local source hashes separately from the preserved CI sample. [Memory-mapping change and CI](https://github.com/Afloat16/anti-rea-forge/pull/9)
 
 Modern IDA/Hex-Rays engine execution and independent reconstruction of v2 remain pending. The historical recovery records above retain their original sample identities and outcomes.
