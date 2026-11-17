@@ -19,11 +19,11 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - pr: '17572'
-            sha: '3a1b17af176a5d4b89f2a11e4b1c9ae92d8d8abc'
-            package: 'cli'
-            tests: 'src/utils/cleanup.test.ts src/services/mod-session.test.ts src/services/interactive-mod-session.test.ts'
-            files: 'packages/cli/src/services/mod-session.ts packages/cli/src/services/interactive-mod-session.ts packages/cli/src/utils/cleanup.test.ts'
+          - pr: '17579'
+            sha: '5c9bc81f9600875599552c739feb8ee1294e64bf'
+            package: 'sdk-typescript'
+            tests: 'test/unit/AcpHttpTransport.test.ts test/unit/acpTransportUtils.test.ts'
+            files: 'packages/sdk-typescript/test/unit/AcpHttpTransport.test.ts'
     env:
       CI: 'true'
       QWEN_SKIP_PREPARE: '1'
@@ -46,10 +46,6 @@ jobs:
           package-manager-cache: false
       - name: Install pinned dependencies
         run: corepack pnpm install --frozen-lockfile --reporter=append-only
-      - name: SDK focused tests
-        if: matrix.package == 'sdk-typescript'
-        working-directory: packages/sdk-typescript
-        run: corepack pnpm exec vitest run ${{ matrix.tests }}
       - name: Build normal workspace prerequisites
         run: |
           if [ "${{ matrix.package }}" = "cli" ]; then
@@ -58,6 +54,10 @@ jobs:
             npm run build --workspace=packages/core
             npm run build --workspace=packages/acp-bridge
           fi
+      - name: SDK focused tests
+        if: matrix.package == 'sdk-typescript'
+        working-directory: packages/sdk-typescript
+        run: corepack pnpm exec vitest run ${{ matrix.tests }}
       - name: CLI focused tests with normal prerequisite guard
         if: matrix.package == 'cli'
         working-directory: packages/cli
