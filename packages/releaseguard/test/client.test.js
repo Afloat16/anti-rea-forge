@@ -51,6 +51,24 @@ test("project checks resolve one configuration path and preserve scanner outcome
   }
 });
 
+test("scan and project forward external key paths as exact argv, including shell characters", async () => {
+  const { client, calls } = fake();
+  const keys = ["private issuer/key;$(ignored).bin", "密钥 path/key.bin"];
+  await client.scanRelease({ root: "dist", policy: "rules.json", assetKeyFiles: keys });
+  await client.checkProject({ config: "project.json", assetKeyFiles: keys });
+  const expected = keys.map((key) => "--asset-key-file=" + resolve(key));
+  for (const call of calls) assert.deepEqual(call[1].slice(-2), expected);
+});
+
+test("invalid external key lists fail before a Python process starts", async () => {
+  const { client, calls } = fake();
+  for (const assetKeyFiles of [null, "key.bin", Array(1), [undefined], [42], [""], ["key\0.bin"], Array(17).fill("key")]) {
+    await assert.rejects(client.scanRelease({ root: "dist", policy: "rules.json", assetKeyFiles }), hasCode("INVALID_ARGUMENT"));
+    await assert.rejects(client.checkProject({ config: "project.json", assetKeyFiles }), hasCode("INVALID_ARGUMENT"));
+  }
+  assert.equal(calls.length, 0);
+});
+
 test("policy failures return exitCode 3 without throwing", async () => {
   const { client } = fake(scan(false));
   const result = await client.scanRelease({ root: "dist", policy: "rules.json" });

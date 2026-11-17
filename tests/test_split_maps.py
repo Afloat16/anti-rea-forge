@@ -167,11 +167,14 @@ class SplitMapsTests(unittest.TestCase):
         self.assert_rolled_back()
 
     def test_compressed_or_opaque_packaging_is_refused_before_publishing(self):
+        from tests.test_asar import asar
+
         zipped = io.BytesIO()
         with zipfile.ZipFile(zipped, "w", zipfile.ZIP_DEFLATED) as archive:
             archive.writestr("inner/debug.map", self.map_file.read_bytes())
         for name, data in [("archive.blob", zipped.getvalue()), ("app.map.gz", gzip.compress(b"map")),
-                           ("app.js.br", b"precompressed"), ("debug.asar", b"opaque")]:
+                           ("app.js.br", b"precompressed"), ("debug.asar", b"opaque"),
+                           ("renamed.bin", asar([("inner/debug.map", self.map_file.read_bytes())]))]:
             with self.subTest(name=name):
                 p = self.root / name
                 p.write_bytes(data)

@@ -2,6 +2,14 @@
 
 [简体中文](README.zh-CN.md) · [English](README.md) · [MIT 许可证](LICENSE)
 
+## 开发中的全发布包加固
+
+发布检查现将 **Electron packed ASAR、ZIP 包内成员与普通文件纳入同一套规则**：按 JSON 语义识别转义字段名的 v3 source map，检查所有已识别 ELF/PE 的私有调试资料和静态符号。修改包、源码映射或原生模块的后缀不会跳过这些检查；布局有歧义或检查超出预算时会阻止发布。
+
+外置资产/代码密钥可一次配置到 `project.json`，由 `check`、`prepare` 和 JavaScript SDK 统一检查。`prepare` 在发现泄漏时不会签发发布清单；原生函数加密封装也会拒绝未核验的全局存储和可能把明文写入对象文件的元数据。
+
+新一轮实际运行 GNU `strings`、`nm`、`readelf`、`objdump`，验证私有元数据分离、机器指令保持一致、外置密钥正常解密，以及故意泄漏密钥被门禁拦截。上述结果是发布暴露检查；合法运行进程中的明文和已分发的机器指令仍可被观察。[接入指南](docs/portable-release.md) · [当前 REA 工具覆盖与实测](docs/rea-coverage-2026-11-17.zh-CN.md) · [机器可读对照](docs/results/release-exposure-controls.json)
+
 ## 开发中的原生函数保护
 
 `native-obfuscate --profile sealed-virtualize` 新增实验性的 LLVM 18 接入，支持 Linux x86-64 标量整数函数。执行函数所需的 VM 指令和描述表经过加密，由生成的 C++17/OpenSSL 组件使用独立提供的 32 字节密钥装载。授权后的进程内存中存在明文 VM 存储。
@@ -51,7 +59,7 @@ python -m releaseguard native-asset-export asset.json \
   --product myapp --release v1 --purpose reference-data --asset-id table \
   --out generated-asset
 mkdir release-asset
-c++ -std=c++17 -O2 -Igenerated-asset examples/native-asset/read.cpp \
+c++ -std=c++17 -O2 -s -Igenerated-asset examples/native-asset/read.cpp \
   -lcrypto -o release-asset/read-asset
 ./release-asset/read-asset < ../asset-issuer/key.bin
 ```

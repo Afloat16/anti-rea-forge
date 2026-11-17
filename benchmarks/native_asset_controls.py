@@ -71,7 +71,10 @@ def prepare(args):
     envelope = seal_asset(payload, key, **CONTEXT)
     save(root / "asset.json", envelope)
     export_native_asset(envelope, root / "include", **CONTEXT)
-    flags = [f"-m{args.bits}", "-std=c++17", "-O0", "-g0", "-fno-inline", "-fno-pie",
+    # The public fixtures obey the default release-wide metadata gate. Preserve
+    # the explicitly exported gate for analyzer discovery while stripping private
+    # symbols; key extraction still covers every allocated file-backed byte.
+    flags = [f"-m{args.bits}", "-std=c++17", "-O0", "-g0", "-s", "-fno-inline", "-fno-pie",
              "-fno-builtin-memcmp", "-no-pie", "-Wl,--hash-style=both,--export-dynamic-symbol=rg_asset_gate"]
     inputs = {}
     scan_results = {}

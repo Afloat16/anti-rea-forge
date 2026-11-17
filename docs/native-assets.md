@@ -21,7 +21,7 @@ python -m releaseguard native-asset-export asset.json \
   --product myapp --release v1 --purpose reference-data --asset-id table \
   --out generated-asset
 mkdir release-asset
-c++ -std=c++17 -O2 -Igenerated-asset examples/native-asset/read.cpp \
+c++ -std=c++17 -O2 -s -Igenerated-asset examples/native-asset/read.cpp \
   -lcrypto -o release-asset/read-asset
 ./release-asset/read-asset < ../asset-issuer/key.bin
 ```
@@ -61,6 +61,12 @@ For CMake, add the generated directory as a private include path and link `OpenS
 
 Use the key only on the trusted release-checking machine. The optional `--asset-key-file` argument checks the final staging directory against that exact key and can be repeated for up to 16 keys.
 
+The examples now link with `-s` so the default ELF/PE metadata check also passes.
+Use `split-elf-debug` instead when you need a private symbol sidecar for support.
+Store repeatable key-file references in `project.json` or pass the same flag to
+`check` and `prepare`; a leaking release is rejected before signing. See the
+[scan-to-sign workflow](portable-release.md#keep-external-keys-in-the-scan-to-sign-workflow).
+
 ```sh
 python -c 'from pathlib import Path; Path("asset-policy.json").write_text("{\"version\":1}\n", encoding="utf-8")'
 python -m releaseguard scan-release \
@@ -68,7 +74,7 @@ python -m releaseguard scan-release \
   --asset-key-file ../asset-issuer/key.bin
 ```
 
-The checker searches physical files and supported nested ZIP members, including matches across read chunks. It checks raw key bytes, lowercase and uppercase hexadecimal, standard and URL-safe Base64 with or without padding, and each textual representation in UTF-8, UTF-16 LE/BE and UTF-32 LE/BE. A match creates an `asset_key_exposure` finding. Reports include the path, key index and encoding while keeping matched key contents out of findings. The command exits `3` on release findings and `2` on invalid inputs.
+The checker searches physical files and supported nested ZIP/ASAR members, including matches across read chunks. It checks raw key bytes, lowercase and uppercase hexadecimal, standard and URL-safe Base64 with or without padding, and each textual representation in UTF-8, UTF-16 LE/BE and UTF-32 LE/BE. A match creates an `asset_key_exposure` finding. Reports include the path, key index and encoding while keeping matched key contents out of findings. The command exits `3` on release findings and `2` on invalid inputs.
 
 The Python API exposes the same optional argument.
 

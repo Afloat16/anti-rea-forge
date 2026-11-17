@@ -2,8 +2,10 @@
 
 Anti-REA Forge 0.5 adds a **Python release scanner usable from any build system** and
 a **JavaScript ESM bridge with TypeScript declarations**. The scanner reads a staging
-directory without requiring an EXE, DLL or ELF entry file. The existing native `gate`
-still provides PE/ELF structure, symbol and mitigation checks.
+directory without requiring an EXE, DLL or ELF entry file. The current scanner checks
+debug metadata and static symbols in every recognized ELF/PE payload, including
+inspected ZIP and packed ASAR members. The native `gate` additionally provides
+artifact-specific policies and mitigation checks.
 
 本版用 Python 统一维护扫描规则与安全判定，通过 JavaScript/TypeScript 接入 Node.js
 构建流程；C++ 只保留在原生内存和构建组件中。贡献一条规则不需要 C++ 编译器。
@@ -35,7 +37,7 @@ and rerun the check before signing or distributing the result.
 
 Native-token exposure checks are on by default (`check_native_tokens: true`).
 They detect complete token-shaped content in inspected files and supported ZIP
-members. The matched payload is not echoed; reports still include names, paths
+and packed ASAR members. The matched payload is not echoed; reports still include names, paths
 and hashes. See [native token integration](native-tokens.md) for the exact
 format and its limits.
 
@@ -69,6 +71,7 @@ const guard = createReleaseGuard({
 const report = await guard.scanRelease({
   root: "./dist",
   policy: "./examples/policy-portable-release.json",
+  assetKeyFiles: ["../asset-issuer/key.bin"], // optional known external key
 });
 console.log(JSON.stringify(report, null, 2));
 process.exitCode = report.ok ? 0 : 3;
@@ -102,12 +105,15 @@ invalid types, ambiguous paths and invalid resource limits are errors.
 | `forbid_file_sha256` | `[]` | Reject exact known file digests, including expanded ZIP members |
 | `allowed_release_files` | Omitted | Optional nonempty exact list of physical files relative to the release root; reject missing or extra files |
 | `check_private_keys` | `true` | Detect supported PEM private-key begin markers in the five encodings |
-| `check_source_maps` | `true` | Detect `sourceMappingURL` and the quoted `sourcesContent` marker in the five encodings |
+| `check_source_maps` | `true` | Detect markers in five encodings and bounded v3 JSON source-map structures, including escaped keys and indexed maps |
+| `check_native_tokens` | `true` | Detect complete public-format native bearer tokens in five encodings |
+| `check_native_metadata` | `true` | Inspect every recognized ELF/PE for private debug metadata/static symbols; unverifiable recognized metadata produces a finding |
 | `scan_zip_archives` | `true` | Inspect recognized ZIP content recursively; disabling inspection creates a finding for each detected ZIP |
+| `scan_asar_archives` | `true` | Inspect canonical packed ASAR, including content-recognized renamed archives; disabling inspection creates a finding |
 | `max_file_bytes` | `67108864` (64 MiB) | Limit each physical file and each expanded member; maximum 512 MiB |
 | `max_total_bytes` | `268435456` (256 MiB) | Combined physical and expanded bytes across the complete scan; maximum 512 MiB |
-| `max_archive_depth` | `2` | Permit a ZIP and one nested ZIP level; range 1–8 |
-| `max_archive_entries` | `10000` | Aggregate ZIP entries, including directories and nested containers; maximum 20,000 |
+| `max_archive_depth` | `2` | Permit a ZIP/ASAR and one nested container level; range 1–8, shared across formats |
+| `max_archive_entries` | `10000` | Aggregate ZIP/ASAR entries, including directories, aliases and nested containers; maximum 20,000 |
 | `max_files` | `20000` | Physical release-file limit; maximum 20,000 |
 
 There are also fixed safety ceilings for inventory entries and report findings. A scan
@@ -121,10 +127,59 @@ disclosure, not proof of a valid key, and its absence is not proof that no secre
 Binary DER keys, credentials outside the configured literals, encrypted/encoded strings,
 split values and other secret formats need additional controls.
 
-源映射检查采用明确的字节标记，可能命中文档或有意公开的调试材料。关闭
+源映射字节标记可能命中文档或有意公开的调试材料。关闭
 `check_source_maps` 不会自动移除 `forbid_extensions` 中的 `.map`；策略中的各项检查
 独立生效。`sourceMappingURL` 无论指向 `.map`、任意文件名还是内联 data URI 都会命中。
-该规则不是 JavaScript/JSON 语义解析器，不能识别任意转义或转换后的等价表示。
+结构检查另按 JSON 解析 v3 source map，识别转义键、数值等于 3 的版本写法、indexed map、
+UTF-8/16/32 和常见 UTF-8 XSSI 前缀。它不是 JavaScript 解混淆器，也不解码任意嵌入字符串。
+
+JSON candidates have a fixed 8 MiB parsing limit, a 64-level structure limit and a
+100,000-node work limit. Ambiguous/over-budget candidates produce
+`source_map_unverifiable`; malformed non-JSON text such as a JavaScript block is not
+treated as a source-map document. `source_map_structure` records an identified flat or
+indexed v3 map without echoing its sources. Public maps can be an intentional choice;
+disable the relevant policy explicitly if your release is meant to include them.
+
+`check_native_metadata` adds `native_debug_metadata`, `native_symbol_table` or
+`native_metadata_unverifiable` findings. ELF section tables/names must be available for
+this metadata check; an absent table is not proof that private metadata was removed.
+The audit does not remove or reject ordinary public imports/exports, and does not audit
+Mach-O, DEX, CIL or every possible executable format. An explicit policy opt-out is
+available for intentionally shipped native debug metadata. The report records whether
+the check was enabled and how many ELF/PE payloads were inspected.
+
+### Keep external keys in the scan-to-sign workflow
+
+`scan-release`, `check` and `prepare` accept repeatable `--asset-key-file` arguments.
+Supply private raw 32-byte files from outside the release; the scanner checks their raw
+bytes and common hex/Base64 representations. To make the same keys mandatory on each
+project check, add references to the build-only `project.json`:
+
+```json
+{
+  "version": 1,
+  "product": "MyApp",
+  "root": "../dist",
+  "policy": "policy.json",
+  "asset_key_files": ["../../asset-issuer/data.key", "../../asset-issuer/code.key"]
+}
+```
+
+Paths resolve from the configuration file. Additional CLI/Python/SDK keys are added to
+configured keys, never substituted for them; the combined limit is 16. Missing/invalid
+keys fail the operation. `prepare` checks before signing or creating any sidecars, and
+its `release-report.json` records the completed check configuration. Existing project
+configurations without `asset_key_files` remain supported.
+
+```sh
+python -m releaseguard check --config .releaseguard/project.json
+python -m releaseguard prepare --config .releaseguard/project.json \
+  --private ../issuer/signing.pem --release 1.0 --out ../release-evidence
+```
+
+The Python APIs accept the keyword-only `asset_key_files` sequence. The SDK accepts
+`assetKeyFiles` on both `scanRelease` and `checkProject`. These are known-key exposure
+checks, not discovery of every possible secret or arbitrary transformed encoding.
 
 ## Archives and paths
 
@@ -147,9 +202,23 @@ uninspected. Standard UTF-8 names and checked data descriptors are supported. Lo
 central headers, actual bounded DEFLATE output, stream completion and CRC must agree;
 directory entries must contain an actually empty payload.
 
-Detected ASAR, tar, gzip, bzip2, xz, zstd,
-7z and RAR containers produce `unsupported_archive` findings. `archive_not_scanned`
-indicates that ZIP inspection was explicitly disabled. Neither finding can yield `ok: true`.
+Canonical **packed Electron ASAR** is recognized by its two Pickle headers or the
+`.asar` suffix. Member paths, JSON duplicate keys, case aliases, offsets, sizes, optional
+SHA-256/block digests and complete file-range coverage are checked before acceptance.
+Exact shared ranges used by ASAR deduplication are supported; every alias is still
+checked by its own path and charged against the byte/entry budgets. A packed member can
+be a ZIP or another ASAR. ASAR directory depth is additionally limited to 64 and its
+JSON header to 8 MiB. No target JavaScript or native code is run.
+
+ASAR links, `unpacked` sidecars, unknown entry layouts, partial overlaps, nonzero padding,
+unindexed bytes and malformed named ASAR files fail the scan. Scan an unpacked Electron
+build before packing when these restrictions prevent inspection of your package;
+do not label the final unsupported package as inspected. Integrity metadata checks
+internal consistency and is not an authenticated publisher signature.
+
+Detected tar, gzip, bzip2, xz, zstd, 7z and RAR containers produce `unsupported_archive`
+findings. `archive_not_scanned` indicates that the corresponding ZIP/ASAR inspection
+was explicitly disabled. Neither finding can yield `ok: true`.
 Archive detection is not a universal file-format classifier: an unrecognized, disguised
 or custom container can still contain uninspected encoded data.
 
@@ -178,6 +247,8 @@ path remain visible and should be considered before publishing a report.
 deliberately unscanned detected archive also sets `checks.archive_scan_completed` to
 `false`. Check `ok` and all findings; even a true archive-completion flag only describes
 recognized containers, not every conceivable file format.
+`source_map_scan_completed` and `native_metadata_scan_completed` describe their
+respective inspection paths; the separate `*_checked` fields record policy opt-outs.
 Error reports go to stderr with `ok: false`; they are not partial passing reports.
 The JavaScript bridge returns validated exit-0/3 reports and throws `ReleaseGuardError`
 for tool/protocol/process failures. Callers should not catch such errors and continue a
@@ -198,7 +269,8 @@ or make a patched client's authorization trustworthy. Keep issuer keys and genui
 restricted operations in the trusted service, using the existing
 [request-bound authorization](runtime-protection.md) where appropriate.
 
-Run `python -m unittest tests.test_distribution tests.test_distribution_cli -v` for the
-portable regression suite. [The validation record](testing-v0.5-2026-11-04.md) lists actual
+Run `python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_asar tests.test_release_disclosures tests.test_project_asset_keys -v`
+for the focused portable regression suite. [Current tool coverage and observations](rea-coverage-2026-11-17.zh-CN.md)
+and the [historical validation record](testing-v0.5-2026-11-04.md) retain their distinct
 results and untested scope. Source review and functional tests are distinct from a full
 REA/provider/model evaluation, which this update does not claim to have completed.

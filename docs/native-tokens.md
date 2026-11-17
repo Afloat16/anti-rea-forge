@@ -10,7 +10,7 @@ Install this checkout with Python 3.10+. The following commands run from the rep
 python -m pip install .
 mkdir -m 700 ../myapp-issuer
 python -m releaseguard native-token-issue --public-dir generated --secret-out ../myapp-issuer/demo.rg-token
-c++ -std=c++17 -O2 -Igenerated examples/native-token/check.cpp -lcrypto -o check-token
+c++ -std=c++17 -O2 -s -Igenerated examples/native-token/check.cpp -lcrypto -o check-token
 ./check-token < ../myapp-issuer/demo.rg-token
 ```
 
@@ -41,7 +41,7 @@ The issuer does not accept a user-selected password. A fast hash would allow off
 
 ## Catch a packaging mistake
 
-Run the existing `check` / `scan-release` on the final staging directory. Portable policies now default `check_native_tokens` to true: full token-shaped values in inspected files and supported ZIP members produce `native_token_exposure`. It detects the format in UTF-8 and UTF-16/32 LE/BE, including across read boundaries. It does not distinguish a real token from a syntactically valid decoy. Reports can contain paths, member names and hashes, but findings do not include matched content. Split/encoded secrets, deployed services or unsupported containers are not covered by this format rule.
+Run the existing `check` / `scan-release` on the final staging directory. Portable policies now default `check_native_tokens` to true: full token-shaped values in inspected files and supported ZIP/ASAR members produce `native_token_exposure`. It detects the format in UTF-8 and UTF-16/32 LE/BE, including across read boundaries. It does not distinguish a real token from a syntactically valid decoy. Reports can contain paths, member names and hashes, but findings do not include matched content. Split/encoded secrets, deployed services or unsupported containers are not covered by this format rule.
 
 ## Reproduce the controls
 

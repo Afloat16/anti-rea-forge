@@ -26,6 +26,10 @@ _GLOBAL = re.compile(r"^@(" + _NAME + r") = ([^\n]*)$", re.MULTILINE)
 _TOKENS = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|@(' + _NAME + r")")
 _INTEGER = r"i(?:1|8|16|32|64)"
 _POINTER_TABLE = re.compile(r"private constant \[([1-9][0-9]*) x ptr\] zeroinitializer(?:, align [0-9]+)?")
+_RETENTION_GLOBALS = {"llvm.used", "llvm.compiler.used"}
+_RETENTION = re.compile(
+    r'appending global \[([1-9][0-9]*) x ptr\] \[(ptr @' + _NAME
+    + r'(?:, ptr @' + _NAME + r')*)\], section "llvm.metadata"(?:, align [0-9]+)?')
 _FILES = ("releaseguard_native_code.hpp", "releaseguard_native_code.cpp",
           "releaseguard_native_code_asset.hpp", "releaseguard_sealed_asset.hpp",
           "releaseguard_secure_buffer.hpp")
@@ -50,6 +54,30 @@ def _require_global_reads(function, message):
                            r"inaccessiblemem_or_argmemonly)\b", attributes)
              and all(value in ("read", "readwrite")
                      for value in re.findall(r"\bmemory\(([^)]+)\)", attributes)), message)
+
+
+def _validate_metadata(text):
+    # Named metadata can emit additional object bytes even when it is unrelated
+    # to a function body (for example llvm.commandline -> .GCC.command.line).
+    # Keep only the compiler's module flags and the ident root removed below.
+    for line in text.splitlines():
+        if not line.lstrip().startswith("!"):
+            continue
+        if re.match(r"^![0-9]+ = ", line):
+            continue
+        _require(re.match(r"^!llvm\.(?:module\.flags|ident) = !\{", line) is not None,
+                 "Unsupported sealed VM named metadata")
+    syntax = re.sub(r'"(?:[^"\\]|\\.)*"|;[^\n]*', "", text)
+    _require(re.search(r"!DI[A-Za-z]+\(", syntax) is None,
+             "Sealed VM does not support debug metadata")
+
+
+def _validate_retention(name, definition, allowed):
+    match = _RETENTION.fullmatch(definition)
+    _require(match is not None, f"Unsupported VM retention global: {name}")
+    references = re.findall(r"ptr @(" + _NAME + r")", match[2])
+    _require(len(references) == int(match[1]) and set(references) <= allowed,
+             f"VM retention global refers to unverified storage or functions: {name}")
 
 
 def _storage(definition, kind):
@@ -312,6 +340,7 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
     _require(re.search(r"^[ \t]*!llvm\.(?:linker\.options|dependent-libraries)\s*=",
                        after_ir_text, re.MULTILINE) is None,
              "Sealed VM does not support linker metadata")
+    _validate_metadata(after_ir_text)
     filename_pattern = r"^[ \t]*source_filename\s*=.*$"
     filenames = len(re.findall(filename_pattern, after_ir_text, re.MULTILINE))
     _require(filenames <= 1, "Repeated LLVM source filename")
@@ -322,8 +351,9 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
              and layout is not None and layout[1].startswith("e"),
              "Sealed VM requires the little-endian x86-64 Linux module runtime")
     functions = _functions(after_ir_text)
-    _require(re.search(r'^@"', after_ir_text, re.MULTILINE) is None, "Quoted VM global definitions are unsupported")
     globals_found = list(_GLOBAL.finditer(after_ir_text))
+    _require(sum(line.lstrip().startswith("@") for line in after_ir_text.splitlines()) == len(globals_found),
+             "Unsupported VM global definition; expected an exact canonical unquoted name")
     globals_by_name = {match[1]: match[2] for match in globals_found}
     _require(len(globals_found) == len(globals_by_name), "Duplicate VM globals")
     wrappers, expected = {}, {}
@@ -373,16 +403,25 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
             else:
                 _require(reference.startswith("llvm."), "VM runtime has an external native dependency")
     _require(set(expected) <= associated, "Covered VM storage is disconnected from the runtime")
-    pointer_tables = []
+    pointer_tables, retention = [], {}
     for name, definition in globals_by_name.items():
         if name in expected:
+            continue
+        if name in _RETENTION_GLOBALS:
+            _require(name not in associated, "VM runtime must not read retention metadata")
+            retention[name] = definition
             continue
         if re.match(r"private constant \[[0-9]+ x ptr\]", definition):
             _require(_POINTER_TABLE.fullmatch(definition) is not None, "Native-call table must be zero initialized")
             pointer_tables.append(name)
         else:
-            _require(name not in associated and not re.match(r"private constant \[[0-9]+ x i(?:8|64)\]", definition),
-                     "Unsealed VM storage or unsupported runtime global")
+            # Do not infer safety from linkage, spelling, reachability or type.
+            # An unreferenced internal/unnamed_addr global can still be retained
+            # in the object, and an alias can keep an unsealed payload alive.
+            raise GuardError("Unsealed VM storage or unsupported runtime global: " + name)
+    allowed_retention = set(expected) | set(pointer_tables) | visited | set(wrappers)
+    for name, definition in retention.items():
+        _validate_retention(name, definition, allowed_retention)
 
     tag = _sha(aad + hashlib.sha256(after_ir_text.encode("utf-8")).digest())[:24]
     prefix = "rg_native_code_" + tag
@@ -498,6 +537,7 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
         "payload_bytes": len(payload), "payload_sha256": payload_sha256,
         "ciphertext_bytes": len(payload) + 16, "storage": storage, "ready_symbol": ready,
         "guarded_wrappers": guarded, "zero_native_call_tables": len(pointer_tables),
+        "validated_retention_globals": sorted(retention),
         "randomized_descriptor_guards": {"scheme": "sealed-random-u64/v1", "records": records,
                                          "descriptor_word_index": 7, "random_bits_per_record": 64,
                                          "nonzero_guard_required": True,

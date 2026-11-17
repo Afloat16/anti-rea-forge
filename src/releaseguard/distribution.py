@@ -8,8 +8,10 @@ A release and its ancestor directories must remain under trusted build control.
 from __future__ import annotations
 
 import base64
+import codecs
 import hashlib
 import io
+import json
 import os
 import re
 import stat
@@ -19,23 +21,32 @@ import zlib
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from .core import MAX_FILES, GuardError, _inventory, _is_link, _root, read_document, safe_relative_path
+from .asar import looks_like_asar, read_asar_entries, read_asar_member
+from .core import (
+    MAX_DOCUMENT_BYTES, MAX_FILES, GuardError, _inventory, _is_link, _no_number,
+    _pairs, _root, read_document, safe_relative_path,
+)
+from .elf import audit_elf_stream
 from .native import _assert_scanned_identity, _component_findings
 from .native_token import NATIVE_TOKEN_HEX_DIGITS, NATIVE_TOKEN_PREFIX
+from .pe import audit_pe_stream
 from .sealed import load_asset_key
 
 _CHUNK_BYTES = 1024 * 1024
 _MAX_BYTES = 512 * 1024 * 1024
 _MAX_FINDINGS = 10000
+_MAX_JSON_NODES = 100000
+_MAX_JSON_DEPTH = 64
 _ENCODINGS = ("utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be")
 _FIELDS = {
     "version", "forbid_literals", "forbid_extensions", "forbid_path_components",
     "forbid_file_sha256", "allowed_release_files", "check_private_keys",
-    "check_source_maps", "check_native_tokens", "scan_zip_archives", "max_file_bytes", "max_total_bytes",
+    "check_source_maps", "check_native_tokens", "check_native_metadata", "scan_zip_archives",
+    "scan_asar_archives", "max_file_bytes", "max_total_bytes",
     "max_archive_depth", "max_archive_entries", "max_files",
 }
 _ZIP_EXTENSIONS = {".zip", ".jar", ".war", ".ear", ".whl", ".nupkg", ".vsix", ".apk", ".aab"}
-_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst", ".asar"}
+_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst"}
 _UNSUPPORTED_MAGICS = (b"\x1f\x8b", b"BZh", b"\xfd7zXZ\x00", b"7z\xbc\xaf\x27\x1c",
                        b"Rar!\x1a\x07", b"\x28\xb5\x2f\xfd")
 _KEY_MARKERS = ("-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----",
@@ -59,6 +70,37 @@ def _native_token_rules():
 _TOKEN_RULES = tuple(_native_token_rules())
 
 
+def _json_object_offset(stream: BinaryIO, size: int) -> int | None:
+    """Recognize JSON objects without trusting a filename or allocating a payload.
+
+    Match the same BOM/UTF-16/UTF-32 and UTF-8 XSSI forms used by the source-map
+    splitter. Long leading whitespace is inspected in bounded chunks, so an
+    over-budget JSON object cannot hide behind padding. A negative offset means
+    an XSSI prefix could not be verified within its small header budget.
+    """
+    stream.seek(0)
+    probe = stream.read(min(size, 4096))
+    bom_size = 0
+    for bom in (codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE, codecs.BOM_UTF16_LE,
+                codecs.BOM_UTF16_BE, codecs.BOM_UTF8):
+        if probe.startswith(bom):
+            bom_size = len(bom)
+            probe = probe[bom_size:]
+            break
+    offset = 0
+    if probe.startswith(b")]}'"):
+        newline = probe.find(b"\n")
+        if newline < 0:
+            return -1
+        offset = bom_size + newline + 1
+        probe = probe[newline + 1:]
+    while not (start := probe.lstrip(b" \t\r\n\x00")):
+        probe = stream.read(min(4096, size - stream.tell()))
+        if not probe:
+            return None
+    return offset if start.startswith(b"{") else None
+
+
 def _strings(value: Any, label: str, maximum: int) -> list[str]:
     if type(value) is not list or len(value) > maximum or any(type(x) is not str for x in value):
         raise GuardError(f"Invalid {label}")
@@ -77,7 +119,9 @@ def load_distribution_policy(path: Path | str) -> dict[str, Any]:
         "forbid_path_components": [".git", ".svn", ".hg", ".env"],
         "forbid_file_sha256": [], "allowed_release_files": None,
         "check_private_keys": True, "check_source_maps": True, "check_native_tokens": True,
+        "check_native_metadata": True,
         "scan_zip_archives": True,
+        "scan_asar_archives": True,
         "max_file_bytes": 64 * 1024 * 1024, "max_total_bytes": 256 * 1024 * 1024,
         "max_archive_depth": 2, "max_archive_entries": 10000, "max_files": MAX_FILES,
     }
@@ -110,7 +154,8 @@ def load_distribution_policy(path: Path | str) -> dict[str, Any]:
             safe_relative_path(item)
         if len({item.casefold() for item in allowed}) != len(allowed):
             raise GuardError("Duplicate case-insensitive allowed release files")
-    for field in ("check_private_keys", "check_source_maps", "check_native_tokens", "scan_zip_archives"):
+    for field in ("check_private_keys", "check_source_maps", "check_native_tokens", "check_native_metadata",
+                  "scan_zip_archives", "scan_asar_archives"):
         if type(policy[field]) is not bool:
             raise GuardError(f"{field} must be a boolean")
     for field, maximum in (("max_file_bytes", _MAX_BYTES), ("max_total_bytes", _MAX_BYTES),
@@ -146,6 +191,9 @@ class _Scanner:
         self.archive_entries = 0
         self.archives = 0
         self.archive_scan_completed = True
+        self.source_map_scan_completed = True
+        self.native_files_checked = 0
+        self.native_metadata_scan_completed = True
         self.findings: list[dict[str, Any]] = []
         self.patterns: list[tuple[str, int, str, bytes]] = []
         groups = [("forbidden_literal", policy["forbid_literals"])]
@@ -228,7 +276,116 @@ class _Scanner:
         index = self.digests.get(hexdigest)
         if index is not None:
             self.add("forbidden_file_digest", path, members, rule_index=index)
+        if self.policy["check_source_maps"]:
+            self.source_maps(stream, size, path, members)
+        if self.policy["check_native_metadata"]:
+            self.native_metadata(stream, size, path, members)
         return {"size": total, "sha256": hexdigest}
+
+    def source_maps(self, stream: BinaryIO, size: int, path: str,
+                    members: tuple[str, ...] = ()) -> None:
+        """Inspect bounded JSON data, including escaped keys and indexed maps."""
+        offset = _json_object_offset(stream, size)
+        if offset is None:
+            return
+
+        def unverifiable(reason: str) -> None:
+            self.source_map_scan_completed = False
+            self.add("source_map_unverifiable", path, members, reason=reason)
+
+        if offset < 0:
+            unverifiable("json_prefix_limit")
+            return
+        if size > MAX_DOCUMENT_BYTES:
+            unverifiable("json_byte_limit")
+            return
+        stream.seek(offset)
+        data = stream.read(size - offset + 1)
+        if len(data) != size - offset:
+            raise GuardError("JSON payload size changed during the portable scan")
+
+        def finite_float(text: str) -> float:
+            number = float(text)
+            if not -float("inf") < number < float("inf"):
+                raise ValueError("Non-finite JSON number")
+            return number
+
+        try:
+            document = json.loads(data, object_pairs_hook=_pairs, parse_constant=_no_number,
+                                  parse_float=finite_float)
+        except (json.JSONDecodeError, UnicodeError):
+            return  # e.g. a JavaScript block; this is not a JS decoder/parser.
+        except (ValueError, RecursionError):
+            unverifiable("ambiguous_or_overdeep_json")
+            return
+        pending = [(document, 0)]
+        visited = 0
+        kinds = set()
+        while pending:
+            value, depth = pending.pop()
+            visited += 1
+            if visited > _MAX_JSON_NODES or depth > _MAX_JSON_DEPTH:
+                unverifiable("json_structure_limit")
+                return
+            if isinstance(value, dict):
+                visited += len(value)
+                if visited > _MAX_JSON_NODES:
+                    unverifiable("json_structure_limit")
+                    return
+                # JSON has one number type. Decimal/exponent spellings such as
+                # 3.0 and 3e0 are the same version to ordinary map consumers.
+                version = value.get("version")
+                if type(version) in (int, float) and version == 3:
+                    if isinstance(value.get("sections"), list):
+                        kinds.add("indexed")
+                    elif isinstance(value.get("sources"), list) and isinstance(value.get("mappings"), str):
+                        kinds.add("flat")
+                pending.extend((item, depth + 1) for item in value.values() if isinstance(item, (dict, list)))
+            elif isinstance(value, list):
+                # Include scalar elements in the work budget before constructing
+                # a list of pending containers, even when none needs visiting.
+                visited += len(value)
+                if visited > _MAX_JSON_NODES:
+                    unverifiable("json_structure_limit")
+                    return
+                pending.extend((item, depth + 1) for item in value if isinstance(item, (dict, list)))
+        for kind in sorted(kinds):
+            self.add("source_map_structure", path, members, kind=kind)
+
+    def native_metadata(self, stream: BinaryIO, size: int, path: str,
+                        members: tuple[str, ...] = ()) -> None:
+        """Check every recognized ELF/PE payload without changing public exports."""
+        stream.seek(0)
+        prefix = stream.read(min(size, 4))
+        if prefix == b"\x7fELF":
+            format_name, reader = "elf", audit_elf_stream
+        elif prefix.startswith(b"MZ"):
+            format_name, reader = "pe", audit_pe_stream
+        else:
+            return
+        self.native_files_checked += 1
+
+        def unverifiable(reason: str) -> None:
+            self.native_metadata_scan_completed = False
+            self.add("native_metadata_unverifiable", path, members, format=format_name, reason=reason)
+
+        try:
+            report = reader(stream, size)
+        except ValueError:
+            unverifiable("invalid_or_unsupported_metadata")
+            return
+        evidence = report["evidence"]
+        debug = evidence["debug_sections_present"] if format_name == "elf" else evidence["debug_metadata_present"]
+        symbols = evidence["symbol_table_present"] if format_name == "elf" else evidence["coff_symbols_present"]
+        if debug:
+            self.add("native_debug_metadata", path, members, format=format_name)
+        if symbols:
+            self.add("native_symbol_table", path, members, format=format_name)
+        if format_name == "elf":
+            if not report["section_table_present"]:
+                unverifiable("section_table_missing")
+            elif not report["section_names_available"]:
+                unverifiable("section_names_missing")
 
     def container(self, stream: BinaryIO, size: int, name: str, path: str,
                   members: tuple[str, ...] = ()) -> None:
@@ -236,6 +393,11 @@ class _Scanner:
         prefix = stream.read(min(size, 512))
         stream.seek(0)
         suffix = Path(name).suffix.casefold()
+        # Inspect ASAR first: a final packed member may itself be a ZIP, whose
+        # end directory would otherwise make the outer archive look prefixed.
+        if suffix == ".asar" or looks_like_asar(prefix):
+            self.asar(stream, size, path, members)
+            return
         is_zip = zipfile.is_zipfile(stream)
         expected_zip = suffix in _ZIP_EXTENSIONS or prefix.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
         unsupported = suffix in _UNSUPPORTED_EXTENSIONS or prefix.startswith(_UNSUPPORTED_MAGICS) or prefix[257:262] == b"ustar"
@@ -293,6 +455,33 @@ class _Scanner:
             if isinstance(exc, GuardError):
                 raise
             raise GuardError("Invalid or unsupported ZIP archive") from exc
+
+    def asar(self, stream: BinaryIO, size: int, path: str, members: tuple[str, ...]) -> None:
+        if not self.policy["scan_asar_archives"]:
+            self.archive_scan_completed = False
+            self.add("archive_not_scanned", path, members, format="asar")
+            return
+        if len(members) >= self.policy["max_archive_depth"]:
+            raise GuardError("ASAR nesting exceeds max_archive_depth")
+        entries = read_asar_entries(
+            stream, size, max_entries=self.policy["max_archive_entries"] - self.archive_entries,
+            max_member_bytes=self.policy["max_file_bytes"],
+        )
+        self.archive_entries += len(entries)
+        self.archives += 1
+        for entry in entries:
+            entry_members = members + (entry.name,)
+            self.names(entry.name, path, entry_members, directory=entry.directory)
+            if entry.directory:
+                continue
+            # Deduplicated ranges are still separate named members. Check each
+            # path and charge each read before allocating, including nested work.
+            if entry.size > self.remaining():
+                raise GuardError("ASAR member exceeds remaining max_total_bytes")
+            data = read_asar_member(stream, entry)
+            content = io.BytesIO(data)
+            self.payload(content, entry.size, path, entry_members)
+            self.container(content, entry.size, entry.name, path, entry_members)
 
     @staticmethod
     def _member_bytes(stream: BinaryIO, info: zipfile.ZipInfo, boundary: int) -> bytes:
@@ -439,7 +628,7 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
 
     Unsupported, disabled, malformed or over-budget containers never produce a
     passing report. Byte accounting includes physical files plus every expanded
-    ZIP member, including nested archives. Checks use builder-controlled paths;
+    ZIP/ASAR member, including nested archives. Checks use builder-controlled paths;
     ordinary identity checks are not an atomic snapshot or a race-proof sandbox.
     """
     if not isinstance(asset_key_files, (list, tuple)) or len(asset_key_files) > 16:
@@ -497,21 +686,29 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "bytes_scanned": scanner.total_bytes, "max_total_bytes": policy["max_total_bytes"],
             "archives_scanned": scanner.archives, "archive_entries": scanner.archive_entries,
             "archive_scan_completed": scanner.archive_scan_completed,
-            "archive_formats": ["zip-stored", "zip-deflate"] if policy["scan_zip_archives"] else [],
+            "archive_formats": (["zip-stored", "zip-deflate"] if policy["scan_zip_archives"] else [])
+                               + (["asar-packed"] if policy["scan_asar_archives"] else []),
             "literal_rules": len(policy["forbid_literals"]), "encodings": list(_ENCODINGS),
             "private_key_markers_checked": policy["check_private_keys"],
             "source_map_markers_checked": policy["check_source_maps"],
+            "source_map_structures_checked": policy["check_source_maps"],
+            "source_map_scan_completed": scanner.source_map_scan_completed,
             "native_token_format_checked": policy["check_native_tokens"],
+            "native_metadata_checked": policy["check_native_metadata"],
+            "native_files_checked": scanner.native_files_checked,
+            "native_metadata_scan_completed": scanner.native_metadata_scan_completed,
             "asset_keys_checked": len(asset_keys),
             "release_allowlist_applied": policy["allowed_release_files"] is not None,
         },
         "notes": [
             "Static exposure checks only; passing does not measure REA or cracking resistance.",
-            "PEM and source-map markers are heuristics. Undeclared secrets and encoded data can remain undetected.",
+            "PEM and source-map markers are heuristics. Bounded JSON inspection also recognizes v3 source maps; arbitrary JS and encoded data can remain undetected.",
+            "JSON-like payloads exceeding 8 MiB or structural limits fail source-map inspection when enabled.",
+            "ELF/PE checks report debug metadata and static symbols, including inside inspected archives. Public imports/exports remain observable; other native formats are not inspected.",
             "Native-token findings identify the public token format, not proof of validity. Reports retain file paths and archive member names.",
-            "Only stored/deflated ZIP containers are expanded; detected other archives fail policy. ZIP64, Unicode Path aliases, prefixed/concatenated archives and unindexed gaps are unsupported.",
+            "Stored/deflated ZIP and canonical packed ASAR containers are inspected; detected other archives fail policy. ZIP64, ZIP path aliases, prefixed/concatenated archives, ASAR links/unpacked sidecars and unindexed bytes are unsupported.",
             "scan_completed means the scan plan finished; archive_scan_completed is false for detected unexpanded archives.",
-            "The byte budget counts disk bytes and all expanded ZIP members. No members are extracted or executed.",
+            "The byte budget counts disk bytes and all inspected ZIP/ASAR members, including deduplicated ASAR aliases. No members are extracted or executed.",
             "Release roots and ancestors must stay under trusted build control. Verify later-used bytes with a signed manifest.",
         ],
     }

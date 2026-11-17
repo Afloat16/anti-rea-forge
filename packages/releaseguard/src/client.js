@@ -26,6 +26,11 @@ function path(value, label) {
   return resolve(text(value, label));
 }
 
+function assetKeyArguments(value = []) {
+  if (!Array.isArray(value) || value.length > 16) input("assetKeyFiles must contain at most 16 paths.");
+  return [...value].map((item) => "--asset-key-file=" + path(item, "asset key path"));
+}
+
 function integer(value, minimum, maximum, label) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     input(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -113,8 +118,9 @@ export function createClient(options = {}, runner = runCommand) {
 
   return Object.freeze({
     async checkProject(options, controls) {
-      object(options, ["config"], "checkProject options");
-      return call("check", ["--config=" + path(options.config, "config")], {}, controls);
+      object(options, ["config", "assetKeyFiles"], "checkProject options");
+      return call("check", ["--config=" + path(options.config, "config"),
+        ...assetKeyArguments(options.assetKeyFiles)], {}, controls);
     },
 
     checkAnalysis,
@@ -137,10 +143,11 @@ export function createClient(options = {}, runner = runCommand) {
     },
 
     async scanRelease(options, controls) {
-      object(options, ["root", "policy"], "scanRelease options");
+      object(options, ["root", "policy", "assetKeyFiles"], "scanRelease options");
       return call("scan-release", [
         `--root=${path(options.root, "root")}`,
         `--policy=${path(options.policy, "policy")}`,
+        ...assetKeyArguments(options.assetKeyFiles),
       ], {}, controls);
     },
 

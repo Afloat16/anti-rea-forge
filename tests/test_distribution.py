@@ -352,7 +352,7 @@ class PortableReleaseTests(unittest.TestCase):
 
     def test_detected_unsupported_archives_are_findings_even_when_renamed(self):
         self.put("asset.dat", b"\x1f\x8b" + b"opaque")
-        self.put("electron.asar", b"opaque")
+        self.put("backup.tar", b"opaque")
         report = self.scan()
         self.assertFalse(report["ok"])
         self.assertEqual({f["code"] for f in report["findings"]}, {"unsupported_archive"})

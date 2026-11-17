@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — release hardening, 2026-11-17
+
+- Inspect canonical packed Electron ASAR by content, including renamed and mixed ZIP/ASAR nesting, under shared byte, entry and depth budgets. Validate paths, complete range coverage and optional SHA-256 integrity; reject links, unpacked sidecars, unknown layouts and ambiguous members without extracting or executing them.
+- Recognize bounded v3 JSON source maps independently of suffix, Unicode-escaped keys and equivalent numeric version spellings. Oversized or ambiguous JSON candidates produce an explicit incomplete-inspection finding.
+- Check debug metadata and static symbols in every recognized ELF/PE payload, including inspected archive members. Add reusable stream audit APIs and the default-on `check_native_metadata` policy; unverifiable recognized native metadata blocks publication.
+- Add optional configured `asset_key_files`, repeatable `check`/`prepare --asset-key-file` arguments, and JavaScript/TypeScript `assetKeyFiles`. Configured keys cannot be removed by an empty per-call list; leaking releases are rejected before signing. Persist the scan checks in the prepared release report.
+- Reject unknown LLVM globals, aliases and emission-capable metadata in sealed native-code builds. Validate retention globals instead of relying on linkage or a particular constant spelling to identify unsealed storage.
+- Add real GNU binutils/native-asset controls and official Electron ASAR package controls, along with regressions and a dated REA tool/format coverage matrix. Retain the boundary that shipped code and authorized runtime plaintext remain available to an analyst.
+
 ## 0.10.0 — 2026-11-09
 
 - Add `native-asset-export` and a C++17/OpenSSL reader for the existing authenticated sealed-data format. The build consumes a public envelope, with an independent 256-bit key supplied at use time.

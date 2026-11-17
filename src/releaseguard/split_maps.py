@@ -33,7 +33,8 @@ _DIGITS = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmno
 # literal key without JSON quotes: a JS module can embed the original source in
 # an object using a bare or single-quoted key. This intentionally flags benign
 # uses of the same token; it is not a JavaScript parser or decoder for computed keys.
-_POLICY = {"version": 1, "scan_zip_archives": False, "forbid_literals": ["sourcesContent"],
+_POLICY = {"version": 1, "scan_zip_archives": False, "scan_asar_archives": False,
+           "forbid_literals": ["sourcesContent"],
            "forbid_extensions": [".map", ".pdb", ".ilk", ".br", ".gzip", ".zstd"]}
 
 
