@@ -19,11 +19,11 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - pr: '17581'
-            sha: 'b6678792ba0cbbbfcc447fa8ccda04162750c698'
-            package: 'sdk-typescript'
-            tests: 'test/unit/Query.test.ts'
-            files: 'packages/sdk-typescript/test/unit/Query.test.ts'
+          - pr: '17572'
+            sha: '3a1b17af176a5d4b89f2a11e4b1c9ae92d8d8abc'
+            package: 'cli'
+            tests: 'src/utils/cleanup.test.ts src/services/mod-session.test.ts src/services/interactive-mod-session.test.ts'
+            files: 'packages/cli/src/services/mod-session.ts packages/cli/src/services/interactive-mod-session.ts packages/cli/src/utils/cleanup.test.ts'
     env:
       CI: 'true'
       QWEN_SKIP_PREPARE: '1'
@@ -46,6 +46,10 @@ jobs:
           package-manager-cache: false
       - name: Install pinned dependencies
         run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: SDK focused tests
+        if: matrix.package == 'sdk-typescript'
+        working-directory: packages/sdk-typescript
+        run: corepack pnpm exec vitest run ${{ matrix.tests }}
       - name: Build normal workspace prerequisites
         run: |
           if [ "${{ matrix.package }}" = "cli" ]; then
@@ -54,10 +58,6 @@ jobs:
             npm run build --workspace=packages/core
             npm run build --workspace=packages/acp-bridge
           fi
-      - name: SDK focused tests
-        if: matrix.package == 'sdk-typescript'
-        working-directory: packages/sdk-typescript
-        run: corepack pnpm exec vitest run ${{ matrix.tests }}
       - name: CLI focused tests with normal prerequisite guard
         if: matrix.package == 'cli'
         working-directory: packages/cli
@@ -135,6 +135,16 @@ jobs:
                 source,
                 '    while (draining && cleanupFunctions.length > 0) {\n      // Remove the current entry before awaiting it so unregistering a\n      // cleanup cannot shift the next pending entry past the drain.\n      const { fn } = cleanupFunctions.shift()!;',
                 '    for (const { fn } of cleanupFunctions) {\n      if (!draining) break;',
+              ),
+            }, {
+              label: 'timed-out array iterator consumes the next pass',
+              file: 'src/utils/cleanup.ts',
+              tests: ['src/utils/cleanup.test.ts', '-t', 'does not drain registrations from a later pass after the overall timeout'],
+              failed: 1,
+              mutate: (source) => replaceOnce(
+                source,
+                '    while (draining && cleanupFunctions.length > 0) {\n      // Remove the current entry before awaiting it so unregistering a\n      // cleanup cannot shift the next pending entry past the drain.\n      const { fn } = cleanupFunctions.shift()!;',
+                '    for (const { fn } of cleanupFunctions) {',
               ),
             }],
           };
