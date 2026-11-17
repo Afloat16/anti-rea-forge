@@ -8,7 +8,7 @@
 
 先前测试依次使用普通编译、控制流平坦化、基本块拆分与运算替换、指令虚拟化。独立恢复者分别从普通、混合变换、虚拟化程序及真实 Ghidra 输出重写出普通 C 实现。三份实现都通过 1,081,924 次隐藏参考计算。虚拟化样本的该次恢复耗时 310 秒，分析者使用原始 ELF 反汇编补充了不完整的反编译结果。[原始记录](results/native-code-recovery.json) · [公开后的源程序与恢复实现](../benchmarks/function_recovery/README.md)
 
-这些结果推动了函数指令加密。发行文件中的 VM 存储初始化为零，完整认证成功后才填充指令并启用 wrapper。检查发现的具体问题都保留了回归。
+这些结果推动了函数指令加密。当前发行文件中的 VM 存储指针初始化为 `null`，ready 为零。loader 将载荷直接解密到独立拥有的受保护映射，完成认证与摘要核对、切换只读权限后才绑定指针并启用 wrapper。检查发现的具体问题都保留了回归。
 
 | 发现 | 处理 |
 | --- | --- |
@@ -21,6 +21,8 @@
 | 链接选项与依赖库元数据保留明文 | 明确拒绝这些附加链接依赖 |
 | 可逆描述表检查泄露一个 8 字节校验字 | 每条描述记录使用独立非零随机校验字，其比较值一并密封 |
 | 清理后两侧零值可能通过相等检查 | 执行时同时要求非零，回归测试强制修改 ready 后的零状态 |
+| 明文 VM 数组在授权期间持续可写 | 使用带 guard page 的匿名映射，要求锁页和 dump exclusion 成功，认证后切换只读 |
+| 清理依赖静态数组逐项擦除 | 先撤销全部存储指针，再清理并解除映射 |
 
 最初密封样本的独立评估实际恢复了该 8 字节，评估者保留原条件分支，通过成功路径 marker 验证结果。隐藏载荷复核确认了恢复值。修复前的失败记录与修复后测试分别保留。[独立检查与修复记录](results/native-code-hardening.json)
 
@@ -51,22 +53,36 @@ python -m releaseguard native-obfuscate \
 
 输出目录必须是新目录。`--function` 可重复，指定必须通过覆盖检查的函数。插件处理整个输入单元，因此每个保留的原始函数都需要有效 VM 覆盖。密封模式拒绝外部 native 调用、指针与内存访问、浮点、向量以及未经支持的 ABI。VM profile 使用固定受控配置，`--seed` 仅用于两种控制流变换 profile。
 
-输出包含以下文件。
+输出包含 `protected.o`、`report.json` 和五个生成的 C++ 接入文件。
 
 | 文件 | 用途 |
 | --- | --- |
-| `protected.o` | 函数 wrapper、VM runtime、零初始化存储 |
+| `protected.o` | 函数 wrapper、VM runtime、初始为空的存储指针 |
 | `releaseguard_native_code.hpp` | 初始化与清理接口 |
 | `releaseguard_native_code.cpp` | 认证、完整载荷核对、装载与清理 |
 | `releaseguard_native_code_asset.hpp` | 密文及公开认证参数 |
 | `releaseguard_sealed_asset.hpp` | 复用的 HKDF/AES-GCM 实现 |
+| `releaseguard_secure_buffer.hpp` | guard page、锁页、dump exclusion、页权限和清理 |
 | `report.json` | 工具版本、哈希、覆盖记录、模块 namespace 和存储布局 |
+
+报告中的 `code_seal.format` 为 `open-release-guard-sealed-native-code/v2`。每项存储通过 `offset_bytes` 指定在认证载荷中的位置，字节码按字节对齐，描述表与预期校验表按八字节对齐。对齐填充也纳入密文和完整载荷摘要。按该格式一起重新生成并链接对象、loader 与头文件。
 
 从 `report.json` 的 `code_seal.cpp_namespace` 读取实际 namespace，将它用于 `initialize_native_code(external_key)` 与 `clear_native_code()`。应用以 C++17 编译，链接 `protected.o`、生成的 `.cpp` 和 `-lcrypto`。英文指南给出了对应 C++ 调用片段。[C++ 调用方式](native-code.md#execute-encrypted-function-instructions)
 
-初始化顺序为清理旧状态、AEAD 认证、完整长度与 SHA-256 核对、复制全部存储、最后设置 ready。初始化失败会清理旧指令。锁定 wrapper 返回零，应用需要检查初始化的布尔结果，因为正常函数也可能返回零。
+锁定 wrapper 返回零，应用需要检查初始化的布尔结果，因为正常函数也可能返回零。初始化失败会撤销旧指令的访问状态。
 
-在启动工作线程前独占初始化，在线程全部退出后清理。各模块拥有独立 namespace、ready 与存储。调用方管理外部密钥的生命周期，发布前使用 `scan-release --asset-key-file` 检查最终发行目录。[发布检查](native-assets.md)
+在启动工作线程前独占初始化，在线程全部退出后清理。各模块拥有独立 namespace、ready 与映射。调用方管理外部密钥的生命周期，发布前使用 `scan-release --asset-key-file` 检查最终发行目录。[发布检查](native-assets.md)
+
+## 受保护映射的生命周期
+
+1. 初始化先清除 ready、撤销旧存储指针并释放旧映射，再分配两侧带不可访问 guard page 的匿名映射。载荷分配按页向上取整，要求 `mlock` 与 `MADV_DONTDUMP` 成功。Linux loader 在解密前还要求 `MADV_WIPEONFORK` 成功，任何必需保护失败都会使初始化失败。
+2. `open_native_asset_into` 直接解密到 `secure_buffer`。认证、完整长度与 SHA-256 检查均使用这块映射，省去完整明文 `std::vector` 中转。
+3. 所有检查通过后，将映射切换为只读。随后按各项 `offset_bytes` 绑定 VM 存储指针，最后设置 ready。映射整个生命周期使用数据页权限。
+4. `clear_native_code` 先清除 ready 并将全部存储指针设为 `null`，随后恢复写权限、擦除按页取整的载荷、解锁并解除映射。恢复写权限失败时仍会解锁和解除映射，该失败路径无法保证用户态显式擦除。
+
+`fork` 后，子进程通过 `MADV_WIPEONFORK` 得到零填充 VM 存储。非零描述表校验要求使子进程计算保持锁定，子进程执行前需要独立重新初始化。父进程继续使用自己的已认证映射。每个进程中的初始化与清理都要求调用方独占所有权。
+
+授权期间，映射中的明文 VM 指令与描述表仍可读。锁页、dump exclusion、guard page 与只读权限约束该分配的操作系统行为，具有进程内存读取权限的分析者仍能取得授权内容。dump exclusion 作用于遵循该标记的操作系统转储机制。
 
 ## 复现真实 Ghidra 对照
 
@@ -89,7 +105,7 @@ python benchmarks/sealed_code_controls.py analyze code-corpus \
 
 三种程序为完整明文 VM、独立密钥的加密 VM、故意把实际密钥放回程序的加密 VM。每个程序都先读取 32 字节密钥，再读取小端 32 位输入序列。参考检查包含 82,014 次计算，并对分析器的每个已分配文件字节核对来源。
 
-修复后样本的实际结果如下。[完整记录](results/native-code-sealed-controls.json)
+下表对应 2026-11-09 完成 Ghidra 12.2 分析的历史 v1 样本。其加密 ELF 的 SHA-256 为 `d4586625d21eb6e870cd7a15a121ac60c0885289019ef1a2bcd03b809c8e2a90`。v2 受保护映射的验证进度见下一节。[历史样本完整记录](results/native-code-sealed-controls.json)
 
 | 对照 | 不同连续 32 字节候选 | 成功解密 | 正确密钥下的函数输出 |
 | --- | --- | --- | --- |
@@ -101,9 +117,26 @@ python benchmarks/sealed_code_controls.py analyze code-corpus \
 
 工具完整性检查保存函数、helper、初始化数据、原始 ELF、日志、函数警告和哈希。`decompileCompleted()` 成功时仍可能有未恢复的跳转表或截断控制流，报告会保留这些诊断。独立恢复需要重新编译实现，并通过隐藏输入参考评分。[Ghidra 采集契约](../benchmarks/ghidra_function/README.md)
 
-现代 IDA 9.x 的导出适配器已实现，并通过引擎独立验证测试。当前环境缺少可执行的 IDA 9.x 与对应 Hex-Rays，因此实机运行状态为待验证。历史 IDA 5.0 的数据加密实验记录了另一组 i386 样本。[IDA 9.x 接入说明](../benchmarks/ida_function/README.md)
+现代 IDA 9.x 的导出适配器已实现，实际 IDA/Hex-Rays 引擎运行状态为待验证。历史 IDA 5.0 的数据加密实验记录了另一组 i386 样本。[IDA 9.x 接入说明](../benchmarks/ida_function/README.md)
 
-修复后的第二轮独立恢复子任务被执行层自动审查阻止，返回原因为可能涉及网络安全风险，该项独立复验状态为未完成。修复后的自动化对照、私有载荷核对和真实编译回归均有单独记录。[验证范围与执行状态](results/native-code-hardening.json)
+历史 v1 修复样本的第二轮独立恢复子任务被执行层自动审查阻止，返回原因为可能涉及网络安全风险，该项独立复验状态为未完成。修复后的自动化对照、私有载荷核对和真实编译回归均有单独记录。[验证范围与执行状态](results/native-code-hardening.json)
+
+## 受保护映射的验证进度
+
+机器可读报告保存源码哈希、本地实际工具链和剩余引擎验证状态。[受保护映射结果](results/native-code-memory.json)
+
+v2 映射实现的首批本地验证已经完成以下检查。
+
+| 检查 | 已完成结果 |
+| --- | --- |
+| LLVM 19.1.7 C API 生成对象后的 loader 测试 | 12 项编译测试通过，真实解析和验证 8 个 IR 模块，生成 8 个 PIC 对象 |
+| `secure_buffer` 回归 | 16 项通过 |
+| 原生资产读取与直接缓冲区解密回归 | 21 项通过 |
+| IDA 报告适配器与验证器 | 10 项引擎独立测试通过 |
+
+LLVM 19 实验仅替换编译测试类的对象生成方法，后续 C++ 编译、链接、函数装载和断言均实际执行。覆盖对齐、只读、锁页与 dump exclusion 映射、进程写入故障、指针撤销、清理、整数 ABI、fork 子进程清零、两种全局对象链接顺序，以及十种加载器系统调用故障场景。IDA 验证器增加了入口检查，完整函数记录的入口必须属于已核验的字节范围，并且是已核验指令的起始地址。[Loader 回归](../tests/test_native_code_seal.py) · [内存回归](../tests/test_secure_buffer.py) · [IDA 验证器回归](../benchmarks/ida_function/test_validation.py)
+
+LLVM 18/Amice 集成运行与 v2 真实 Ghidra 对照仍待完成。现代 IDA/Hex-Rays 实机验证也处于待验证状态。上文保留了历史恢复实验各自的样本身份和结果。
 
 ## 性能与开源实现
 

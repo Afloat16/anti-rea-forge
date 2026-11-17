@@ -45,7 +45,8 @@ PATCH = bytes.fromhex("b8 01 00 00 00 c3")
 HOOK_MARKER = b"RG_GCM_FINAL_FORCED\n"
 HERE = Path(__file__).resolve().parent
 CODE_FILES = ("releaseguard_native_code.hpp", "releaseguard_native_code.cpp",
-              "releaseguard_native_code_asset.hpp", "releaseguard_sealed_asset.hpp")
+              "releaseguard_native_code_asset.hpp", "releaseguard_sealed_asset.hpp",
+              "releaseguard_secure_buffer.hpp")
 LINK_FLAGS = ["-std=c++17", "-O2", "-g0", "-Wall", "-Wextra", "-Werror",
               "-fno-pie", "-no-pie", "-Wl,--export-dynamic-symbol=rg_compute",
               "-Wl,--export-dynamic-symbol=rg_code_gate"]

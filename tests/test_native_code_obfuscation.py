@@ -235,7 +235,7 @@ extern "C" void test_clear() { selected_code::clear_native_code(); }
         for file in Path(report["object"]).parent.iterdir():
             self.assertNotIn(KEY, file.read_bytes())
             self.assertNotIn(KEY.hex().encode(), file.read_bytes())
-        self.assertEqual(len(report["sealed_files"]), 4)
+        self.assertEqual(len(report["sealed_files"]), 5)
         self.assertEqual(report["recovery_evaluation"], "not_performed")
 
     def test_used_skip_and_pointer_dependency_fail_before_publication(self):

@@ -15,7 +15,7 @@ The input translation unit determines the transformation scope. The plugin proce
 
 ## Execute encrypted function instructions
 
-The `sealed-virtualize` profile converts self-contained scalar-integer functions into a VM representation and encrypts the bytecode, descriptor records and randomized descriptor guards. The release contains zero-initialized VM storage. A separately delivered random 32-byte key opens the complete authenticated payload, verifies its length and SHA-256, initializes every storage region, and finally enables the wrappers. Each locked wrapper returns zero. The application must check the initialization result because zero can also be a valid function result.
+The `sealed-virtualize` profile converts self-contained scalar-integer functions into a VM representation and encrypts the bytecode, descriptor records and randomized descriptor guards. The release contains null VM storage pointers and a cleared ready flag. A separately delivered random 32-byte key opens the payload directly in an owned `secure_buffer` mapping. The loader verifies authentication, length and SHA-256, makes the mapping read-only, binds its storage pointers and finally enables the wrappers. Each locked wrapper returns zero. The application must check the initialization result because zero can also be a valid function result.
 
 The protection target is the release before external key delivery. An authorized process holds plaintext VM instructions and descriptors. A reader of that process memory can obtain them. Public ABI, interpreter operations, program sizes and format metadata remain observable. The current implementation supports independent scalar-integer computation units with widths 1, 8, 16, 32 and 64. Original globals, module-level assembly, external native calls, pointers, vectors, floating-point operations and unsupported ABI attributes cause a build failure.
 
@@ -41,7 +41,19 @@ python -m releaseguard native-obfuscate \
   --product myapp --release v1 --module-id compute
 ```
 
-The new directory contains `protected.o`, `report.json` and four generated headers/sources. Read `code_seal.cpp_namespace` from the report and use that namespace for initialization and clearing. Link the object and `releaseguard_native_code.cpp` with the application's C++17 code and `-lcrypto`.
+The new directory contains `protected.o`, `report.json` and five generated C++ integration files.
+
+| Generated file | Purpose |
+| --- | --- |
+| `releaseguard_native_code.hpp` | Initialization and clearing interface |
+| `releaseguard_native_code.cpp` | Authentication, owned mapping and storage-pointer lifecycle |
+| `releaseguard_native_code_asset.hpp` | Ciphertext and public authentication parameters |
+| `releaseguard_sealed_asset.hpp` | HKDF/AES-GCM reader with direct-buffer decryption |
+| `releaseguard_secure_buffer.hpp` | Guarded mapping, page protections and cleanup |
+
+The report's `code_seal.format` is `open-release-guard-sealed-native-code/v2`. Each storage entry has an `offset_bytes` within the authenticated payload. Bytecode has byte alignment, while descriptor and expected-guard tables have eight-byte alignment. Padding is included in the encrypted payload and its complete digest. Regenerate and link the object, loader and headers together for this format.
+
+Read `code_seal.cpp_namespace` from the report and use that namespace for initialization and clearing. Link the object and `releaseguard_native_code.cpp` with the application's C++17 code and `-lcrypto`.
 
 ```cpp
 #include "releaseguard_native_code.hpp"
@@ -69,7 +81,18 @@ c++ -std=c++17 -O2 -Isealed-function \
   -lcrypto -o application
 ```
 
-Initialize with exclusive ownership before starting workers. Clear after all workers have joined. A failed reinitialization clears the previous VM storage. Separate generated modules use separate namespaces, ready flags and storage. The caller owns the external key's lifetime and cleanup. Run the existing `scan-release --asset-key-file` check against the final release staging directory. [Release-key check](native-assets.md)
+Initialize with exclusive ownership before starting workers. Clear after all workers have joined. A failed reinitialization revokes the previous VM storage. Separate generated modules use separate namespaces, ready flags and owned mappings. The caller owns the external key's lifetime and cleanup. Run the existing `scan-release --asset-key-file` check against the final release staging directory. [Release-key check](native-assets.md)
+
+### Protected mapping lifecycle
+
+1. Initialization clears the previous ready flag and storage bindings, then releases the old mapping. It allocates a page-rounded anonymous payload between inaccessible guard pages and requires successful `mlock` and `MADV_DONTDUMP` operations. The Linux loader also requires `MADV_WIPEONFORK` before decryption. Failure to acquire a required protection leaves initialization unsuccessful.
+2. `open_native_asset_into` decrypts directly into this mapping. The generated loader uses that allocation throughout authentication, length checking and SHA-256 verification, avoiding a complete plaintext `std::vector` intermediate.
+3. After all checks pass, the loader requires a successful change to read-only access. It then binds each VM storage pointer at its aligned `offset_bytes` and sets ready last. The mapping requests data-page permissions throughout its lifetime.
+4. `clear_native_code` clears ready and revokes every storage pointer before releasing the mapping. Cleanup restores write permission, wipes the page-rounded payload, unlocks it and unmaps the reservation. If restoring write permission fails, cleanup still unlocks and unmaps the allocation. An explicit userspace wipe cannot be guaranteed on that failure path.
+
+After `fork`, the child inherits zero-filled VM storage through `MADV_WIPEONFORK`. The required nonzero descriptor guards keep child computations locked until the child initializes its own mapping. The parent continues using its authenticated mapping. Initialization and clearing require exclusive ownership in each process.
+
+During an authorized session the mapping contains readable plaintext VM instructions and descriptors. Locking, dump exclusion, guard pages and read-only access govern the allocation's OS behavior. A process-memory reader with sufficient access can still obtain the authorized contents. Dump exclusion applies to cooperating OS dump mechanisms.
 
 VM profiles reject `--seed`. The sealed profile creates fresh authenticated encryption parameters and randomized descriptor guards. Reports record build identities and coverage, while application-specific functional and recovery evaluations retain their own result fields.
 
@@ -163,13 +186,13 @@ Recovery success requires a separately compiled implementation that produces the
 
 The pinned upstream implementation describes control-flow flattening and arithmetic substitution. Their actual resistance depends on the resulting program and the reconstruction procedure. The upstream Obfuscator-LLVM FAQ also discusses limits against skilled reverse engineering. [eshard plugin](https://github.com/eshard/obfuscator-llvm) · [Obfuscator-LLVM FAQ](https://github.com/obfuscator-llvm/obfuscator/wiki/FAQ)
 
-## Sealed-code observations and hardening
+## Historical sealed-code observations and hardening
 
 The first encrypted-code sample underwent an independent reconstruction attempt using only its ELF, genuine Ghidra exports, generated public loader files and the open protection implementation. The worker followed an instruction-enforced input allowlist on a shared filesystem. It tried 247,070 distinct candidate keys as both master keys and package keys, for 494,140 authentication attempts, with zero successful decryptions. It recovered one eight-byte descriptor guard from a public reversible check. The root evaluator confirmed that value against the private decrypted payload. [Initial automated controls](results/native-code-sealed-initial.json) · [Initial independent assessment](results/native-code-sealed-review-initial.json)
 
-The sealer now replaces each descriptor guard with an independent nonzero random word and seals its expected comparison value in another storage array. The runtime requires a matching nonzero value. The old recovered word differs from the new private payload. Cleared-state tests force ready to one and verify that the function still returns zero. Actual compiler regressions also cover retained globals, module assembly, dropped prologue instructions, linker metadata, arbitrary source filenames and compiler-identification strings. [Hardening record](results/native-code-hardening.json)
+The v1 repair replaced each descriptor guard with an independent nonzero random word and sealed its expected comparison value in another storage array. The runtime requires a matching nonzero value. The recorded private-payload check confirmed that the recovered word differed from the repaired v1 payload. Cleared-state tests forced ready to one and verified that the function still returned zero. Actual compiler regressions also covered retained globals, module assembly, dropped prologue instructions, linker metadata, arbitrary source filenames and compiler-identification strings. [Historical hardening record](results/native-code-hardening.json)
 
-The repaired source instance was rebuilt and analyzed again by Ghidra 12.2. Every case's allocated file bytes were validated against the original ELF.
+The repaired v1 source instance was rebuilt and analyzed again by Ghidra 12.2 on 2026-11-09. Every case's allocated file bytes were validated against the original ELF. The encrypted ELF has SHA-256 `d4586625d21eb6e870cd7a15a121ac60c0885289019ef1a2bcd03b809c8e2a90`. The following results describe that historical sample. The v2 protected-mapping implementation has its own validation status below.
 
 | Case | Distinct contiguous 32-byte candidates | Successful key decryptions | Functional result with the correct key |
 | --- | --- | --- | --- |
@@ -179,6 +202,23 @@ The repaired source instance was rebuilt and analyzed again by Ghidra 12.2. Ever
 
 Replacing the externally visible gate with a successful return produced locked zero outputs for the encrypted case. Every one of its 82,014 values differed from the private function reference. The forced GCM-final-success control still rejected a wrong key, while the correct key produced all reference outputs. Recompiled ciphertext-tamper and wrong-context controls both rejected initialization. These automated observations cover the exact procedures in `benchmarks/sealed_code_controls.py`. [Repaired-sample results](results/native-code-sealed-controls.json)
 
-A second independent reconstruction subtask was blocked by the execution layer's automatic safety review for possible cybersecurity risk. Its post-fix reconstruction status is incomplete. The modern IDA 9.x adapter passed eight engine-independent tests, with actual IDA/Hex-Rays execution pending because this workspace has no runnable compatible engine. The prior IDA 5.0 data experiment retains its separate sample and scope. [Modern IDA adapter](../benchmarks/ida_function/README.md)
+A second independent reconstruction subtask for the repaired v1 sample was blocked by the execution layer's automatic safety review for possible cybersecurity risk. Its post-fix reconstruction status is incomplete. Actual modern IDA 9.x/Hex-Rays execution remains pending. The prior IDA 5.0 data experiment retains its separate i386 sample and scope. [Modern IDA adapter](../benchmarks/ida_function/README.md)
 
 Additional real LLVM execution checked 24 signed/unsigned multiplication, division, remainder, shift, comparison and switch functions at 32 and 64 bits. All 26,264 defined input pairs matched the ordinary LLVM baseline. The five-width regression matrix separately covers i1, i8, i16, i32 and i64. [Arithmetic observations](results/native-code-integer-semantics.json)
+
+## Protected-mapping validation status
+
+Machine-readable results record the source hashes, exact local toolchain and remaining engine coverage. [Protected-mapping results](results/native-code-memory.json)
+
+The initial local validation batch for the v2 mapping implementation completed the following checks.
+
+| Check | Completed result |
+| --- | --- |
+| Generated-loader tests with LLVM 19.1.7 C API | 12 compiled tests passed, with 8 IR modules parsed, verified and emitted as PIC objects |
+| `secure_buffer` regressions | 16 tests passed |
+| Native asset reader and direct-buffer decryption regressions | 21 tests passed |
+| IDA report adapter and validator | 10 engine-independent tests passed |
+
+The LLVM 19 experiment replaced only the compiled test class's object-emission method. It retained the real C++ compiler, linker, loaded functions and existing assertions. Its coverage includes aligned read-only, locked and dump-excluded storage, process-write faults, revoked bindings, cleanup, integer ABIs, forked-child zeroing, both global-object link orders and ten loader OS-failure scenarios. The IDA validator now requires every completed function's entry to belong to its verified byte ranges and to match a verified instruction start. [Loader regressions](../tests/test_native_code_seal.py) · [Memory regressions](../tests/test_secure_buffer.py) · [IDA validator regressions](../benchmarks/ida_function/test_validation.py)
+
+The LLVM 18/Amice integration run and genuine Ghidra v2 observations are pending completion. Modern IDA/Hex-Rays engine execution also remains pending. The historical recovery records above retain their original sample identities and outcomes.

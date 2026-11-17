@@ -25,27 +25,43 @@ struct native_asset_view {
     std::size_t aad_size;
 };
 
-inline bool open_native_asset(const native_asset_key& master, native_asset_view asset,
-                              std::vector<unsigned char>& output) {
-    // A failed call must not leave plaintext from an earlier successful call.
-    if (!output.empty()) OPENSSL_cleanse(output.data(), output.size());
-    output.clear();
-    static constexpr unsigned char info_prefix[] =
-        "OpenReleaseGuard\0sealed-asset\0v1\0HKDF-SHA256/AES-256-GCM";
-    constexpr std::size_t max_plaintext = 1024 * 1024;
-    constexpr std::size_t tag_size = 16;
-    if (!asset.ciphertext || !asset.aad || asset.ciphertext_size < tag_size ||
-        asset.ciphertext_size > max_plaintext + tag_size || asset.aad_size == 0 ||
-        asset.aad_size > 1024 - sizeof(info_prefix)) return false;
+namespace native_asset_detail {
+
+inline constexpr unsigned char info_prefix[] =
+    "OpenReleaseGuard\0sealed-asset\0v1\0HKDF-SHA256/AES-256-GCM";
+inline constexpr std::size_t max_plaintext = 1024 * 1024;
+inline constexpr std::size_t tag_size = 16;
+
+inline bool valid_view(native_asset_view asset) noexcept {
+    return asset.ciphertext && asset.aad && asset.ciphertext_size >= tag_size &&
+           asset.ciphertext_size <= max_plaintext + tag_size && asset.aad_size > 0 &&
+           asset.aad_size <= 1024 - sizeof(info_prefix);
+}
+
+}  // namespace native_asset_detail
+
+// output must describe capacity writable bytes, with exclusive access until
+// this call returns. It must not overlap the master key, ciphertext or AAD.
+// output_size must refer to a separate object outside that buffer.
+// Even an empty asset requires a nonnull output and at least one byte of capacity.
+// The whole supplied buffer is erased on entry and again after authentication
+// failure. A null output or zero capacity is rejected without accessing memory.
+inline bool open_native_asset_into(const native_asset_key& master, native_asset_view asset,
+                                   unsigned char* output, std::size_t capacity,
+                                   std::size_t& output_size) {
+    output_size = 0;
+    if (!output || capacity == 0) return false;
+    OPENSSL_cleanse(output, capacity);
+    if (!native_asset_detail::valid_view(asset)) return false;
+    const std::size_t payload_size = asset.ciphertext_size - native_asset_detail::tag_size;
+    if (payload_size > capacity) return false;
 
     std::array<unsigned char, 1024> info{};
-    std::memcpy(info.data(), info_prefix, sizeof(info_prefix));
-    std::memcpy(info.data() + sizeof(info_prefix), asset.aad, asset.aad_size);
-    const std::size_t info_size = sizeof(info_prefix) + asset.aad_size;
-    const std::size_t payload_size = asset.ciphertext_size - tag_size;
-    // All allocations precede derivation/decryption. swap below cannot throw.
-    std::vector<unsigned char> plaintext(payload_size + EVP_MAX_BLOCK_LENGTH);
+    std::memcpy(info.data(), native_asset_detail::info_prefix, sizeof(native_asset_detail::info_prefix));
+    std::memcpy(info.data() + sizeof(native_asset_detail::info_prefix), asset.aad, asset.aad_size);
+    const std::size_t info_size = sizeof(native_asset_detail::info_prefix) + asset.aad_size;
     std::array<unsigned char, 32> package_key{};
+    std::array<unsigned char, EVP_MAX_BLOCK_LENGTH> final_block{};
     std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> derive(
         EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr), EVP_PKEY_CTX_free);
     std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> cipher(
@@ -66,19 +82,37 @@ inline bool open_native_asset(const native_asset_key& master, native_asset_view 
         EVP_CIPHER_CTX_ctrl(cipher.get(), EVP_CTRL_GCM_SET_IVLEN, asset.nonce.size(), nullptr) == 1 &&
         EVP_DecryptInit_ex(cipher.get(), nullptr, nullptr, package_key.data(), asset.nonce.data()) == 1 &&
         EVP_DecryptUpdate(cipher.get(), nullptr, &written, asset.aad, static_cast<int>(asset.aad_size)) == 1 &&
-        EVP_DecryptUpdate(cipher.get(), plaintext.data(), &written, asset.ciphertext,
+        // AES-GCM has a one-byte EVP block size, so Update needs payload_size bytes.
+        EVP_DecryptUpdate(cipher.get(), output, &written, asset.ciphertext,
                           static_cast<int>(payload_size)) == 1 &&
         written >= 0 && static_cast<std::size_t>(written) == payload_size &&
-        EVP_CIPHER_CTX_ctrl(cipher.get(), EVP_CTRL_GCM_SET_TAG, tag_size,
+        EVP_CIPHER_CTX_ctrl(cipher.get(), EVP_CTRL_GCM_SET_TAG, native_asset_detail::tag_size,
                             const_cast<unsigned char*>(asset.ciphertext + payload_size)) == 1 &&
-        EVP_DecryptFinal_ex(cipher.get(), plaintext.data() + written, &final_bytes) == 1 &&
+        EVP_DecryptFinal_ex(cipher.get(), final_block.data(), &final_bytes) == 1 &&
         final_bytes == 0;
     OPENSSL_cleanse(package_key.data(), package_key.size());
+    OPENSSL_cleanse(final_block.data(), final_block.size());
     if (!authenticated) {
-        OPENSSL_cleanse(plaintext.data(), plaintext.size());
+        OPENSSL_cleanse(output, capacity);
         return false;
     }
-    plaintext.resize(payload_size);
+    output_size = payload_size;
+    return true;
+}
+
+inline bool open_native_asset(const native_asset_key& master, native_asset_view asset,
+                              std::vector<unsigned char>& output) {
+    // A failed call must not leave plaintext from an earlier successful call.
+    if (!output.empty()) OPENSSL_cleanse(output.data(), output.size());
+    output.clear();
+    if (!native_asset_detail::valid_view(asset)) return false;
+    const std::size_t payload_size = asset.ciphertext_size - native_asset_detail::tag_size;
+    // This compatibility API owns an ordinary allocation. Protected-memory
+    // callers can instead pass their existing allocation to the bounded API.
+    std::vector<unsigned char> plaintext(payload_size == 0 ? 1 : payload_size);
+    std::size_t output_size = 0;
+    if (!open_native_asset_into(master, asset, plaintext.data(), plaintext.size(), output_size)) return false;
+    plaintext.resize(output_size);
     output.swap(plaintext);
     return true;
 }

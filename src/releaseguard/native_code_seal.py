@@ -8,6 +8,7 @@ Authenticated VM instructions are plaintext in the authorized process.
 from __future__ import annotations
 
 import hashlib
+from importlib import resources
 from pathlib import Path
 import re
 import secrets
@@ -26,7 +27,8 @@ _TOKENS = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|@(' + _NAME + r")")
 _INTEGER = r"i(?:1|8|16|32|64)"
 _POINTER_TABLE = re.compile(r"private constant \[([1-9][0-9]*) x ptr\] zeroinitializer(?:, align [0-9]+)?")
 _FILES = ("releaseguard_native_code.hpp", "releaseguard_native_code.cpp",
-          "releaseguard_native_code_asset.hpp", "releaseguard_sealed_asset.hpp")
+          "releaseguard_native_code_asset.hpp", "releaseguard_sealed_asset.hpp",
+          "releaseguard_secure_buffer.hpp")
 
 
 def _require(condition, message):
@@ -40,6 +42,14 @@ def _sha(data):
 
 def _references(text):
     return {match[1] for match in _TOKENS.finditer(text) if match[1] is not None}
+
+
+def _require_global_reads(function, message):
+    attributes = function["header"] + " " + function["attributes"]
+    _require(not re.search(r"\b(readnone|writeonly|argmemonly|inaccessiblememonly|"
+                           r"inaccessiblemem_or_argmemonly)\b", attributes)
+             and all(value in ("read", "readwrite")
+                     for value in re.findall(r"\bmemory\(([^)]+)\)", attributes)), message)
 
 
 def _storage(definition, kind):
@@ -68,7 +78,7 @@ def _storage(definition, kind):
     return count, b"".join(struct.pack("<Q", value & ((1 << 64) - 1)) for value in values)
 
 
-def _wrapper(function, name, runtime, ready, tag):
+def _wrapper(function, name, runtime, ready, tag, storage_symbols):
     header = function["header"]
     match = re.fullmatch(
         r"define (?:(?:dso_local|dso_preemptable|hidden|protected|internal|private|ccc|zeroext|signext|noundef) )*"
@@ -80,11 +90,11 @@ def _wrapper(function, name, runtime, ready, tag):
         _INTEGER + r"(?: (?:noundef|zeroext|signext|inreg))* " + _LOCAL, value) for value in arguments),
         f"Sealed VM supports only scalar integer parameters: {name}")
     attributes = header + " " + function["attributes"]
-    _require(not re.search(r"\b(readnone|writeonly|argmemonly|inaccessiblememonly|"
-                           r"inaccessiblemem_or_argmemonly|speculatable|noreturn|naked|returns_twice|convergent)\b",
+    _require(not re.search(r"\b(speculatable|noreturn|naked|returns_twice|convergent)\b",
                            attributes), f"Unsupported sealed wrapper attribute: {name}")
-    _require(all(value in ("read", "readwrite") for value in re.findall(r"\bmemory\(([^)]+)\)", attributes)),
-             f"Wrapper memory attributes exclude the ready global: {name}")
+    _require_global_reads(function, f"Wrapper memory attributes exclude the ready global: {name}")
+    _require(_references(function["body"]) == {runtime},
+             f"Sealed VM wrapper has unsupported global dependencies: {name}")
     lines = function["body"].splitlines()
     _require(bool(lines) and re.fullmatch(_NAME + r":", lines[0]) is not None,
              f"Sealed VM wrapper requires a named entry block: {name}")
@@ -101,12 +111,61 @@ def _wrapper(function, name, runtime, ready, tag):
              f"Wrapper does not call its verified VM runtime: {name}")
     stem = "rg.sealed." + tag
     _require(stem not in function["body"] and stem not in header, "Sealed wrapper local name collision")
-    guarded = (lines[0] + f"\n  %{stem}.ready = load i8, ptr @{ready}, align 1\n"
-               f"  %{stem}.allowed = icmp eq i8 %{stem}.ready, 1\n"
-               f"  br i1 %{stem}.allowed, label %{stem}.open, label %{stem}.locked\n"
+    checks = [f"  %{stem}.ready = load i8, ptr @{ready}, align 1",
+              f"  %{stem}.allowed = icmp eq i8 %{stem}.ready, 1"]
+    allowed = f"%{stem}.allowed"
+    for index, symbol in enumerate(storage_symbols):
+        pointer = f"%{stem}.pointer.{index}"
+        checks.extend((f"  {pointer} = load ptr, ptr @{symbol}, align 8",
+                       f"  {pointer}.present = icmp ne ptr {pointer}, null",
+                       f"  {pointer}.allowed = and i1 {allowed}, {pointer}.present"))
+        allowed = pointer + ".allowed"
+    guarded = (lines[0] + "\n" + "\n".join(checks) + "\n"
+               f"  br i1 {allowed}, label %{stem}.open, label %{stem}.locked\n"
                f"{stem}.open:\n" + "\n".join(lines[1:]) + "\n"
                f"{stem}.locked:\n  ret {match[1]} 0\n")
     return header + "\n" + guarded + "}", match[1]
+
+
+def _indirect_storage(ir, runtime_functions, storage, prefix):
+    """Load authenticated storage pointers at each consuming helper's entry."""
+    from .native_obfuscation import _functions
+
+    functions = _functions(ir)
+    symbols = {item["symbol"] for item in storage}
+    references = {name: _references(functions[name]["body"]) for name in runtime_functions}
+    affected = {name for name, values in references.items() if values & symbols}
+    while True:
+        parents = {name for name, values in references.items() if values & affected}
+        if parents <= affected:
+            break
+        affected.update(parents)
+    for name in affected:
+        _require_global_reads(functions[name], f"VM helper memory attributes exclude storage bindings: {name}")
+    for name in sorted(runtime_functions):
+        function = functions[name]
+        used = [(index, item["symbol"]) for index, item in enumerate(storage)
+                if item["symbol"] in references[name]]
+        if not used:
+            continue
+        lines = function["body"].splitlines()
+        _require(lines and re.fullmatch(_NAME + r":", lines[0]) is not None,
+                 "VM storage consumer requires a named entry block")
+        locals_by_symbol = {symbol: f"%{prefix}.storage.{index}" for index, symbol in used}
+        for line in lines[1:]:
+            if _references(line) & locals_by_symbol.keys():
+                _require(re.search(r"\b(?:getelementptr(?: inbounds)?|ptrtoint|inttoptr|bitcast|addrspacecast)\s*\(",
+                                   line) is None,
+                         "VM storage has an unsupported constant-expression reference")
+        body = _TOKENS.sub(lambda match: locals_by_symbol.get(match[1], match[0]),
+                           "\n".join(lines[1:]))
+        loads = [f"  {locals_by_symbol[symbol]} = load ptr, ptr @{symbol}, align 8" for _, symbol in used]
+        replacement = function["header"] + "\n" + lines[0] + "\n" + "\n".join(loads) + "\n" + body + "\n}"
+        pattern = r"^" + re.escape(function["header"]) + r"\n.*?^}"
+        ir, changed = re.subn(pattern, lambda match: replacement, ir, count=1,
+                             flags=re.MULTILINE | re.DOTALL)
+        _require(changed == 1, "Could not redirect the exact VM storage consumer")
+    return ir
 
 
 def _guard_shape(function, descriptor, words):
@@ -155,15 +214,14 @@ br i1 %descriptor.guard.ok, label %descriptor.ready, label %default.return'''
 def _loader(storage, ready, payload_bytes, payload_sha256, cpp_namespace):
     declarations = [f"extern unsigned char {ready};"]
     clearing = [f"    {ready} = 0;"]
-    copying = []
-    offset = 0
+    binding = []
     for item in storage:
         ctype = "unsigned char" if item["kind"] == "bytecode" else "std::uint64_t"
         name = item["symbol"]
-        declarations.append(f"extern {ctype} {name}[{item['elements']}];")
-        clearing.append(f"    OPENSSL_cleanse({name}, sizeof({name}));")
-        copying.append(f"    std::memcpy({name}, plaintext.data() + {offset}, sizeof({name}));")
-        offset += item["bytes"]
+        declarations.append(f"extern {ctype}* {name};")
+        clearing.append(f"    {name} = nullptr;")
+        binding.append(f"    {name} = reinterpret_cast<{ctype}*>("
+                       f"memory.buffer->data() + {item['offset_bytes']});")
     expected = ", ".join(f"0x{value:02x}" for value in bytes.fromhex(payload_sha256))
     header = '''// Initialize before starting workers and clear after joining them.
 #pragma once
@@ -175,46 +233,59 @@ void clear_native_code() noexcept;
 '''
     source = '''#include "releaseguard_native_code.hpp"
 #include "releaseguard_native_code_asset.hpp"
+#include "releaseguard_secure_buffer.hpp"
 #include <cstdint>
+#include <memory>
+#include <sys/mman.h>
+#include <utility>
 
 extern "C" {
 ''' + "\n".join(declarations) + '''
 }
 
 namespace releaseguard {
+namespace {
+struct memory_owner {
+    std::unique_ptr<secure_buffer> buffer;
+    ~memory_owner() noexcept { clear_native_code(); }
+};
+memory_owner& module_memory() noexcept {
+    static memory_owner memory;
+    return memory;
+}
+}  // namespace
+
 void clear_native_code() noexcept {
 ''' + "\n".join(clearing) + '''
+    module_memory().buffer.reset();
 }
 
 bool initialize_native_code(const native_asset_key& key) noexcept {
     clear_native_code();
-    std::vector<unsigned char> plaintext;
-    bool authenticated = false;
     try {
-        authenticated = open_embedded_asset(key, plaintext);
+        auto pending = std::make_unique<secure_buffer>(''' + str(payload_bytes) + ''',
+                                                       secure_buffer_options{true, true});
+        if (::madvise(pending->data(), pending->size(), MADV_WIPEONFORK) != 0) return false;
+        std::size_t opened = 0;
+        if (!open_native_asset_into(key, embedded_asset, pending->data(), pending->size(), opened) ||
+            opened != pending->size()) return false;
+        static constexpr std::array<unsigned char, 32> expected = {''' + expected + '''};
+        std::array<unsigned char, 32> actual{};
+        unsigned int written = 0;
+        const bool exact = EVP_Digest(pending->data(), pending->size(), actual.data(), &written,
+                                      EVP_sha256(), nullptr) == 1 && written == actual.size() &&
+                           CRYPTO_memcmp(actual.data(), expected.data(), actual.size()) == 0;
+        OPENSSL_cleanse(actual.data(), actual.size());
+        if (!exact || !pending->make_read_only()) return false;
+        auto& memory = module_memory();
+        memory.buffer = std::move(pending);
+''' + "\n".join("    " + line for line in binding) + '''
+        ''' + ready + ''' = 1;
+        return true;
     } catch (...) {
-        if (!plaintext.empty()) OPENSSL_cleanse(plaintext.data(), plaintext.size());
+        clear_native_code();
         return false;
     }
-    if (!authenticated || plaintext.size() != ''' + str(payload_bytes) + ''') {
-        if (!plaintext.empty()) OPENSSL_cleanse(plaintext.data(), plaintext.size());
-        return false;
-    }
-    static constexpr std::array<unsigned char, 32> expected = {''' + expected + '''};
-    std::array<unsigned char, 32> actual{};
-    unsigned int written = 0;
-    const bool exact = EVP_Digest(plaintext.data(), plaintext.size(), actual.data(), &written,
-                                  EVP_sha256(), nullptr) == 1 && written == actual.size() &&
-                       CRYPTO_memcmp(actual.data(), expected.data(), actual.size()) == 0;
-    OPENSSL_cleanse(actual.data(), actual.size());
-    if (!exact) {
-        OPENSSL_cleanse(plaintext.data(), plaintext.size());
-        return false;
-    }
-''' + "\n".join(copying) + '''
-    OPENSSL_cleanse(plaintext.data(), plaintext.size());
-    ''' + ready + ''' = 1;
-    return true;
 }
 }  // namespace releaseguard
 '''
@@ -224,7 +295,7 @@ bool initialize_native_code(const native_asset_key& key) noexcept {
 
 
 def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, module_id):
-    """Return verified-wrapper IR, four flat keyless build files and public metadata.
+    """Return verified-wrapper IR, flat keyless build files and public metadata.
 
     vm_coverage is the native-obfuscation observation list produced before this
     edit. All covered wrappers sharing the module runtime receive ready guards.
@@ -343,11 +414,13 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
     runtime_header = functions[runtime]["header"]
     runtime_pattern = r"^" + re.escape(runtime_header) + r"\n.*?^}"
     old_guard = "  %descriptor.guard.ok = icmp eq i64 %descriptor.guard.plain, %descriptor.guard.expected"
+    guard_symbol = prefix + "_expected_guards"
+    storage_symbols = [item["symbol"] for item in storage] + [guard_symbol]
 
     rewritten = after_ir_text
     guarded = []
     for name, runtime in wrappers.items():
-        replacement, return_type = _wrapper(functions[name], name, runtime, ready, tag)
+        replacement, return_type = _wrapper(functions[name], name, runtime, ready, tag, storage_symbols)
         pattern = r"^" + re.escape(functions[name]["header"]) + r"\n.*?^}"
         rewritten, changed = re.subn(pattern, lambda match: replacement, rewritten,
                                      count=1, flags=re.MULTILINE | re.DOTALL)
@@ -360,7 +433,6 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
              "Could not replace the exact verified VM guard")
     _require(0 < sum(map(len, chunks)) + records * 8 <= MAX_ASSET_BYTES,
              "Sealed VM storage exceeds the native asset size limit")
-    guard_symbol = prefix + "_expected_guards"
     guard_data = b"".join(struct.pack("<Q", secrets.randbelow((1 << 64) - 1) + 1) for _ in range(records))
     descriptor_data = bytearray(chunks[descriptor_index])
     for index in range(records):
@@ -369,7 +441,16 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
     storage.append({"symbol": guard_symbol, "kind": "guard_expected", "elements": records,
                     "bytes": len(guard_data)})
     chunks.append(guard_data)
-    payload = b"".join(chunks)
+    payload_parts, offset = [], 0
+    for item, chunk in zip(storage, chunks):
+        alignment = 1 if item["kind"] == "bytecode" else 8
+        padding = (-offset) % alignment
+        payload_parts.extend((bytes(padding), chunk))
+        offset += padding
+        item["offset_bytes"] = offset
+        offset += len(chunk)
+    payload = b"".join(payload_parts)
+    _require(len(payload) <= MAX_ASSET_BYTES, "Aligned sealed VM storage exceeds the native asset size limit")
     new_guard = (f"  %{prefix}.guard.ptr = getelementptr inbounds [{records} x i64], ptr @{guard_symbol}, "
                  "i64 0, i64 %token.index\n"
                  f"  %{prefix}.guard.expected = load i64, ptr %{prefix}.guard.ptr, align 8\n"
@@ -385,15 +466,15 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
         item = by_original.get(match[1])
         if item is None:
             return match[0]
-        width, alignment = (8, 1) if item["kind"] == "bytecode" else (64, 8)
-        return f"@{item['symbol']} = global [{item['elements']} x i{width}] zeroinitializer, align {alignment}"
+        return f"@{item['symbol']} = global ptr null, align 8"
 
     rewritten = _GLOBAL.sub(replace_global, rewritten)
     rewritten = _TOKENS.sub(lambda match: "@" + renamed.get(match[1], match[1]) if match[1] else match[0], rewritten)
     declarations = (f"@{ready} = global i8 0, align 1\n"
-                    f"@{guard_symbol} = global [{records} x i64] zeroinitializer, align 8\n\n")
+                    f"@{guard_symbol} = global ptr null, align 8\n\n")
     rewritten = re.sub(r"^define ", declarations + "define ", rewritten,
                         count=1, flags=re.MULTILINE)
+    rewritten = _indirect_storage(rewritten, visited, storage, prefix)
     rewritten = re.sub(r"^[ \t]*!llvm\.ident\s*=.*(?:\n|$)", "", rewritten, flags=re.MULTILINE)
     rewritten = re.sub(filename_pattern, 'source_filename = "releaseguard-sealed-code"', rewritten,
                        flags=re.MULTILINE)
@@ -409,9 +490,11 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
             b'#include "releaseguard/sealed_asset.hpp"', b'#include "releaseguard_sealed_asset.hpp"')
     payload_sha256 = _sha(payload)
     header, loader = _loader(storage, ready, len(payload), payload_sha256, cpp_namespace)
-    files = dict(zip(_FILES, (header, loader, asset, helper)))
+    secure_buffer = (resources.files("releaseguard") / "data" / "include" / "releaseguard"
+                     / "secure_buffer.hpp").read_bytes()
+    files = dict(zip(_FILES, (header, loader, asset, helper, secure_buffer)))
     details = {
-        "format": "open-release-guard-sealed-native-code/v1", "purpose": "vm-code",
+        "format": "open-release-guard-sealed-native-code/v2", "purpose": "vm-code",
         "payload_bytes": len(payload), "payload_sha256": payload_sha256,
         "ciphertext_bytes": len(payload) + 16, "storage": storage, "ready_symbol": ready,
         "guarded_wrappers": guarded, "zero_native_call_tables": len(pointer_tables),
@@ -424,9 +507,19 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
         "cpp_namespace": cpp_namespace,
         "required_link_libraries": ["crypto"], "required_cxx_standard": "c++17",
         "authentication": "HKDF-SHA256/AES-256-GCM with trusted caller context",
-        "post_authentication_check": "Complete payload SHA-256 before copying VM storage",
+        "post_authentication_check": "Complete payload SHA-256 before publishing read-only VM storage",
         "lifecycle": "Exclusive initialize before starting workers and clear after joining workers",
-        "module_scope": "Independent loader namespace and writable storage for each generated module",
+        "module_scope": "Independent loader namespace and owned anonymous mapping for each generated module",
+        "memory_protection": {
+            "storage": "one anonymous guarded allocation with aligned payload offsets",
+            "direct_authenticated_decryption": True,
+            "lock_required": True, "dump_exclusion_required": True,
+            "fork_wipe_required": True,
+            "read_only_before_ready": True, "executable_permission_requested": False,
+            "clear_revokes_all_storage_pointers": True,
+            "cleanup": "Restore writable, wipe page-rounded payload, unlock and unmap",
+            "cleanup_write_restore_failure": "Unmap without a guaranteed explicit userspace wipe",
+        },
         "authorized_process_contains_plaintext_vm_storage": True,
         "stronger_runtime_crypto_replacement_evaluation": "not_performed",
     }
