@@ -1,0 +1,86 @@
+name: Qwen shell R8 validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-shell-r8-20261118'
+
+permissions:
+  contents: read
+
+jobs:
+  shell-permissions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+      QWEN_SKIP_PREPARE: '1'
+      CI: 'true'
+    steps:
+      - name: Check out the exact candidate
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '7ae8ce49e1971b036f544c05893bcef640090e71'
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.22.1'
+          package-manager-cache: false
+      - name: Install the pinned workspace dependencies
+        run: |
+          test "$(git rev-parse HEAD)" = '7ae8ce49e1971b036f544c05893bcef640090e71'
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: Check formatting and changed-file lint
+        run: |
+          corepack pnpm exec prettier --write packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
+          git diff --exit-code -- packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts docs/design/2026-11-17-shell-permission-rule-coverage.md docs/design/2026-11-17-shell-permission-rule-coverage.zh-CN.md
+          corepack pnpm exec eslint --max-warnings 0 packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/permissions/compound-redirect-cwd.test.ts packages/core/src/permissions/shell-semantics.test.ts packages/core/src/permissions/restricted-shell-execution.test.ts packages/core/src/permissions/shell-command-syntax.test.ts packages/core/src/utils/shell-word-tokenizer.ts
+      - name: Build and typecheck the actual core workspace
+        run: |
+          node scripts/build.js --preflight
+          npm run build --workspace=@qwen-code/qwen-code-core
+          npm run typecheck --workspace=@qwen-code/qwen-code-core
+      - name: Run all permission suites and affected callers
+        working-directory: packages/core
+        run: corepack pnpm exec vitest run src/permissions src/utils/shell-word-tokenizer.test.ts src/utils/shell-utils.test.ts src/utils/shellAstParser.test.ts src/core/permission-helpers.test.ts src/tools/shell.test.ts src/tools/monitor.test.ts
+      - name: Require each reported defect to fail on the preceding implementation
+        run: |
+          git fetch --no-tags --depth=1 origin 0263003726e9a34f617e725492d9a0bdbd01f3e5
+          for source in packages/core/src/permissions/permission-manager.ts packages/core/src/permissions/rule-parser.ts packages/core/src/permissions/shell-semantics.ts packages/core/src/permissions/shell-command-syntax.ts packages/core/src/utils/shell-word-tokenizer.ts; do
+            git show "0263003726e9a34f617e725492d9a0bdbd01f3e5:$source" > "$source"
+          done
+          npm run build --workspace=@qwen-code/qwen-code-core
+          cd packages/core
+          set +e
+          corepack pnpm exec vitest run src/permissions/compound-redirect-cwd.test.ts src/permissions/restricted-shell-execution.test.ts src/permissions/shell-command-syntax.test.ts src/permissions/shell-semantics.test.ts --reporter=json --outputFile="$RUNNER_TEMP/r8-baseline.json"
+          status=$?
+          set -e
+          test "$status" -ne 0
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const result = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/r8-baseline.json', 'utf8'));
+          const assertions = result.testResults.flatMap((suite) => suite.assertionResults ?? []);
+          const failed = assertions.filter((test) => test.status === 'failed');
+          for (const family of ['expanded argument from hiding a redirect', 'R8 execution entries', 'R8 expanded file paths', 'R8 heredoc body', 'bare home target']) {
+            assert(failed.some((test) => test.fullName.includes(family)), 'missing expected failing family: ' + family);
+          }
+          assert.equal(result.numFailedTests, failed.length);
+          assert(result.numPassedTests > 0);
+          console.log(JSON.stringify({failed: failed.length, passed: result.numPassedTests, failures: failed.map((test) => test.fullName)}));
+          NODE
+      - name: Restore exact candidate source
+        if: always()
+        run: |
+          git restore --source='7ae8ce49e1971b036f544c05893bcef640090e71' -- .
+          test "$(git rev-parse HEAD)" = '7ae8ce49e1971b036f544c05893bcef640090e71'
+          git diff --exit-code
+      - name: Rebuild restored core and rerun the regression suites
+        run: |
+          npm run build --workspace=@qwen-code/qwen-code-core
+          cd packages/core
+          corepack pnpm exec vitest run src/permissions/compound-redirect-cwd.test.ts src/permissions/restricted-shell-execution.test.ts src/permissions/shell-command-syntax.test.ts src/permissions/shell-semantics.test.ts
