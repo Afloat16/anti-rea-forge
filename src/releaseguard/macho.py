@@ -482,7 +482,12 @@ def _thin(reader: _Reader) -> dict:
                         raise ValueError("Invalid Mach-O dSYM section placeholder")
                 elif (attributes & 0xFF) not in (1, 0xC, 0x12):
                     file_data(offset, size)
-                    if size and (offset < fileoff or offset + size > fileoff + filesize or offset % (1 << align)):
+                    # MH_OBJECT packs its segment immediately after the load
+                    # commands. LLVM aligns SectionDataOffset, then adds this
+                    # potentially unaligned segment fileoff (MachObjectWriter).
+                    alignment_offset = offset - fileoff if file_type == 1 else offset
+                    if size and (offset < fileoff or offset + size > fileoff + filesize
+                                 or alignment_offset % (1 << align)):
                         raise ValueError("Mach-O section exceeds its segment or is misaligned")
                 file_data(reloff, nreloc * 8)
                 if is_debug:

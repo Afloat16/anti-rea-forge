@@ -230,6 +230,25 @@ class MachOReaderTests(unittest.TestCase):
         # dSYM itself is debug metadata, even if only its address map remains.
         self.assertTrue(self.inspect(make_macho(file_type=10))["evidence"]["debug_metadata_present"])
 
+    def test_object_section_alignment_is_relative_to_its_packed_segment(self):
+        for bits in (32, 64):
+            for endian in ("<", ">"):
+                with self.subTest(bits=bits, endian=endian):
+                    # clang's object writer adds an unpadded header/command
+                    # prefix to aligned section-data offsets, not the reverse.
+                    build = struct.pack(endian + "6I", 0x32, 24, 1, 0x000D0000, 0, 0)
+                    data = make_macho(bits=bits, endian=endian, file_type=1, extra=build)
+                    section = (28 + 56) if bits == 32 else (32 + 72)
+                    offset_field = section + (40 if bits == 32 else 48)
+                    offset = struct.unpack_from(endian + "I", data, offset_field)[0]
+                    self.assertEqual(offset % 16, 8)
+                    data = replace_u32(data, offset_field + 4, 4, endian)
+                    self.assertTrue(self.inspect(data)["metadata_complete"])
+                    # Linked-image alignment and all file/segment bounds remain
+                    # enforced; the exception is specific to MH_OBJECT layout.
+                    self.rejected(replace_u32(data, 12, 6, endian))
+                    self.rejected(replace_u32(data, offset_field, len(data), endian))
+
     def test_symbol_string_and_section_indices_are_checked(self):
         data = make_macho()
         command = command_offset(data, 2)
