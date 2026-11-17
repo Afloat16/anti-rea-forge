@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           repository: Afloat16/qwen-code
-          ref: '7b64e9c51a0878cc0fd79ac091b5b57218e81f10'
+          ref: '2ba4b49d8894c561b3ae5456ecc45611f544ca71'
           persist-credentials: false
           fetch-depth: 1
       - name: Set up Node.js
@@ -31,7 +31,7 @@ jobs:
           package-manager-cache: false
       - name: Install the pinned workspace dependencies
         run: |
-          test "$(git rev-parse HEAD)" = '7b64e9c51a0878cc0fd79ac091b5b57218e81f10'
+          test "$(git rev-parse HEAD)" = '2ba4b49d8894c561b3ae5456ecc45611f544ca71'
           corepack enable
           corepack pnpm install --frozen-lockfile
       - name: Check formatting and changed-file lint
@@ -76,8 +76,8 @@ jobs:
       - name: Restore exact candidate source
         if: always()
         run: |
-          git restore --source='7b64e9c51a0878cc0fd79ac091b5b57218e81f10' -- .
-          test "$(git rev-parse HEAD)" = '7b64e9c51a0878cc0fd79ac091b5b57218e81f10'
+          git restore --source='2ba4b49d8894c561b3ae5456ecc45611f544ca71' -- .
+          test "$(git rev-parse HEAD)" = '2ba4b49d8894c561b3ae5456ecc45611f544ca71'
           git diff --exit-code
       - name: Rebuild restored core and rerun the regression suites
         run: |
