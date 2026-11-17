@@ -19,11 +19,11 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - pr: '17579'
-            sha: '5c9bc81f9600875599552c739feb8ee1294e64bf'
+          - pr: '17581'
+            sha: 'b6678792ba0cbbbfcc447fa8ccda04162750c698'
             package: 'sdk-typescript'
-            tests: 'test/unit/AcpHttpTransport.test.ts test/unit/acpTransportUtils.test.ts'
-            files: 'packages/sdk-typescript/test/unit/AcpHttpTransport.test.ts'
+            tests: 'test/unit/Query.test.ts'
+            files: 'packages/sdk-typescript/test/unit/Query.test.ts'
     env:
       CI: 'true'
       QWEN_SKIP_PREPARE: '1'
