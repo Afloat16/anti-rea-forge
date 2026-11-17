@@ -1,0 +1,192 @@
+name: Qwen exact-head review follow-up validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-review-followups-20261117'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: 'PR ${{ matrix.pr }} at ${{ matrix.sha }}'
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - pr: '17581'
+            sha: '113cf6e857d888adfca9ddb6add16b16a08cc83a'
+            package: 'sdk-typescript'
+            tests: 'test/unit/Query.test.ts'
+            files: 'packages/sdk-typescript/test/unit/Query.test.ts'
+          - pr: '17579'
+            sha: '5c9bc81f9600875599552c739feb8ee1294e64bf'
+            package: 'sdk-typescript'
+            tests: 'test/unit/AcpHttpTransport.test.ts test/unit/acpTransportUtils.test.ts'
+            files: 'packages/sdk-typescript/test/unit/AcpHttpTransport.test.ts'
+          - pr: '17569'
+            sha: '10759b3ea656a2df39a567e9aca255ec946bd002'
+            package: 'sdk-typescript'
+            tests: 'test/unit/daemon-sse.test.ts'
+            files: 'packages/sdk-typescript/src/daemon/sse.ts packages/sdk-typescript/test/unit/daemon-sse.test.ts'
+          - pr: '17572'
+            sha: 'bea44d68fde5b658c626277b98c5cdd368bc51ac'
+            package: 'cli'
+            tests: 'src/utils/cleanup.test.ts src/services/mod-session.test.ts src/services/interactive-mod-session.test.ts'
+            files: 'packages/cli/src/services/mod-session.ts packages/cli/src/services/interactive-mod-session.ts'
+    env:
+      CI: 'true'
+      QWEN_SKIP_PREPARE: '1'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '${{ matrix.sha }}'
+          persist-credentials: false
+      - name: Verify source identity
+        env:
+          EXPECTED_SHA: '${{ matrix.sha }}'
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Install pinned dependencies
+        run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: SDK focused tests
+        if: matrix.package == 'sdk-typescript'
+        working-directory: packages/sdk-typescript
+        run: corepack pnpm exec vitest run ${{ matrix.tests }}
+      - name: Build normal workspace prerequisites
+        run: |
+          if [ "${{ matrix.package }}" = "cli" ]; then
+            npm run build -- --cli-only
+          else
+            npm run build --workspace=packages/core
+            npm run build --workspace=packages/acp-bridge
+          fi
+      - name: CLI focused tests with normal prerequisite guard
+        if: matrix.package == 'cli'
+        working-directory: packages/cli
+        run: corepack pnpm exec vitest run ${{ matrix.tests }}
+      - name: Verify review regression witnesses
+        working-directory: packages/${{ matrix.package }}
+        env:
+          PR_NUMBER: '${{ matrix.pr }}'
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          import assert from 'node:assert/strict';
+          
+          function replaceOnce(text, before, after) {
+            assert.equal(text.split(before).length, 2, 'Mutation target must occur once');
+            return text.replace(before, after);
+          }
+          const pr = process.env.PR_NUMBER;
+          const cases = {
+            '17581': [{
+              label: 'catch-only permission timer cleanup',
+              file: 'src/query/Query.ts',
+              tests: ['test/unit/Query.test.ts', '-t', 'clears the permission deadline'],
+              failed: 2,
+              passed: 2,
+              mutate: (source) => replaceOnce(
+                replaceOnce(
+                  source,
+                  '    } finally {\n      if (timeoutId) {\n        clearTimeout(timeoutId);\n      }\n    }\n',
+                  '    }\n',
+                ),
+                '    } catch (error) {\n      /**\n       * Timeout or error',
+                '    } catch (error) {\n      if (timeoutId) clearTimeout(timeoutId);\n      /**\n       * Timeout or error',
+              ),
+            }],
+            '17579': [{
+              label: 'case-sensitive header merge',
+              file: 'src/daemon/acpTransportUtils.ts',
+              tests: ['test/unit/AcpHttpTransport.test.ts', '-t', 'overrides authorization case-insensitively at the request boundary'],
+              failed: 1,
+              mutate: (source) => replaceOnce(
+                source,
+                "  const merged = new Headers(transportHeaders);\n  new Headers(initHeaders).forEach((value, key) => {\n    merged.set(key, value);\n  });\n  const headers: Record<string, string> = {};\n  merged.forEach((value, key) => {\n    headers[key] = value;\n  });\n  return headers;",
+                '  return Object.assign({}, transportHeaders, initHeaders);',
+              ),
+            }, {
+              label: 'caller headers omitted at transport boundary',
+              file: 'src/daemon/AcpHttpTransport.ts',
+              tests: ['test/unit/AcpHttpTransport.test.ts', '-t', 'overrides authorization case-insensitively at the request boundary'],
+              failed: 1,
+              mutate: (source) => {
+                const before = 'const headers = mergeHeaders(transportHeaders, callerHeaders);';
+                assert.equal(source.split(before).length, 3);
+                return source.replaceAll(before, 'const headers = mergeHeaders(transportHeaders, undefined);');
+              },
+            }],
+            '17569': [{
+              label: 'post-read abort guard removed',
+              file: 'src/daemon/sse.ts',
+              tests: ['test/unit/daemon-sse.test.ts', '-t', 'completes cleanly when an oversized read settles during cancellation'],
+              failed: 1,
+              mutate: (source) => replaceOnce(
+                source,
+                '      if (signal?.aborted) return;\n      if (done) {\n',
+                '      if (done) {\n',
+              ),
+            }],
+            '17572': [{
+              label: 'cleanup array iteration restored',
+              file: 'src/utils/cleanup.ts',
+              tests: ['src/services/mod-session.test.ts', '-t', 'does not skip the next registered exit cleanup'],
+              failed: 1,
+              mutate: (source) => replaceOnce(
+                source,
+                '    while (draining && cleanupFunctions.length > 0) {\n      // Remove the current entry before awaiting it so unregistering a\n      // cleanup cannot shift the next pending entry past the drain.\n      const { fn } = cleanupFunctions.shift()!;',
+                '    for (const { fn } of cleanupFunctions) {\n      if (!draining) break;',
+              ),
+            }],
+          };
+          assert.ok(cases[pr], 'Known PR required');
+          for (const probe of cases[pr]) {
+            const original = readFileSync(probe.file, 'utf8');
+            try {
+              writeFileSync(probe.file, probe.mutate(original));
+              const result = spawnSync('corepack', ['pnpm', 'exec', 'vitest', 'run', ...probe.tests], {
+                encoding: 'utf8',
+                timeout: 240000,
+                maxBuffer: 32 * 1024 * 1024,
+              });
+              const output = (result.stdout ?? '') + (result.stderr ?? '');
+              process.stdout.write(output);
+              assert.ifError(result.error);
+              assert.equal(result.signal, null, 'Mutation test must finish normally');
+              assert.equal(result.status, 1, 'Mutation must be caught by the focused test');
+              const plain = output.replace(/\u001b\[[0-9;]*m/g, '');
+              assert.match(plain, new RegExp('Tests\\s+' + probe.failed + ' failed'));
+              assert.match(plain, /AssertionError/);
+              if (probe.passed) assert.match(plain, new RegExp(probe.passed + ' passed'));
+              console.log('Confirmed regression witness:', probe.label);
+            } finally {
+              writeFileSync(probe.file, original);
+            }
+          }
+          NODE
+      - name: Check patch formatting and lint
+        run: |
+          corepack pnpm exec prettier --check ${{ matrix.files }}
+          corepack pnpm exec eslint ${{ matrix.files }}
+          git diff --exit-code
+      - name: Normal package typecheck
+        working-directory: packages/${{ matrix.package }}
+        run: npm run typecheck
+      - name: SDK public surface typecheck
+        if: matrix.package == 'sdk-typescript'
+        working-directory: packages/sdk-typescript
+        run: npm run typecheck:public-surface
