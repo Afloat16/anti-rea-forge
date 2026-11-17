@@ -160,8 +160,8 @@ JSON 报告本身不会阻止工具。要形成有效边界，相关工具入口
 
 | 方法 | 必需参数 | 可选参数 | 对应 Python 命令 |
 | --- | --- | --- | --- |
-| `scanRelease(options, controls?)` | `root`、`policy` | — | `scan-release` |
-| `checkProject(options, controls?)` | `config` | — | `check` |
+| `scanRelease(options, controls?)` | `root`、`policy` | `assetKeyFiles` | `scan-release` |
+| `checkProject(options, controls?)` | `config` | `assetKeyFiles` | `check` |
 | `checkAnalysis(options, controls?)` | `manifest`、`root`、`publicKey`、`product`、`release`、`subject`、`audience`、`operation` | `grant` | `analysis-check` |
 | `withAnalysisAuthorization(options, handler, controls?)` | `checkAnalysis` 的参数及一个回调 | `grant` | `analysis-check`，允许后调用一次回调 |
 | `audit(path, options?)` | PE 文件路径 | `strict`、`signal` | `audit` |
@@ -171,6 +171,19 @@ JSON 报告本身不会阻止工具。要形成有效边界，相关工具入口
 
 `controls` 可传 `{ signal: controller.signal }`，用于取消请求。
 [index.d.ts](index.d.ts) 包含 TypeScript 参数、报告和错误码类型。
+
+`assetKeyFiles` 是可选的外置密钥文件路径数组，最多 16 个，每个文件必须为原始
+32 字节资产/代码密钥。SDK 将路径作为独立的 `--asset-key-file` 参数传给 Python，
+不接受内联密钥。`checkProject` 将它们追加到 `project.json` 的 `asset_key_files`，
+合计最多 16 个；传空数组不会取消已配置密钥。统一扫描器检查普通文件和受支持
+ZIP/ASAR 成员中的原始密钥、常见十六进制/Base64 表示，报告不会返回命中内容。
+密钥文件缺失或格式无效时操作失败。
+
+```javascript
+const report = await guard.scanRelease({
+  root: "dist", policy: "release-policy.json", assetKeyFiles: ["../issuer/asset.key"],
+});
+```
 
 客户端选项：
 

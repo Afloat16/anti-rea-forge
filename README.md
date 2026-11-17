@@ -2,6 +2,14 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [MIT license](LICENSE)
 
+## Release hardening in development
+
+Release checks now inspect **packed Electron ASAR and ZIP members with the same rules as loose files**, recognize escaped v3 source-map JSON, and check every detected ELF/PE for private debug metadata and static symbols. Renaming a supported package, map or native module does not skip these checks. Ambiguous layouts and exhausted inspection budgets block publication.
+
+Known external asset/code keys can be configured once in `project.json` and checked by `check`, `prepare` and the JavaScript SDK. `prepare` refuses to sign a release containing a detected leak. Sealed native-function builds also reject unverified globals and metadata that could leave plaintext in the generated object.
+
+Fresh GNU `strings`, `nm`, `readelf` and `objdump` controls verify private-metadata removal, unchanged executable instructions, correct external-key operation and deliberately leaked-key rejection. These are release-exposure controls; authorized process memory and shipped instructions remain observable. [Integration](docs/portable-release.md) · [Current REA coverage and observations (中文)](docs/rea-coverage-2026-11-17.zh-CN.md) · [Machine-readable controls](docs/results/release-exposure-controls.json)
+
 ## Native function protection in development
 
 `native-obfuscate --profile sealed-virtualize` adds experimental LLVM 18 integration for Linux x86-64 scalar-integer functions. It encrypts the VM instructions and descriptors required by the functions, with a generated C++17/OpenSSL loader and an independently supplied 32-byte key. An authorized process holds plaintext VM storage.
@@ -51,7 +59,7 @@ python -m releaseguard native-asset-export asset.json \
   --product myapp --release v1 --purpose reference-data --asset-id table \
   --out generated-asset
 mkdir release-asset
-c++ -std=c++17 -O2 -Igenerated-asset examples/native-asset/read.cpp \
+c++ -std=c++17 -O2 -s -Igenerated-asset examples/native-asset/read.cpp \
   -lcrypto -o release-asset/read-asset
 ./release-asset/read-asset < ../asset-issuer/key.bin
 ```

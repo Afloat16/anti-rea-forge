@@ -4,6 +4,14 @@
 
 [简体中文 integration guide](native-code.zh-CN.md)
 
+Sealed builds now require a complete allowlist of globals: verified bytecode and
+descriptor storage, zero native-call tables, and validated LLVM retention lists.
+Extra `internal`/`unnamed_addr` constants, aliases and unknown storage fail the
+build even when the runtime does not reference them. Unsupported named metadata
+(including `llvm.commandline`) and debug metadata are rejected; supported module
+flags remain and compiler identification is removed. This closes known residual
+plaintext paths and must still be combined with scanning the final linked release.
+
 | Profile | Plugin and pipeline | Supported platform |
 | --- | --- | --- |
 | `flatten` | eshard, `function(flattening),verify` | Linux x86 and x86-64 |
@@ -75,7 +83,7 @@ An application source containing this integration can select the generated names
 
 ```sh
 RG_CODE_NAMESPACE="$(python -c 'import json; print(json.load(open("sealed-function/report.json"))["code_seal"]["cpp_namespace"])')"
-c++ -std=c++17 -O2 -Isealed-function \
+c++ -std=c++17 -O2 -s -Isealed-function \
   "-DRG_CODE_NAMESPACE=$RG_CODE_NAMESPACE" your_application.cpp \
   sealed-function/releaseguard_native_code.cpp sealed-function/protected.o \
   -lcrypto -o application

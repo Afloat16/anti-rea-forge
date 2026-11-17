@@ -295,6 +295,79 @@ class NativeCodeSealValidation(unittest.TestCase):
         with self.assertRaisesRegex(GuardError, "retained original"):
             self.seal(coverage=uncovered)
 
+    def test_uncovered_globals_fail_closed_for_all_linkage_and_storage_forms(self):
+        # These bytes used to survive sealing with internal/unnamed_addr linkage.
+        payload = '[16 x i8] c"OWNED-PLAINTEXT!"'
+        definitions = [modifier + " " + payload for modifier in (
+            "private constant", "private unnamed_addr constant", "private local_unnamed_addr constant",
+            "internal constant", "constant", "available_externally constant", "linkonce_odr constant",
+            "private global", "internal global", "private thread_local constant",
+            "private addrspace(1) constant")]
+        definitions += [
+            "external global i64", "private constant i64 918273645",
+            "private constant { i32, i32 } { i32 9182, i32 7364 }",
+            "private alias [64 x i8], ptr @code",
+            "ifunc i64 (i64, ptr, ptr), ptr @vm_runtime",
+        ]
+        for definition in definitions:
+            with self.subTest(definition=definition), self.assertRaisesRegex(GuardError, "Unsealed VM storage"):
+                self.seal(source=self.source + "\n@uncovered = " + definition + "\n")
+
+    def test_unrecognized_global_syntax_is_rejected_instead_of_ignored(self):
+        for declaration in (
+            '@"quoted" = private constant i64 1234',
+            '@0 = private constant i64 1234',
+            '  @indented = private constant i64 1234',
+            '@tabbed\t= private constant i64 1234',
+            '@nospace= private constant i64 1234',
+        ):
+            with self.subTest(declaration=declaration), self.assertRaisesRegex(GuardError, "global definition"):
+                self.seal(source=self.source + "\n" + declaration + "\n")
+
+    def test_retention_metadata_accepts_only_verified_symbols_and_exact_layout(self):
+        existing = ('@llvm.compiler.used = appending global [3 x ptr] '
+                    '[ptr @code, ptr @descriptors, ptr @native_calls], section "llvm.metadata"')
+        for name in ("llvm.used", "llvm.compiler.used"):
+            retained = ("@" + name + ' = appending global [5 x ptr] '
+                        '[ptr @code, ptr @descriptors, ptr @native_calls, ptr @vm_runtime, ptr @rg_compute], '
+                        'section "llvm.metadata", align 8')
+            rewritten, _, details = self.seal(source=self.source.replace(existing, retained))
+            self.assertEqual(details["validated_retention_globals"], [name])
+            self.assertIn("@" + name + " = appending global", rewritten)
+            self.assertIn("ptr @" + details["storage"][0]["symbol"], rewritten)
+            self.assertNotIn("ptr @code,", rewritten)
+        for replacement in (
+            existing.replace("[3 x ptr]", "[4 x ptr]"),
+            existing.replace("ptr @code,", "ptr @missing,"),
+            existing.replace("ptr @code,", "ptr null,"),
+            existing.replace("ptr @code,", "ptr inttoptr (i64 123456 to ptr),"),
+            existing.replace('section "llvm.metadata"', 'section ".rodata"'),
+            existing.replace("appending global", "private constant"),
+            existing.replace("@llvm.compiler.used", "@llvm.unrecognized"),
+            '@llvm.used = private alias [64 x i8], ptr @code',
+        ):
+            with self.subTest(replacement=replacement), self.assertRaises(GuardError):
+                self.seal(source=self.source.replace(existing, replacement))
+        with self.assertRaisesRegex(GuardError, "must not read retention metadata"):
+            self.seal(source=self.source.replace("%native = load ptr, ptr @native_calls",
+                                                 "%native = load ptr, ptr @llvm.compiler.used"))
+
+    def test_object_emitting_and_unknown_named_metadata_fail_closed(self):
+        # LLVM 18 emits llvm.commandline strings in .GCC.command.line even if no
+        # instruction references them. Debug metadata similarly exposes sources.
+        for name in ("llvm.commandline", "llvm.dbg.cu", "llvm.annotations", "unknown"):
+            source = self.source + f'\n!{name} = !{{!90}}\n!90 = !{{!"OWNED_PRIVATE_MARKER"}}\n'
+            with self.subTest(name=name), self.assertRaisesRegex(GuardError, "named metadata"):
+                self.seal(source=source)
+        source = (self.source + '\n!llvm.module.flags = !{!90}\n'
+                  '!90 = !{i32 1, !"wchar_size", i32 4}\n')
+        self.assertIn("!llvm.module.flags", self.seal(source=source)[0])
+        with self.assertRaisesRegex(GuardError, "debug metadata"):
+            self.seal(source=self.source + '\n!90 = !DIFile(filename: "private.c", directory: "/private")\n')
+        # Debug-like strings in a compiler identity are data, not an IR node.
+        source = self.source + '\n!llvm.ident = !{!90}\n!90 = !{!"compiler !DIFile(foo)"}\n'
+        self.assertNotIn("!llvm.ident", self.seal(source=source)[0])
+
     def test_unverified_multiblock_or_pointer_abi_wrappers_are_rejected(self):
         altered = copy.deepcopy(self.coverage)
         altered[0]["vm_coverage"]["wrapper_replaced"] = False
@@ -417,6 +490,30 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
         image = (self.folder / "module.so").read_bytes()
         for secret in (CODE, DESCRIPTORS, self.key):
             self.assertNotIn(secret, image)
+
+    def test_uncovered_global_and_commandline_bytes_are_rejected_before_codegen(self):
+        source, coverage = fixture()
+        marker = b"OWNED-PLAINTEXT!"
+        cases = {
+            "unnamed-global": '@uncovered = private unnamed_addr constant [16 x i8] c"OWNED-PLAINTEXT!"',
+            "internal-global": '@uncovered = internal constant [16 x i8] c"OWNED-PLAINTEXT!"',
+            "commandline": '!llvm.commandline = !{!90}\n!90 = !{!"OWNED-PLAINTEXT!"}',
+        }
+        for name, addition in cases.items():
+            with self.subTest(name=name):
+                ir = source + "\n" + addition + "\n"
+                original = self.work / (name + ".ll")
+                original.write_text(ir)
+                verified = self.work / (name + "-verified.ll")
+                artifact = self.work / (name + ".o")
+                self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                               "-o", verified])
+                self.run_tool([self.llvm / "llc", "-O=2", "-relocation-model=pic", "-filetype=obj",
+                               verified, "-o", artifact])
+                self.assertIn(marker, artifact.read_bytes())
+                expected_error = "named metadata" if name == "commandline" else "Unsealed VM storage"
+                with self.assertRaisesRegex(GuardError, expected_error):
+                    seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
 
     def test_cleared_storage_rejects_even_with_ready_forced(self):
         loaded = self.normal

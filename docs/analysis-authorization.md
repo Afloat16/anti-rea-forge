@@ -47,18 +47,25 @@ From another working directory, specify the config path:
 python -m releaseguard check --config /path/to/project/.releaseguard/project.json
 ```
 
-The config's `root` and `policy` resolve relative to the config file. Generated
+The config's `root`, `policy` and optional `asset_key_files` paths resolve relative to the config file. Generated
 relative paths survive moving the entire project; Windows locations on different
 drives use absolute paths. Unknown fields, ambiguous JSON, links/special config
 files and oversized input are rejected. JSON configuration cannot run commands
 or load plugins. Product/release identifiers use the same rules as grants.
 
 Review the initial policy for your release. It permits ordinary source files,
-checks configured debug extensions and source-map/private-key markers, and
-inspects supported ZIP members under explicit budgets. It is heuristic, not a
+checks configured debug extensions, source-map structures/private-key markers and ELF/PE metadata, and
+inspects supported ZIP/ASAR members under explicit budgets. It is heuristic, not a
 complete secret detector. Unsupported recognized containers do not pass.
 See [portable scanning](portable-release.md). Keep private literal rules in the
 trusted build environment rather than distributing them as public notices.
+
+If you use external asset or sealed-code keys, add `asset_key_files` to
+`project.json` as a list of private raw 32-byte key-file paths. Both `check` and
+`prepare` then check those keys automatically. Repeat `--asset-key-file` to add
+per-run keys; an explicit empty SDK/API list never removes configured keys.
+There is a combined limit of 16. A missing key fails the command, and a detected
+key leak blocks signing. See the [complete key-check example](portable-release.md#keep-external-keys-in-the-scan-to-sign-workflow).
 
 ## 2. Prepare signed sidecars without changing the application
 

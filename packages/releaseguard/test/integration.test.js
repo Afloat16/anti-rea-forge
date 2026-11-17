@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +16,9 @@ const fixtures = fileURLToPath(new URL("./fixtures/", import.meta.url));
 const cliError = (error) => error instanceof ReleaseGuardError && error.code === "CLI_ERROR" && error.exitCode === 2;
 
 async function release(t) {
-  const base = await mkdtemp(join(tmpdir(), "releaseguard-js-integration-"));
+  // macOS's system temporary directory can have a symlink ancestor. Resolve
+  // our owned fixture root; production key readers deliberately reject links.
+  const base = await realpath(await mkdtemp(join(tmpdir(), "releaseguard-js-integration-")));
   t.after(() => rm(base, { recursive: true, force: true }));
   const root = join(base, "dist");
   const policy = join(base, "rules.json");
@@ -44,6 +47,27 @@ test("invalid policy and missing files remain errors, never policy passes", asyn
   await writeFile(policy, '{"version":1,"typo_option":true}');
   await assert.rejects(client.scanRelease({ root, policy }), cliError);
   await assert.rejects(client.audit(join(root, "missing.exe")), cliError);
+});
+
+test("external asset keys reach the real scanner and saved project checks without disclosure", async (t) => {
+  const { base, root, policy } = await release(t);
+  const key = randomBytes(32);
+  const keyFile = join(base, "external key.bin");
+  await writeFile(keyFile, key);
+  const options = { root, policy, assetKeyFiles: [keyFile] };
+  assert.equal((await client.scanRelease(options)).checks.asset_keys_checked, 1);
+  await writeFile(join(root, "asset.dat"), key.toString("base64"));
+  const rejected = await client.scanRelease(options);
+  assert.equal(rejected.exitCode, 3);
+  assert.ok(rejected.findings.some((finding) => finding.code === "asset_key_exposure"));
+  assert.equal(JSON.stringify(rejected).includes(key.toString("base64")), false);
+  const configDir = join(base, "guard-config");
+  await execute(python, ["-I", "-m", "releaseguard", "project-init", "--root=" + root,
+    "--product=owned-app", "--out=" + configDir], { timeout: 10_000, maxBuffer: 4096 });
+  const project = await client.checkProject({ config: join(configDir, "project.json"), assetKeyFiles: [keyFile] });
+  assert.equal(project.exitCode, 3);
+  assert.equal(project.checks.asset_keys_checked, 1);
+  await assert.rejects(client.scanRelease({ ...options, assetKeyFiles: [join(base, "missing.key")] }), cliError);
 });
 
 test("one project configuration runs the same release gate through JavaScript", async (t) => {

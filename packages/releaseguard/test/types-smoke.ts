@@ -2,7 +2,8 @@ import { createReleaseGuard, ReleaseGuardError, type ScanReleaseReport, type Ana
   type AuthorizedAnalysisReport, type AnalysisDenialReason } from "@anti-rea-forge/releaseguard";
 
 const guard = createReleaseGuard({ python: "/trusted/bin/python", timeoutMs: 10_000 });
-const report: ScanReleaseReport = await guard.scanRelease({ root: "dist", policy: "rules.json" }, {
+const report: ScanReleaseReport = await guard.scanRelease({ root: "dist", policy: "rules.json",
+  assetKeyFiles: ["issuer/asset.key"] as const }, {
   signal: new AbortController().signal,
 });
 const bytes: number = report.files[0].size;
@@ -17,7 +18,8 @@ const error = new ReleaseGuardError("CLI_ERROR", "Check failed", { exitCode: 2 }
 const diagnostic: string | undefined = error.diagnostic;
 void [bytes, passed, features, warnings, diagnostic];
 
-const projectReport: ScanReleaseReport = await guard.checkProject({ config: ".releaseguard/project.json" });
+const projectReport: ScanReleaseReport = await guard.checkProject({ config: ".releaseguard/project.json",
+  assetKeyFiles: ["issuer/code.key"] as const });
 const analysis: AnalysisOptions = {
   manifest: "release-manifest.json", root: "dist", publicKey: "trusted-issuer.pem", grant: "grant.json",
   product: "Demo", release: "1.0", subject: "authenticated-reviewer", audience: "analysis-service", operation: "inspect",
@@ -46,6 +48,8 @@ void [projectReport, handlerValue, deniedError];
 guard.scanRelease({ root: 42, policy: "rules.json" });
 // @ts-expect-error Unknown transport controls must not silently disable checks.
 guard.audit("app.exe", { strict: "yes" });
+// @ts-expect-error External key values are file paths, not numeric identifiers.
+guard.scanRelease({ root: "dist", policy: "rules.json", assetKeyFiles: [42] });
 // @ts-expect-error The bridge has no issuer/private-key API.
 guard.issueLicense({ privateKey: "issuer.pem" });
 // @ts-expect-error An unknown operation must not be interpreted as a valid scope.

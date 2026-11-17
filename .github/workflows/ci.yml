@@ -184,6 +184,42 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+  release-exposure:
+    name: Native release exposure and official ASAR packages / Linux
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.22.1'
+          package-manager-cache: false
+      - name: Install the core and explicit control tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ libssl-dev binutils
+          python -m pip install .
+          npm install --prefix "$RUNNER_TEMP/asar-controls" --ignore-scripts --no-audit --no-fund @electron/asar@4.3.2
+      - name: Require portable parser, key-to-sign and real native controls
+        run: |
+          python -m unittest tests.test_asar tests.test_release_disclosures tests.test_project_asset_keys tests.test_release_exposure_controls -v
+          python benchmarks/release_exposure_controls.py --out "$RUNNER_TEMP/release-exposure.json"
+          python benchmarks/asar_package_controls.py --asar-cli "$RUNNER_TEMP/asar-controls/node_modules/.bin/asar" --out "$RUNNER_TEMP/asar-packages.json"
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: release-exposure-observations
+          path: |
+            ${{ runner.temp }}/release-exposure.json
+            ${{ runner.temp }}/asar-packages.json
+          retention-days: 14
+          if-no-files-found: error
+
   javascript:
     name: JavaScript / ${{ matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
@@ -232,7 +268,7 @@ jobs:
         run: npm exec --yes --package=typescript@7.0.2 -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 packages/releaseguard/test/types-smoke.ts
 
       - name: Exercise portable checks without a native toolchain
-        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_analysis tests.test_analysis_cli tests.test_split_maps tests.test_split_maps_cli -v
+        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_project_asset_keys tests.test_asar tests.test_release_disclosures tests.test_analysis tests.test_analysis_cli tests.test_split_maps tests.test_split_maps_cli -v
 
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}

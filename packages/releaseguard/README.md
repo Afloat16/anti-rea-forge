@@ -180,8 +180,8 @@ it does not establish legal ownership or permissions beyond this workflow.
 
 | Method | Required options | Optional options | Python command |
 | --- | --- | --- | --- |
-| `scanRelease(options, controls?)` | `root`, `policy` | — | `scan-release` |
-| `checkProject(options, controls?)` | `config` | — | `check` |
+| `scanRelease(options, controls?)` | `root`, `policy` | `assetKeyFiles` | `scan-release` |
+| `checkProject(options, controls?)` | `config` | `assetKeyFiles` | `check` |
 | `checkAnalysis(options, controls?)` | `manifest`, `root`, `publicKey`, `product`, `release`, `subject`, `audience`, `operation` | `grant` | `analysis-check` |
 | `withAnalysisAuthorization(options, handler, controls?)` | Same options as `checkAnalysis`, plus a callback | `grant` | `analysis-check`, then one callback if allowed |
 | `audit(path, options?)` | PE file path | `strict`, `signal` | `audit` |
@@ -191,6 +191,20 @@ it does not establish legal ownership or permissions beyond this workflow.
 
 `controls` accepts an `AbortSignal`, for example
 `guard.scanRelease({ root, policy }, { signal: controller.signal })`.
+
+`assetKeyFiles` is an optional array of at most 16 paths to external raw 32-byte
+asset/code keys. Both calls forward them as separate `--asset-key-file` arguments;
+they never accept inline key material. `checkProject` adds these paths to any
+`asset_key_files` saved in `project.json`, with the same combined limit of 16.
+An empty array does not disable configured keys. The Python core checks known raw,
+hex and Base64 key representations in loose files and supported ZIP/ASAR members;
+matched bytes are not returned. Missing/invalid key files are errors.
+
+```javascript
+const report = await guard.scanRelease({
+  root: "dist", policy: "release-policy.json", assetKeyFiles: ["../issuer/asset.key"],
+});
+```
 TypeScript consumers receive declarations from [index.d.ts](index.d.ts), including
 the report fields and error codes.
 

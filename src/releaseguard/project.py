@@ -17,7 +17,7 @@ from typing import Any
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from .core import (
-    GuardError, HEX256, _fields, _is_link, _text, _version, canonical, create_manifest,
+    GuardError, HEX256, _is_link, _text, _version, canonical, create_manifest,
     key_id, parse_json, verify_document, write_new,
 )
 from .analysis import _identifier as _analysis_identifier
@@ -33,7 +33,9 @@ _DEFAULT_POLICY = {
     "check_private_keys": True,
     "check_native_tokens": True,
     "check_source_maps": True,
+    "check_native_metadata": True,
     "scan_zip_archives": True,
+    "scan_asar_archives": True,
     "max_file_bytes": 67108864,
     "max_total_bytes": 268435456,
     "max_archive_depth": 2,
@@ -94,6 +96,7 @@ def init_project(root: Path | str, product: str,
         "product": product,
         "root": _relative_or_absolute(release_root.resolve(), output.resolve()),
         "policy": "policy.json",
+        "asset_key_files": [],
     }
     _new_bundle(output, {
         "project.json": _json_bytes(document),
@@ -136,7 +139,9 @@ def load_project(config: Path | str = DEFAULT_CONFIG) -> dict[str, Any]:
     """Resolve paths relative to the config file, never the caller's cwd."""
     path = Path(config).absolute()
     document = _read_config(path)
-    _fields(document, {"version", "product", "root", "policy"})
+    required = {"version", "product", "root", "policy"}
+    if not required <= set(document) or set(document) - required - {"asset_key_files"}:
+        raise GuardError("Missing or unknown project configuration fields")
     _version(document["version"])
     _analysis_identifier(document["product"], "product")
     resolved: dict[str, Any] = {"product": document["product"]}
@@ -146,12 +151,30 @@ def load_project(config: Path | str = DEFAULT_CONFIG) -> dict[str, Any]:
         resolved[field] = candidate if candidate.is_absolute() else path.parent / candidate
     outside_release(path, resolved["root"], "Project configuration")
     outside_release(resolved["policy"], resolved["root"], "Scan policy")
+    key_paths = document.get("asset_key_files", [])
+    if type(key_paths) is not list or len(key_paths) > 16:
+        raise GuardError("Project asset_key_files must contain at most 16 paths")
+    resolved["asset_key_files"] = []
+    for value in key_paths:
+        candidate = Path(_text(value, "project asset key path", 32768))
+        resolved["asset_key_files"].append(candidate if candidate.is_absolute() else path.parent / candidate)
     return resolved
 
 
-def check_project(config: Path | str = DEFAULT_CONFIG) -> dict[str, Any]:
+def _project_asset_keys(project: dict[str, Any], extra: tuple[Path | str, ...] | list[Path | str]) -> list[Path | str]:
+    if not isinstance(extra, (list, tuple)) or any(not isinstance(value, (str, Path)) for value in extra):
+        raise GuardError("Expected external asset-key file paths")
+    keys = [*project["asset_key_files"], *extra]
+    if len(keys) > 16:
+        raise GuardError("Expected at most 16 configured and additional asset-key files combined")
+    return keys
+
+
+def check_project(config: Path | str = DEFAULT_CONFIG, *,
+                  asset_key_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
     project = load_project(config)
-    return scan_release(project["root"], project["policy"])
+    return scan_release(project["root"], project["policy"],
+                        asset_key_files=_project_asset_keys(project, asset_key_files))
 
 
 def render_analysis_notice(product: str, *, release: str | None = None,
@@ -197,7 +220,8 @@ def render_analysis_notice(product: str, *, release: str | None = None,
 
 
 def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str,
-                    out: Path | str) -> dict[str, Any]:
+                    out: Path | str, *,
+                    asset_key_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
     """Scan, sign the same inventory, and create external publication sidecars."""
     _analysis_identifier(release, "release")
     project = load_project(config)
@@ -205,7 +229,8 @@ def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str
     outside_release(output, project["root"], "Prepared release sidecars")
     if output.exists() or output.is_symlink():
         raise GuardError("Prepared output must be a new directory")
-    scan = scan_release(project["root"], project["policy"])
+    scan = scan_release(project["root"], project["policy"],
+                        asset_key_files=_project_asset_keys(project, asset_key_files))
     if not scan["ok"]:
         return {"ok": False, "prepared": False, "scan": scan, "outputs": {}}
     manifest = create_manifest(project["root"], project["product"], release, private)
@@ -222,6 +247,7 @@ def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str
         "issuer_key_sha256": issuer,
         "files_checked": len(scan["files"]),
         "bytes_scanned": scan["checks"]["bytes_scanned"],
+        "checks": scan["checks"],
         "release_modified": False,
         "application_runtime_integration": False,
         "note": "Build-time inspection has an I/O cost; no application benchmark is implied.",
