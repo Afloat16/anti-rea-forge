@@ -21,7 +21,9 @@ class ProjectAssetKeyTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="project key controls ")
         self.addCleanup(temporary.cleanup)
-        self.base = Path(temporary.name)
+        # macOS temp roots can have linked ancestors; keep production key
+        # readers strict and canonicalize only this newly created fixture.
+        self.base = Path(temporary.name).resolve()
         self.root = self.base / "dist"
         self.root.mkdir()
         self.app = self.root / "app.bin"

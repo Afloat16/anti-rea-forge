@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,7 +16,9 @@ const fixtures = fileURLToPath(new URL("./fixtures/", import.meta.url));
 const cliError = (error) => error instanceof ReleaseGuardError && error.code === "CLI_ERROR" && error.exitCode === 2;
 
 async function release(t) {
-  const base = await mkdtemp(join(tmpdir(), "releaseguard-js-integration-"));
+  // macOS's system temporary directory can have a symlink ancestor. Resolve
+  // our owned fixture root; production key readers deliberately reject links.
+  const base = await realpath(await mkdtemp(join(tmpdir(), "releaseguard-js-integration-")));
   t.after(() => rm(base, { recursive: true, force: true }));
   const root = join(base, "dist");
   const policy = join(base, "rules.json");

@@ -136,7 +136,8 @@ class AsarScanTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="asar owned controls ")
         self.addCleanup(temporary.cleanup)
-        self.work = Path(temporary.name)
+        # Use the owned real directory when the host's temp path is an alias.
+        self.work = Path(temporary.name).resolve()
         self.root = self.work / "release"
         self.root.mkdir()
         self.policy = self.work / "policy.json"
