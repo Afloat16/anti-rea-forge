@@ -71,6 +71,10 @@ def _validate_metadata(text):
     syntax = re.sub(r'"(?:[^"\\]|\\.)*"|;[^\n]*', "", text)
     _require(re.search(r"!DI[A-Za-z]+\(", syntax) is None,
              "Sealed VM does not support debug metadata")
+    # Unlike named metadata roots, pcsections is attached to a function or
+    # instruction. LLVM emits its numbered-node constants as raw object data.
+    _require(re.search(r"!pcsections(?![A-Za-z0-9$._-])", syntax) is None,
+             "Sealed VM does not support object-emitting attached metadata: pcsections")
 
 
 def _validate_retention(name, definition, allowed):

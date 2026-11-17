@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+from dataclasses import dataclass, field
 import os
 from pathlib import Path
 import secrets
@@ -183,7 +184,16 @@ def _check_key_file(info: os.stat_result) -> None:
         raise GuardError("Asset key must be an unchanged regular 32-byte file")
 
 
-def load_asset_key(path: Path | str) -> bytes:
+@dataclass(frozen=True)
+class AssetKeySnapshot:
+    """Private in-process evidence for one key input; never serialize this object."""
+
+    path: Path = field(repr=False)
+    key: bytes = field(repr=False)
+    identity: tuple[int, ...] = field(repr=False)
+
+
+def _snapshot_asset_key(path: Path | str) -> AssetKeySnapshot:
     """Read one bounded regular key file, rejecting links and identity changes.
 
     Where supported, each path component is opened relative to a directory
@@ -236,7 +246,7 @@ def load_asset_key(path: Path | str) -> bytes:
         if (len(data) != ASSET_KEY_BYTES or _stamp(opened) != _stamp(after)
                 or _stamp(before) != _stamp(final)):
             raise GuardError("Asset key file changed while reading")
-        return bytes(data)
+        return AssetKeySnapshot(destination, bytes(data), _stamp(final))
     except OSError:
         raise GuardError("Cannot load asset key from a regular unchanged file") from None
     finally:
@@ -244,3 +254,39 @@ def load_asset_key(path: Path | str) -> bytes:
             os.close(descriptor)
         if directory_fd is not None:
             os.close(directory_fd)
+
+
+def load_asset_key(path: Path | str) -> bytes:
+    """Read one bounded regular key file, rejecting links and identity changes."""
+    return _snapshot_asset_key(path).key
+
+
+def snapshot_asset_keys(paths: tuple[Path | str, ...] | list[Path | str]) -> tuple[AssetKeySnapshot, ...]:
+    """Retain a bounded set of key inputs for a trusted, immutable operation.
+
+    Call assert_asset_keys_unchanged before completing the operation. This
+    detects ordinary replacement and rotation; it is not an atomic snapshot
+    or protection against malicious directory owners.
+    """
+    if not isinstance(paths, (list, tuple)) or len(paths) > 16:
+        raise GuardError("Expected up to 16 external asset-key files")
+    return tuple(_snapshot_asset_key(path) for path in paths)
+
+
+def assert_asset_keys_unchanged(snapshots: tuple[AssetKeySnapshot, ...] | list[AssetKeySnapshot]) -> None:
+    """Reopen every key safely and reject a changed identity or key value.
+
+    Neither failures nor snapshot reprs include a key, its digest or its path.
+    The caller must keep these objects out of public reports.
+    """
+    if (not isinstance(snapshots, (list, tuple)) or len(snapshots) > 16
+            or any(not isinstance(item, AssetKeySnapshot) for item in snapshots)):
+        raise GuardError("Invalid asset key snapshots")
+    for expected in snapshots:
+        try:
+            current = _snapshot_asset_key(expected.path)
+        except (GuardError, OSError):
+            raise GuardError("Asset key inputs changed during the operation") from None
+        if (current.identity != expected.identity
+                or not secrets.compare_digest(current.key, expected.key)):
+            raise GuardError("Asset key inputs changed during the operation")

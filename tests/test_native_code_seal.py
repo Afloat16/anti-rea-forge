@@ -113,6 +113,26 @@ entry:
     return source, observations
 
 
+def pcsection_fixtures(source):
+    marker = b"OWNED-PLAINTEXT!"
+    metadata = ('\n!90 = !{!"rg_owned_aux", !91}\n!91 = !{'
+                + ", ".join("i64 " + str(word) for word in struct.unpack("<2Q", marker)) + '}\n')
+    replacements = {
+        "wrapper": ("define i32 @rg_compute(i32 %x) {",
+                    "define i32 @rg_compute(i32 %x) !pcsections !90 {"),
+        "runtime": ("define private i64 @vm_runtime(i64 %token, ptr %returns, ptr %arguments) {",
+                    "define private i64 @vm_runtime(i64 %token, ptr %returns, ptr %arguments) !pcsections !90 {"),
+        "instruction": ("  %argument = load i64, ptr %arguments, align 8",
+                        "  %argument = load i64, ptr %arguments, align 8, !pcsections !90"),
+    }
+    variants = {}
+    for name, (original, replacement) in replacements.items():
+        if source.count(original) != 1:
+            raise AssertionError("PC section fixture requires its exact original instruction/header")
+        variants[name] = source.replace(original, replacement) + metadata
+    return marker, variants
+
+
 def embedded_array(header, name):
     block = header.split(("embedded_asset_" + name + " = {").encode())[1].split(b"};")[0]
     return bytes(int(value, 16) for value in re.findall(rb"0x([0-9a-f]{2})", block))
@@ -368,6 +388,17 @@ class NativeCodeSealValidation(unittest.TestCase):
         source = self.source + '\n!llvm.ident = !{!90}\n!90 = !{!"compiler !DIFile(foo)"}\n'
         self.assertNotIn("!llvm.ident", self.seal(source=source)[0])
 
+    def test_object_emitting_attached_metadata_fails_closed(self):
+        _, variants = pcsection_fixtures(self.source)
+        for location, source in variants.items():
+            with self.subTest(location=location), self.assertRaisesRegex(
+                    GuardError, "object-emitting attached metadata"):
+                self.seal(source=source)
+        # Text inside comments/strings is not an attachment.
+        source = (self.source + '\n; !pcsections !90\n!llvm.ident = !{!90}\n'
+                  '!90 = !{!"compiler !pcsections !91"}\n')
+        self.assertNotIn("!llvm.ident", self.seal(source=source)[0])
+
     def test_unverified_multiblock_or_pointer_abi_wrappers_are_rejected(self):
         altered = copy.deepcopy(self.coverage)
         altered[0]["vm_coverage"]["wrapper_replaced"] = False
@@ -513,6 +544,25 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
                 self.assertIn(marker, artifact.read_bytes())
                 expected_error = "named metadata" if name == "commandline" else "Unsealed VM storage"
                 with self.assertRaisesRegex(GuardError, expected_error):
+                    seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_pcsections_emit_plaintext_but_are_rejected_before_sealing(self):
+        # LLVM 18's AsmPrinter emits the auxiliary metadata constants directly
+        # into rg_owned_aux. Numbered nodes alone must not evade the inventory.
+        source, coverage = fixture()
+        marker, variants = pcsection_fixtures(source)
+        for location, ir in variants.items():
+            with self.subTest(location=location):
+                original = self.work / ("pcsections-" + location + ".ll")
+                original.write_text(ir)
+                verified = self.work / ("pcsections-" + location + "-verified.ll")
+                artifact = self.work / ("pcsections-" + location + ".o")
+                self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                               "-o", verified])
+                self.run_tool([self.llvm / "llc", "-O=2", "-relocation-model=pic", "-filetype=obj",
+                               verified, "-o", artifact])
+                self.assertIn(marker, artifact.read_bytes())
+                with self.assertRaisesRegex(GuardError, "object-emitting attached metadata"):
                     seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
 
     def test_cleared_storage_rejects_even_with_ready_forced(self):

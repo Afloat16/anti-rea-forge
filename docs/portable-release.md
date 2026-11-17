@@ -3,8 +3,8 @@
 Anti-REA Forge 0.5 adds a **Python release scanner usable from any build system** and
 a **JavaScript ESM bridge with TypeScript declarations**. The scanner reads a staging
 directory without requiring an EXE, DLL or ELF entry file. The current scanner checks
-debug metadata and static symbols in every recognized ELF/PE payload, including
-inspected ZIP and packed ASAR members. The native `gate` additionally provides
+debug metadata and static symbols in every recognized ELF/PE/Mach-O payload, including
+inspected ZIP and ASAR members. The native `gate` additionally provides
 artifact-specific policies and mitigation checks.
 
 本版用 Python 统一维护扫描规则与安全判定，通过 JavaScript/TypeScript 接入 Node.js
@@ -37,7 +37,7 @@ and rerun the check before signing or distributing the result.
 
 Native-token exposure checks are on by default (`check_native_tokens: true`).
 They detect complete token-shaped content in inspected files and supported ZIP
-and packed ASAR members. The matched payload is not echoed; reports still include names, paths
+and ASAR members, including verified external siblings. The matched payload is not echoed; reports still include names, paths
 and hashes. See [native token integration](native-tokens.md) for the exact
 format and its limits.
 
@@ -107,9 +107,9 @@ invalid types, ambiguous paths and invalid resource limits are errors.
 | `check_private_keys` | `true` | Detect supported PEM private-key begin markers in the five encodings |
 | `check_source_maps` | `true` | Detect markers in five encodings and bounded v3 JSON source-map structures, including escaped keys and indexed maps |
 | `check_native_tokens` | `true` | Detect complete public-format native bearer tokens in five encodings |
-| `check_native_metadata` | `true` | Inspect every recognized ELF/PE for private debug metadata/static symbols; unverifiable recognized metadata produces a finding |
+| `check_native_metadata` | `true` | Inspect recognized ELF/PE/Mach-O for private debug metadata/static symbols; unverifiable recognized metadata produces a finding |
 | `scan_zip_archives` | `true` | Inspect recognized ZIP content recursively; disabling inspection creates a finding for each detected ZIP |
-| `scan_asar_archives` | `true` | Inspect canonical packed ASAR, including content-recognized renamed archives; disabling inspection creates a finding |
+| `scan_asar_archives` | `true` | Inspect canonical ASAR plus verified unpacked siblings, including renamed archives; disabling inspection creates a finding |
 | `max_file_bytes` | `67108864` (64 MiB) | Limit each physical file and each expanded member; maximum 512 MiB |
 | `max_total_bytes` | `268435456` (256 MiB) | Combined physical and expanded bytes across the complete scan; maximum 512 MiB |
 | `max_archive_depth` | `2` | Permit a ZIP/ASAR and one nested container level; range 1–8, shared across formats |
@@ -143,10 +143,14 @@ disable the relevant policy explicitly if your release is meant to include them.
 `check_native_metadata` adds `native_debug_metadata`, `native_symbol_table` or
 `native_metadata_unverifiable` findings. ELF section tables/names must be available for
 this metadata check; an absent table is not proof that private metadata was removed.
-The audit does not remove or reject ordinary public imports/exports, and does not audit
-Mach-O, DEX, CIL or every possible executable format. An explicit policy opt-out is
-available for intentionally shipped native debug metadata. The report records whether
-the check was enabled and how many ELF/PE payloads were inspected.
+The audit does not remove or reject ordinary public imports/exports. Mach-O support
+covers thin 32/64-bit files in both byte orders and bounded canonical universal files;
+DWARF, STABS and named local/private-external symbols are reported. Recognized malformed,
+encrypted or unsupported profiles are unverifiable. Java class files sharing the
+CAFEBABE prefix are distinguished structurally; this is not a JVM verifier. DEX, CIL
+and other executable formats are outside this metadata audit. An explicit policy
+opt-out is available for intentionally shipped native debug metadata. The report
+records whether the check was enabled and how many native payloads were inspected.
 
 ### Keep external keys in the scan-to-sign workflow
 
@@ -169,7 +173,12 @@ Paths resolve from the configuration file. Additional CLI/Python/SDK keys are ad
 configured keys, never substituted for them; the combined limit is 16. Missing/invalid
 keys fail the operation. `prepare` checks before signing or creating any sidecars, and
 its `release-report.json` records the completed check configuration. Existing project
-configurations without `asset_key_files` remain supported.
+configurations without `asset_key_files` remain supported. Each scan captures key-file
+identity and bytes, then safely reopens and checks them before returning. `prepare`
+retains its own snapshots through signing and output creation; a changed, replaced or
+missing key aborts the operation. Its final check re-verifies the signed release and
+keys after writing the new sidecars; failure removes that new output bundle. These
+checks detect ordinary build/rotation mistakes, not an atomic filesystem snapshot.
 
 ```sh
 python -m releaseguard check --config .releaseguard/project.json
@@ -202,21 +211,33 @@ uninspected. Standard UTF-8 names and checked data descriptors are supported. Lo
 central headers, actual bounded DEFLATE output, stream completion and CRC must agree;
 directory entries must contain an actually empty payload.
 
-Canonical **packed Electron ASAR** is recognized by its two Pickle headers or the
-`.asar` suffix. Member paths, JSON duplicate keys, case aliases, offsets, sizes, optional
-SHA-256/block digests and complete file-range coverage are checked before acceptance.
-Exact shared ranges used by ASAR deduplication are supported; every alias is still
-checked by its own path and charged against the byte/entry budgets. A packed member can
-be a ZIP or another ASAR. ASAR directory depth is additionally limited to 64 and its
-JSON header to 8 MiB. No target JavaScript or native code is run.
+Canonical **Electron ASAR** is recognized by its two Pickle headers or the
+`.asar` suffix. Member paths, JSON duplicate keys, case aliases, offsets, sizes,
+optional SHA-256/block digests and complete packed-range coverage are validated.
+Exact shared ranges used by packed ASAR deduplication are supported; each alias is
+checked by its own path and counted against the byte/entry budgets.
 
-ASAR links, `unpacked` sidecars, unknown entry layouts, partial overlaps, nonzero padding,
-unindexed bytes and malformed named ASAR files fail the scan. Scan an unpacked Electron
-build before packing when these restrictions prevent inspection of your package;
-do not label the final unsupported package as inspected. Integrity metadata checks
-internal consistency and is not an authenticated publisher signature.
+An unpacked member binds to the exact sibling
+`archive-name.unpacked/member-path` in the **same namespace**: the release directory,
+one ZIP, or one containing ASAR. The scanner only uses inventoried physical files or
+decoded supported members; a header never causes it to open an arbitrary host path.
+Members are processed by name so ZIP insertion order cannot put a sidecar ahead of
+its declaration. Its actual size and optional full/block hashes must match. Missing,
+renamed-only, mismatched and unindexed sidecar files are rejected, including stale
+sidecars next to a wholly packed archive. Empty files must also exist. The report
+exposes `asar_unpacked_members_checked`; bytes are charged at the actual sibling
+location once, while the declaration counts toward the entry budget.
 
-Detected tar, gzip, bzip2, xz, zstd, 7z and RAR containers produce `unsupported_archive`
+A packed member may be a ZIP or ASAR. Shared nesting, byte and entry limits still
+apply; ASAR directory depth is additionally capped at 64 and its JSON header at
+8 MiB. Links, unknown layouts, partial packed overlaps, nonzero padding, unindexed
+packed bytes and multiple ASAR declarations claiming one external payload are
+unsupported. When these restrictions prevent inspection, do not label the final
+package as fully inspected. Header integrity is consistency data, not a trusted
+publisher signature. No target JavaScript/native code is run and no archive member
+is extracted to the filesystem.
+
+Detected tar, gzip, bzip2, xz, zstd, 7z, RAR and Android OTA `CrAU` containers produce `unsupported_archive`
 findings. `archive_not_scanned` indicates that the corresponding ZIP/ASAR inspection
 was explicitly disabled. Neither finding can yield `ok: true`.
 Archive detection is not a universal file-format classifier: an unrecognized, disguised

@@ -1,15 +1,17 @@
-"""Bounded inspection of packed Electron ASAR archives, without extraction.
+"""Bounded Electron ASAR index and integrity inspection, without extraction.
 
-The canonical Pickle layout and member offsets follow electron/asar's disk.ts.
-Links, unpacked sidecars and unknown entry layouts are rejected. Exact shared
-file ranges (ASAR deduplication) are supported; partial overlaps and unindexed
-bytes are not. Header integrity values are consistency checks, not signatures.
+The canonical Pickle layout and member offsets follow electron/asar disk.ts.
+Unpacked entries require an explicit caller opt-in and a separately verified
+sibling namespace; this module never opens archive-controlled filesystem paths.
+Links and ambiguous layouts are rejected. Integrity values are consistency
+checks, not trusted signatures.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import io
 import re
 import struct
 from typing import Any, BinaryIO
@@ -27,6 +29,7 @@ class AsarEntry:
     size: int
     directory: bool = False
     integrity: dict[str, Any] | None = None
+    unpacked: bool = False
 
 
 def looks_like_asar(prefix: bytes) -> bool:
@@ -59,7 +62,7 @@ def _integrity(value: Any, size: int) -> dict[str, Any]:
 
 
 def read_asar_entries(stream: BinaryIO, file_size: int, *, max_entries: int,
-                      max_member_bytes: int) -> list[AsarEntry]:
+                      max_member_bytes: int, allow_unpacked: bool = False) -> list[AsarEntry]:
     """Validate a complete bounded index before reading any member payloads."""
     stream.seek(0)
     prefix = stream.read(16)
@@ -82,11 +85,11 @@ def read_asar_entries(stream: BinaryIO, file_size: int, *, max_entries: int,
     entries: list[AsarEntry] = []
     aliases: set[str] = set()
     # Iterate rather than recursively traversing archive-controlled paths.
-    pending: list[tuple[str, dict[str, Any], int]] = [("", root["files"], 0)]
+    pending: list[tuple[str, dict[str, Any], int, bool]] = [("", root["files"], 0, False)]
     ranges: set[tuple[int, int]] = set()
     data_size = file_size - data_offset
     while pending:
-        parent, children, depth = pending.pop()
+        parent, children, depth, parent_unpacked = pending.pop()
         _require(depth < _MAX_DIRECTORY_DEPTH, "ASAR directory nesting exceeds its limit")
         _require(len(children) <= max_entries - len(entries), "ASAR entry count exceeds max_archive_entries")
         for leaf, node in children.items():
@@ -99,30 +102,45 @@ def read_asar_entries(stream: BinaryIO, file_size: int, *, max_entries: int,
             _require(type(node) is dict, "ASAR entry must be an object")
             _require("link" not in node, "ASAR links cannot be inspected")
             if "unpacked" in node:
-                _require(type(node["unpacked"]) is bool and not node["unpacked"],
-                         "ASAR unpacked sidecars cannot be inspected as packed members")
+                _require(type(node["unpacked"]) is bool, "Invalid ASAR unpacked flag")
+                _require(not parent_unpacked or node["unpacked"],
+                         "ASAR unpacked directory contains conflicting packed metadata")
+            unpacked = parent_unpacked or node.get("unpacked", False)
+            _require(allow_unpacked or not unpacked,
+                     "ASAR unpacked sidecars require a verified sibling namespace")
             if "files" in node:
                 _require(not (set(node) - {"files", "unpacked"}) and type(node["files"]) is dict,
                          "Unsupported ASAR directory entry")
-                entries.append(AsarEntry(name, 0, 0, directory=True))
-                pending.append((name + "/", node["files"], depth + 1))
+                entries.append(AsarEntry(name, 0, 0, directory=True, unpacked=unpacked))
+                pending.append((name + "/", node["files"], depth + 1, unpacked))
             else:
-                _require({"offset", "size"} <= set(node)
-                         and not (set(node) - {"offset", "size", "unpacked", "executable", "integrity"}),
+                required = {"size", "unpacked"} if unpacked else {"offset", "size"}
+                allowed = {"size", "unpacked", "executable", "integrity"}
+                if not unpacked:
+                    allowed.add("offset")
+                _require(required <= set(node) and not (set(node) - allowed),
                          "Unsupported ASAR file entry")
-                size, offset = node["size"], node["offset"]
+                # The official writer marks every external file explicitly, even
+                # when its containing directory is also marked as unpacked.
+                _require(not unpacked or node.get("unpacked") is True,
+                         "ASAR external file is missing its unpacked flag")
+                size = node["size"]
                 _require(type(size) is int and 0 <= size <= max_member_bytes,
                          "ASAR member exceeds max_file_bytes or has an invalid size")
-                _require(type(offset) is str and re.fullmatch(r"0|[1-9][0-9]{0,15}", offset) is not None,
-                         "Invalid ASAR member offset")
-                position = int(offset)
-                _require(position <= data_size and size <= data_size - position,
-                         "ASAR member extends beyond the archive bounds")
+                position = 0
+                if not unpacked:
+                    offset = node["offset"]
+                    _require(type(offset) is str and re.fullmatch(r"0|[1-9][0-9]{0,15}", offset) is not None,
+                             "Invalid ASAR member offset")
+                    position = int(offset)
+                    _require(position <= data_size and size <= data_size - position,
+                             "ASAR member extends beyond the archive bounds")
                 if "executable" in node:
                     _require(type(node["executable"]) is bool, "Invalid ASAR executable flag")
                 integrity = _integrity(node["integrity"], size) if "integrity" in node else None
-                entries.append(AsarEntry(name, data_offset + position, size, integrity=integrity))
-                if size:
+                entries.append(AsarEntry(name, 0 if unpacked else data_offset + position, size,
+                                         integrity=integrity, unpacked=unpacked))
+                if size and not unpacked:
                     ranges.add((position, position + size))
             _require(len(entries) <= max_entries, "ASAR entry count exceeds max_archive_entries")
 
@@ -134,16 +152,38 @@ def read_asar_entries(stream: BinaryIO, file_size: int, *, max_entries: int,
     return entries
 
 
+def validate_asar_integrity(stream: BinaryIO, size: int,
+                            integrity: dict[str, Any] | None) -> None:
+    """Check already validated integrity metadata against one bounded stream."""
+    if integrity is None:
+        return
+    stream.seek(0)
+    digest = hashlib.sha256()
+    consumed = 0
+    block_matches = True
+    for expected in integrity["blocks"]:
+        block = hashlib.sha256()
+        remaining = min(integrity["blockSize"], size - consumed)
+        while remaining:
+            chunk = stream.read(min(1024 * 1024, remaining))
+            _require(bool(chunk) and len(chunk) <= remaining,
+                     "ASAR member changed or was truncated")
+            digest.update(chunk)
+            block.update(chunk)
+            consumed += len(chunk)
+            remaining -= len(chunk)
+        block_matches = block_matches and block.hexdigest() == expected
+    _require(consumed == size and digest.hexdigest() == integrity["hash"],
+             "ASAR member digest mismatch")
+    _require(block_matches, "ASAR member block digest mismatch")
+
+
 def read_asar_member(stream: BinaryIO, entry: AsarEntry) -> bytes:
-    """Read one already bounded range and check optional SHA-256 metadata."""
+    """Read a packed range; external entries must use a verified sibling."""
+    _require(not entry.unpacked and not entry.directory,
+             "ASAR unpacked sidecars cannot be read as packed members")
     stream.seek(entry.offset)
     data = stream.read(entry.size)
     _require(len(data) == entry.size, "ASAR member changed or was truncated")
-    if entry.integrity is not None:
-        expected = entry.integrity
-        _require(hashlib.sha256(data).hexdigest() == expected["hash"], "ASAR member digest mismatch")
-        block_size = expected["blockSize"]
-        for number, digest in enumerate(expected["blocks"]):
-            block = memoryview(data)[number * block_size:(number + 1) * block_size]
-            _require(hashlib.sha256(block).hexdigest() == digest, "ASAR member block digest mismatch")
+    validate_asar_integrity(io.BytesIO(data), entry.size, entry.integrity)
     return data

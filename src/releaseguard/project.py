@@ -12,16 +12,17 @@ import json
 import os
 import stat
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from .core import (
     GuardError, HEX256, _is_link, _text, _version, canonical, create_manifest,
-    key_id, parse_json, verify_document, write_new,
+    key_id, parse_json, verify_document, verify_manifest, write_new,
 )
 from .analysis import _identifier as _analysis_identifier
 from .distribution import scan_release
+from .sealed import assert_asset_keys_unchanged, snapshot_asset_keys
 
 DEFAULT_CONFIG = Path(".releaseguard/project.json")
 _CONFIG_LIMIT = 64 * 1024
@@ -61,7 +62,8 @@ def _relative_or_absolute(path: Path, base: Path) -> str:
         return path.as_posix()
 
 
-def _new_bundle(directory: Path, files: dict[str, bytes]) -> None:
+def _new_bundle(directory: Path, files: dict[str, bytes], *,
+                final_check: Callable[[], None] | None = None) -> None:
     """Create only a fresh directory, with no overwrite or implicit merging."""
     directory.mkdir(mode=0o755)
     written: list[Path] = []
@@ -70,6 +72,8 @@ def _new_bundle(directory: Path, files: dict[str, bytes]) -> None:
             destination = directory / name
             write_new(destination, content)
             written.append(destination)
+        if final_check is not None:
+            final_check()
     except BaseException:
         for destination in reversed(written):
             destination.unlink(missing_ok=True)
@@ -229,10 +233,12 @@ def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str
     outside_release(output, project["root"], "Prepared release sidecars")
     if output.exists() or output.is_symlink():
         raise GuardError("Prepared output must be a new directory")
-    scan = scan_release(project["root"], project["policy"],
-                        asset_key_files=_project_asset_keys(project, asset_key_files))
+    key_paths = _project_asset_keys(project, asset_key_files)
+    key_snapshots = snapshot_asset_keys(key_paths)
+    scan = scan_release(project["root"], project["policy"], asset_key_files=key_paths)
     if not scan["ok"]:
         return {"ok": False, "prepared": False, "scan": scan, "outputs": {}}
+    assert_asset_keys_unchanged(key_snapshots)
     manifest = create_manifest(project["root"], project["product"], release, private)
     signed = verify_document(manifest, "manifest", private.public_key())
     if signed["files"] != scan["files"]:
@@ -252,13 +258,22 @@ def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str
         "application_runtime_integration": False,
         "note": "Build-time inspection has an I/O cost; no application benchmark is implied.",
     }
+    assert_asset_keys_unchanged(key_snapshots)
+
+    def final_check() -> None:
+        # Revalidate the release after publishing files into the new directory;
+        # a failure makes _new_bundle remove the complete new bundle.
+        assert_asset_keys_unchanged(key_snapshots)
+        verify_manifest(manifest, project["root"], private.public_key(), project["product"], release)
+        assert_asset_keys_unchanged(key_snapshots)
+
     _new_bundle(output, {
         "manifest.json": _json_bytes(manifest),
         "ANALYSIS_NOTICE.md": render_analysis_notice(
             project["product"], release=release, manifest_sha256=manifest_digest, issuer_sha256=issuer,
         ),
         "release-report.json": _json_bytes(summary),
-    })
+    }, final_check=final_check)
     return {
         "ok": True,
         "prepared": True,

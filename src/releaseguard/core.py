@@ -301,30 +301,102 @@ def _inventory(root: Path) -> dict[str, Path]:
     return result
 
 
+def _stat_stamp(info: os.stat_result) -> tuple[int, ...]:
+    """Compare like-for-like stat calls, including ordinary content/identity changes."""
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns,
+            getattr(info, "st_file_attributes", 0) or 0)
+
+
+def _manifest_file_stamp(path: Path) -> tuple[int, ...]:
+    try:
+        info = path.lstat()
+    except OSError:
+        raise GuardError("Release file changed during manifest inspection") from None
+    if _is_link(info) or not stat.S_ISREG(info.st_mode):
+        raise GuardError("Release file became a link or special file")
+    return _stat_stamp(info)
+
+
+def _manifest_root_stamp(root: Path) -> tuple[int, ...]:
+    try:
+        info = root.lstat()
+    except OSError:
+        raise GuardError("Release root changed during manifest inspection") from None
+    if _is_link(info) or not stat.S_ISDIR(info.st_mode):
+        raise GuardError("Release root became a link or non-directory")
+    return _stat_stamp(info)
+
+
+def _manifest_inventory(root: Path) -> tuple[dict[str, Path], tuple[int, ...]]:
+    stamp = _manifest_root_stamp(root)
+    files = _inventory(root)
+    if _manifest_root_stamp(root) != stamp:
+        raise GuardError("Release root changed during manifest inspection")
+    return files, stamp
+
+
+def _assert_manifest_snapshot(root: Path, root_stamp: tuple[int, ...],
+                              inventory: dict[str, Path],
+                              identities: dict[str, tuple[int, ...]]) -> None:
+    """Close a trusted immutable-workflow scan; this is not an atomic snapshot."""
+    if _manifest_root_stamp(root) != root_stamp:
+        raise GuardError("Release root changed during manifest inspection")
+    try:
+        final = _inventory(root)
+    except OSError:
+        raise GuardError("Release inventory changed during manifest inspection") from None
+    if set(final) != set(inventory):
+        raise GuardError("Release inventory changed during manifest inspection")
+    for relative, expected in identities.items():
+        if _manifest_file_stamp(final[relative]) != expected:
+            raise GuardError("Release file changed during manifest inspection")
+    if _manifest_root_stamp(root) != root_stamp:
+        raise GuardError("Release root changed during manifest inspection")
+
+
 def _digest(path: Path, expected_size: int | None = None) -> tuple[int, str]:
     before = path.lstat()
     if _is_link(before) or not stat.S_ISREG(before.st_mode):
         raise GuardError("Release file became a link or special file")
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+    descriptor = os.open(path, flags)
     with os.fdopen(descriptor, "rb") as handle:
         opened = os.fstat(handle.fileno())
-        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+        if (_is_link(opened) or not stat.S_ISREG(opened.st_mode)
+                or (opened.st_dev, opened.st_ino, opened.st_size) !=
+                   (before.st_dev, before.st_ino, before.st_size)):
             raise GuardError("Release file changed during inspection")
         if expected_size is not None and opened.st_size != expected_size:
             raise GuardError(f"Release file size differs: {path.name}")
+        # Even creation hashes no more than the initially observed file size.
+        # A concurrently growing file must not turn signing into an unbounded read.
+        budget = opened.st_size
         digest = hashlib.sha256()
         size = 0
-        while chunk := handle.read(1024 * 1024):
+        while chunk := handle.read(min(1024 * 1024, budget - size + 1)):
             size += len(chunk)
-            if expected_size is not None and size > expected_size:
-                raise GuardError("Release file grew during verification")
+            if size > budget:
+                raise GuardError("Release file grew during inspection")
             digest.update(chunk)
         after = os.fstat(handle.fileno())
-    if (opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns) != (
-        after.st_size, after.st_mtime_ns, after.st_ctime_ns
-    ) or size != after.st_size:
+    if _stat_stamp(opened) != _stat_stamp(after) or size != opened.st_size:
         raise GuardError("Release file changed while hashing")
+    if _manifest_file_stamp(path) != _stat_stamp(before):
+        raise GuardError("Release file changed after hashing")
     return size, digest.hexdigest()
+
+
+def _manifest_digest(path: Path, expected_size: int | None = None) -> tuple[int, str, tuple[int, ...]]:
+    # Retain the identity beyond this file's read, so a later file's work cannot
+    # hide replacement of an already hashed file.
+    before = _manifest_file_stamp(path)
+    size, digest = _digest(path, expected_size=expected_size)
+    after = _manifest_file_stamp(path)
+    if before != after:
+        raise GuardError("Release file changed during manifest inspection")
+    return size, digest, after
 
 
 def create_manifest(root_path: Path | str, product: str, release: str,
@@ -332,20 +404,24 @@ def create_manifest(root_path: Path | str, product: str, release: str,
     _text(product, "product")
     _text(release, "release")
     root = _root(root_path)
-    inventory = _inventory(root)
+    inventory, root_stamp = _manifest_inventory(root)
     if not inventory:
         raise GuardError("Cannot sign an empty release")
     files = []
+    identities: dict[str, tuple[int, ...]] = {}
     for relative, path in sorted(inventory.items()):
         if (path.suffix.lower() in {".key", ".pfx", ".p12"}
                 or path.name.lower() in {".env", "private.pem", "issuer-private.pem"}):
             raise GuardError(f"Potential secret in release directory: {relative}")
-        size, digest = _digest(path)
+        size, digest, identities[relative] = _manifest_digest(path)
         files.append({"path": relative, "size": size, "sha256": digest})
-    return sign_document("manifest", {
+    _assert_manifest_snapshot(root, root_stamp, inventory, identities)
+    document = sign_document("manifest", {
         "version": 1, "product": product, "release": release,
         "created_at": _timestamp(utc_now()), "files": files,
     }, private)
+    _assert_manifest_snapshot(root, root_stamp, inventory, identities)
+    return document
 
 
 def verify_manifest(document: dict[str, Any], root_path: Path | str,
@@ -377,15 +453,18 @@ def verify_manifest(document: dict[str, Any], root_path: Path | str,
         if type(record["sha256"]) is not str or not HEX256.fullmatch(record["sha256"]):
             raise GuardError("Invalid SHA-256 digest")
         expected[relative] = record
-    actual = _inventory(_root(root_path))
+    root = _root(root_path)
+    actual, root_stamp = _manifest_inventory(root)
     if set(expected) != set(actual):
         missing = sorted(set(expected) - set(actual))[:10]
         extra = sorted(set(actual) - set(expected))[:10]
         raise GuardError(f"Release contents differ; missing={missing!r}, extra={extra!r}")
-    for relative, path in actual.items():
-        size, digest = _digest(path, expected_size=expected[relative]["size"])
+    identities: dict[str, tuple[int, ...]] = {}
+    for relative, path in sorted(actual.items()):
+        size, digest, identities[relative] = _manifest_digest(path, expected_size=expected[relative]["size"])
         if size != expected[relative]["size"] or digest != expected[relative]["sha256"]:
             raise GuardError(f"Release file was modified: {relative}")
+    _assert_manifest_snapshot(root, root_stamp, actual, identities)
     return body
 
 

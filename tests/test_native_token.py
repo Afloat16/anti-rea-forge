@@ -152,7 +152,8 @@ class CompiledNativeToken(unittest.TestCase):
             unavailable("requires Unix-style C++17 toolchain and libcrypto")
         temp = tempfile.TemporaryDirectory()
         cls.addClassCleanup(temp.cleanup)
-        work = Path(temp.name)
+        work = Path(temp.name).resolve()
+        cls.work, cls.cxx = work, cxx
         # A standalone readiness check distinguishes missing dependencies from a
         # regression in our header. Compilation of the actual header must pass.
         ready = subprocess.run(
@@ -199,3 +200,49 @@ class CompiledNativeToken(unittest.TestCase):
         if status == 77:
             self.skipTest("OpenSSL provider property controls require OpenSSL 3")
         self.assertEqual(status, 3)
+
+    def test_independent_verifiers_in_separate_translation_units_keep_their_tokens(self):
+        candidates = []
+        sources = []
+        for name in ("a", "b"):
+            public = self.work / ("include_" + name)
+            secret = self.work / "issuer" / ("token_" + name)
+            issue_native_token(public, secret)
+            candidates.append(secret.read_bytes())
+            source = self.work / ("verify_" + name + ".cpp")
+            source.write_text(
+                '#include "' + public.name + '/releaseguard_token.hpp"\n'
+                'bool verify_' + name + '(std::string_view candidate) noexcept {\n'
+                '    return releaseguard::verify_issued_token(candidate);\n'
+                '}\n', encoding="ascii",
+            )
+            sources.append(source)
+        main = self.work / "verify_independent.cpp"
+        main.write_text(r'''
+#include <iostream>
+#include <string>
+#include <string_view>
+bool verify_a(std::string_view) noexcept;
+bool verify_b(std::string_view) noexcept;
+int main() {
+    std::string a, b;
+    if (!std::getline(std::cin, a) || !std::getline(std::cin, b)) return 2;
+    std::cout << verify_a(a) << ' ' << verify_a(b) << ' '
+              << verify_b(a) << ' ' << verify_b(b) << '\n';
+}
+''', encoding="ascii")
+        for optimization in ("-O0", "-O2"):
+            for reverse in (False, True):
+                with self.subTest(optimization=optimization, reverse_link_order=reverse):
+                    ordered = list(reversed(sources)) if reverse else sources
+                    app = self.work / "verify_independent"
+                    compiled = subprocess.run(
+                        [self.cxx, "-std=c++17", "-Wall", "-Wextra", "-Werror", optimization,
+                         *map(str, ordered), str(main), "-lcrypto", "-o", str(app)],
+                        capture_output=True, text=True, timeout=60,
+                    )
+                    self.assertEqual(compiled.returncode, 0, compiled.stderr)
+                    checked = subprocess.run([str(app)], input=b"".join(candidates),
+                                             capture_output=True, timeout=15)
+                    self.assertEqual(checked.returncode, 0, checked.stderr)
+                    self.assertEqual(checked.stdout, b"1 0 0 1\n")

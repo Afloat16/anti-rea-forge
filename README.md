@@ -4,11 +4,13 @@
 
 ## Release hardening in development
 
-Release checks now inspect **packed Electron ASAR and ZIP members with the same rules as loose files**, recognize escaped v3 source-map JSON, and check every detected ELF/PE for private debug metadata and static symbols. Renaming a supported package, map or native module does not skip these checks. Ambiguous layouts and exhausted inspection budgets block publication.
+Release checks inspect **ZIP, packed ASAR and verified ASAR unpacked siblings**, recognize escaped v3 source-map JSON, and check recognized ELF/PE/Mach-O for private debug metadata and symbols. Renaming a supported package or native module does not skip inspection. Ambiguous layouts, missing sidecars and exhausted budgets block publication.
 
-Known external asset/code keys can be configured once in `project.json` and checked by `check`, `prepare` and the JavaScript SDK. `prepare` refuses to sign a release containing a detected leak. Sealed native-function builds also reject unverified globals and metadata that could leave plaintext in the generated object.
+Known external asset/code keys can be configured once in `project.json` and checked by `check`, `prepare` and the JavaScript SDK. Key identities and bytes are rechecked before completion. Manifest operations recheck the complete inventory, and `prepare` validates the signed release again after creating its sidecars; a failed final check removes the new output bundle.
 
-Fresh GNU `strings`, `nm`, `readelf` and `objdump` controls verify private-metadata removal, unchanged executable instructions, correct external-key operation and deliberately leaked-key rejection. These are release-exposure controls; authorized process memory and shipped instructions remain observable. [Integration](docs/portable-release.md) · [Current REA coverage and observations (中文)](docs/rea-coverage-2026-11-17.zh-CN.md) · [Machine-readable controls](docs/results/release-exposure-controls.json)
+Generated native-token verifiers are isolated per translation unit. Sealed native-function builds reject unaccounted globals and object-emitting `!pcsections` metadata. These controls address release and validation boundaries; authorized process memory, public APIs and shipped instructions remain observable.
+
+[Integration](docs/portable-release.md) · [2026-11-18 scope and validation (中文)](docs/rea-coverage-2026-11-18.zh-CN.md) · [Earlier measured release controls](docs/results/release-exposure-controls.json)
 
 ## Native function protection in development
 
