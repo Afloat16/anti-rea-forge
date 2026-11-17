@@ -189,7 +189,7 @@ class NativeVirtualizationRealCLI(unittest.TestCase):
         directory = Path(report["object"]).parent
         self.assertEqual(report["profile"], "sealed-virtualize")
         self.assertEqual(report["vm_coverage_stage"], "before_sealing")
-        self.assertEqual(len(report["sealed_files"]), 4)
+        self.assertEqual(len(report["sealed_files"]), 5)
         self.assertNotIn(key.hex(), json.dumps(report))
         self.assertNotIn(str(keyfile), json.dumps(report))
         driver = self.work / "driver.cpp"

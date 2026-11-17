@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import platform
+import signal
 import shlex
 import shutil
 import subprocess
@@ -46,6 +47,8 @@ static_assert(!std::is_copy_assignable<secure_buffer>::value, "no copying");
 static_assert(!std::is_move_constructible<secure_buffer>::value, "no moving");
 static_assert(!std::is_move_assignable<secure_buffer>::value, "no moving");
 static_assert(noexcept(std::declval<secure_buffer&>().clear()), "clear is noexcept");
+static_assert(noexcept(std::declval<secure_buffer&>().make_read_only()), "read-only is noexcept");
+static_assert(noexcept(std::declval<secure_buffer&>().make_writable()), "writable is noexcept");
 static_assert(std::is_same<decltype(std::declval<const secure_buffer&>().data()),
                            const unsigned char*>::value, "const data");
 
@@ -54,6 +57,7 @@ struct mapping_flags {
     bool available = false;
     bool found = false;
     bool rw_nonexec = false;
+    bool ro_nonexec = false;
     bool locked = false;
     bool dontdump = false;
 };
@@ -73,6 +77,7 @@ mapping_flags inspect_live(const secure_buffer& buffer) {
             if (current) {
                 result.found = true;
                 result.rw_nonexec = permissions[0] == 'r' && permissions[1] == 'w' && permissions[2] == '-';
+                result.ro_nonexec = permissions[0] == 'r' && permissions[1] == '-' && permissions[2] == '-';
             }
         } else if (current && line.compare(0, 8, "VmFlags:") == 0) {
             std::istringstream words(line.substr(8));
@@ -132,6 +137,51 @@ int required_lock_failure() {
 
 int main(int argc, char** argv) {
     const std::string mode = argc > 1 ? argv[1] : "normal";
+    if (mode == "read-only-write") {
+#if defined(__linux__)
+        const rlimit no_core{0, 0};
+        (void)::setrlimit(RLIMIT_CORE, &no_core);
+        std::signal(SIGSEGV, SIG_DFL);
+        std::signal(SIGBUS, SIG_DFL);
+#else
+        SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+#endif
+        secure_buffer buffer(4097, {false, false});
+        if (!buffer.make_read_only()) return 40;
+        volatile unsigned char* output = buffer.data();
+        output[4096] = 0x42;
+        return 41;
+    }
+    if (mode == "read-only") {
+        for (const auto size : {std::size_t{1}, std::size_t{17}, std::size_t{4097}, secure_buffer::max_size}) {
+            secure_buffer buffer(size, {false, false});
+            const auto original = buffer.protection_status();
+            std::memset(buffer.data(), 0x5a, size);
+            if (!buffer.make_writable() || !buffer.make_read_only() || !buffer.make_read_only()) return 42;
+            const auto protected_status = buffer.protection_status();
+            if (!protected_status.read_only || protected_status.locked != original.locked ||
+                protected_status.dump_excluded != original.dump_excluded ||
+                protected_status.guard_pages != original.guard_pages) return 43;
+            const secure_buffer& view = buffer;
+            for (std::size_t i = 0; i < size; ++i) if (view.data()[i] != 0x5a) return 44;
+#if defined(__linux__)
+            const auto observed = inspect_live(buffer);
+            if (observed.available && (!observed.found || !observed.ro_nonexec)) return 45;
+#else
+            MEMORY_BASIC_INFORMATION mapping{};
+            if (VirtualQuery(buffer.data(), &mapping, sizeof(mapping)) == 0 ||
+                mapping.State != MEM_COMMIT || mapping.Protect != PAGE_READONLY) return 45;
+#endif
+            if (!buffer.make_writable() || !buffer.make_writable() || buffer.protection_status().read_only) return 46;
+            buffer.data()[size - 1] = 0x77;
+            if (!buffer.make_read_only()) return 47;
+            buffer.clear();
+            if (buffer.protection_status().read_only) return 48;
+            for (std::size_t i = 0; i < size; ++i) if (buffer.data()[i] != 0) return 49;
+            buffer.data()[0] = 0xa5;
+        }
+        return 0;
+    }
     if (mode == "invalid") {
         for (const auto size : {std::size_t{0}, secure_buffer::max_size + 1,
                                (std::numeric_limits<std::size_t>::max)()}) {
@@ -168,7 +218,7 @@ int main(int argc, char** argv) {
         secure_buffer buffer(size, {false, false});
         if (buffer.size() != size || buffer.data() == nullptr) return 20;
         const auto status = buffer.protection_status();
-        if (!status.guard_pages) return 21;
+        if (!status.guard_pages || status.read_only) return 21;
         for (std::size_t i = 0; i < size; ++i) {
             if (buffer.data()[i] != 0) return 22;
             buffer.data()[i] = static_cast<unsigned char>(i % 251 + 1);
@@ -219,6 +269,7 @@ CLEANUP_SAMPLE = r'''
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <string>
 #include <sys/mman.h>
 
 static int failure_mode;
@@ -228,6 +279,9 @@ static int release_count;
 static int unlock_count;
 static bool zero_at_release;
 static bool zero_at_unlock;
+static bool read_only;
+static bool fail_restore;
+static std::string operations;
 
 static bool is_zero() {
     const volatile unsigned char* bytes = static_cast<unsigned char*>(payload);
@@ -242,11 +296,20 @@ extern "C" int __real_munlock(const void*, std::size_t);
 extern "C" int __real_munmap(void*, std::size_t);
 
 extern "C" int __wrap_mprotect(void* address, std::size_t size, int protection) {
+    const bool first = payload == nullptr;
     payload = address;
     payload_size = size;
-    if (failure_mode == 1) { errno = EACCES; return -1; }
+    operations += protection == PROT_READ ? 'R' : 'W';
+    if (failure_mode == 1 || (failure_mode == 5 && protection == PROT_READ) ||
+        (fail_restore && read_only && protection == (PROT_READ | PROT_WRITE))) {
+        errno = EACCES;
+        return -1;
+    }
     const int result = __real_mprotect(address, size, protection);
-    if (result == 0) std::memset(address, 0xa5, size);
+    if (result == 0) {
+        read_only = protection == PROT_READ;
+        if (first) std::memset(address, 0xa5, size);
+    }
     return result;
 }
 extern "C" int __wrap_mlock(const void* address, std::size_t size) {
@@ -258,11 +321,13 @@ extern "C" int __wrap_madvise(void* address, std::size_t size, int advice) {
     return __real_madvise(address, size, advice);
 }
 extern "C" int __wrap_munlock(const void* address, std::size_t size) {
+    operations += 'U';
     ++unlock_count;
     zero_at_unlock = is_zero();
     return __real_munlock(address, size);
 }
 extern "C" int __wrap_munmap(void* address, std::size_t size) {
+    operations += 'M';
     ++release_count;
     if (failure_mode != 1) zero_at_release = is_zero();
     return __real_munmap(address, size);
@@ -270,19 +335,44 @@ extern "C" int __wrap_munmap(void* address, std::size_t size) {
 
 int main(int argc, char** argv) {
     failure_mode = argc > 1 ? std::atoi(argv[1]) : 0;
+    if (failure_mode < 0 || failure_mode > 8) return 9;
+    const bool construction_failure = failure_mode >= 1 && failure_mode <= 3;
     bool threw = false;
     try {
         releaseguard::secure_buffer buffer(17, {true, true});
-        if (failure_mode != 0) return 10;
+        if (construction_failure) return 10;
         // Also dirty the mapped page padding after the visible 17 bytes.
         std::memset(buffer.data(), 0x77, payload_size);
+        if (failure_mode == 5) {
+            if (buffer.make_read_only() || buffer.protection_status().read_only) return 16;
+            buffer.data()[0] = 0x33;
+            if (!buffer.make_writable()) return 17;
+        } else if (failure_mode >= 4) {
+            if (!buffer.make_read_only() || !buffer.make_read_only() ||
+                !buffer.protection_status().read_only) return 18;
+            fail_restore = failure_mode == 6 || failure_mode == 7;
+            if (failure_mode == 7) {
+                buffer.clear();
+                if (!buffer.protection_status().read_only || buffer.data() != payload ||
+                    release_count != 0 || unlock_count != 0 || is_zero()) return 19;
+                fail_restore = false;
+            }
+            if (failure_mode == 7 || failure_mode == 8) {
+                buffer.clear();
+                if (buffer.protection_status().read_only || !is_zero()) return 20;
+            }
+        }
     } catch (const std::system_error&) { threw = true; }
-    if (threw != (failure_mode != 0)) return 11;
+    if (threw != construction_failure) return 11;
     if (release_count != 1) return 12;
-    if (failure_mode != 1 && !zero_at_release) return 13;
-    if (failure_mode == 0 || failure_mode == 3) {
-        if (unlock_count != 1 || !zero_at_unlock) return 14;
+    if (failure_mode == 6) {
+        if (zero_at_release || zero_at_unlock || !read_only) return 21;
+    } else if (failure_mode != 1 && !zero_at_release) return 13;
+    if (failure_mode == 0 || failure_mode >= 3) {
+        if (unlock_count != 1 || (failure_mode != 6 && !zero_at_unlock)) return 14;
     } else if (unlock_count != 0) return 15;
+    const char* expected[] = {"WUM", "WM", "WM", "WUM", "WRWUM", "WRUM", "WRWUM", "WRWWUM", "WRWUM"};
+    if (operations != expected[failure_mode]) return 22;
     std::cout << "cleanup-ok\n";
 }
 '''
@@ -363,6 +453,17 @@ class SecureBufferTests(unittest.TestCase):
         result = self.run_sample(self.built("o2"))
         self.assertEqual(result.stdout, "secure-buffer-ok\n")
 
+    def test_read_only_transition_restore_and_clear(self):
+        self.run_sample(self.built("read-only"), "read-only")
+
+    def test_read_only_mapping_rejects_a_write_in_an_isolated_process(self):
+        binary = self.built("read-only-write")
+        result = subprocess.run([str(binary), "read-only-write"], capture_output=True, text=True, timeout=20)
+        if platform.system() == "Linux":
+            self.assertIn(result.returncode, {-signal.SIGSEGV, -signal.SIGBUS}, result.stdout + result.stderr)
+        else:
+            self.assertEqual(result.returncode & 0xffffffff, 0xc0000005, result.stdout + result.stderr)
+
     @unittest.skipUnless(platform.system() == "Linux", "live Linux VmFlags require Linux")
     def test_live_flags_independently_match_linux_smaps(self):
         if not Path("/proc/self/smaps").is_file():
@@ -420,6 +521,16 @@ class SecureBufferTests(unittest.TestCase):
         binary = self.cleanup_binary("destructor-cleanup")
         self.run_sample(binary, "0")
         self.run_sample(binary, "3")
+
+    @unittest.skipUnless(platform.system() == "Linux", "GNU syscall-wrapper regressions require Linux")
+    def test_read_only_cleanup_and_permission_failures(self):
+        probe = self.built("read-only-cleanup-protections")
+        self.run_sample(probe, "default-lock", optional=True)
+        self.run_sample(probe, "required-dump", optional=True)
+        binary = self.cleanup_binary("read-only-cleanup")
+        for mode in range(4, 9):
+            with self.subTest(mode=mode):
+                self.run_sample(binary, str(mode))
 
     def test_temporary_data_pointer_is_a_compile_error(self):
         for const in (False, True):

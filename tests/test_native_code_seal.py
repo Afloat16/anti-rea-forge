@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import copy
 import ctypes
+import errno
 import hashlib
 import json
 import os
@@ -12,6 +13,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import signal
 import struct
 import subprocess
 import tempfile
@@ -32,12 +34,12 @@ WORDS = [0xa1b2c3d4e5f60718 + index * 0x0203040506070809 for index in range(8)]
 DESCRIPTORS = struct.pack("<8Q", *WORDS)
 
 
-def fixture(wrappers=(("rg_compute", 32),)):
-    encoded = "".join(f"\\{value:02X}" for value in CODE)
+def fixture(wrappers=(("rg_compute", 32),), code=CODE):
+    encoded = "".join(f"\\{value:02X}" for value in code)
     descriptor = "private constant [8 x i64] [" + ", ".join(f"i64 {value}" for value in WORDS) + "]"
     source = f'''target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-@code = private constant [64 x i8] c"{encoded}"
+@code = private constant [{len(code)} x i8] c"{encoded}"
 @descriptors = {descriptor}
 @native_calls = private constant [1 x ptr] zeroinitializer
 @llvm.compiler.used = appending global [3 x ptr] [ptr @code, ptr @descriptors, ptr @native_calls], section "llvm.metadata"
@@ -103,7 +105,7 @@ entry:
             "name": name, "requested": True, "changed": True,
             "vm_coverage": {
                 "wrapper_replaced": True, "runtime_function": "vm_runtime", "original_body_absent": True,
-                "bytecode_globals": [{"name": "code", "bytes": len(CODE), "sha256": hashlib.sha256(CODE).hexdigest()}],
+                "bytecode_globals": [{"name": "code", "bytes": len(code), "sha256": hashlib.sha256(code).hexdigest()}],
                 "descriptor_globals": [{"name": "descriptors", "words": len(WORDS),
                                          "ir_sha256": hashlib.sha256(descriptor.encode()).hexdigest()}],
             },
@@ -132,7 +134,7 @@ class NativeCodeSealValidation(unittest.TestCase):
                                    self.coverage if coverage is None else coverage,
                                    self.key, **{**CONTEXT, **context})
 
-    def test_all_initializers_are_encrypted_and_only_zero_storage_remains(self):
+    def test_all_initializers_are_encrypted_and_only_null_bindings_remain(self):
         rewritten, files, details = self.seal()
         plaintext = open_asset(document_from_files(files), self.key, **ASSET_CONTEXT)
         self.assertEqual(plaintext[:len(CODE) + 56], CODE + DESCRIPTORS[:56])
@@ -141,7 +143,7 @@ class NativeCodeSealValidation(unittest.TestCase):
         self.assertEqual(len(plaintext), len(CODE) + len(DESCRIPTORS) + 8)
         self.assertEqual(details["payload_bytes"], len(plaintext))
         self.assertEqual(details["payload_sha256"], hashlib.sha256(plaintext).hexdigest())
-        self.assertEqual(len(files), 4)
+        self.assertEqual(len(files), 5)
         material = rewritten.encode() + b"".join(files.values()) + json.dumps(details).encode()
         for secret in (CODE, DESCRIPTORS, self.key):
             self.assertNotIn(secret, material)
@@ -150,11 +152,54 @@ class NativeCodeSealValidation(unittest.TestCase):
             self.assertNotIn(str(word), rewritten)
         for item in details["storage"]:
             self.assertRegex(item["symbol"], r"^[A-Za-z_][A-Za-z0-9_]*$")
-            self.assertIn("@" + item["symbol"] + " = global", rewritten)
-        self.assertEqual(rewritten.count("zeroinitializer"), 4)
+            self.assertIn("@" + item["symbol"] + " = global ptr null", rewritten)
+            self.assertIn("load ptr, ptr @" + item["symbol"], rewritten)
+        self.assertEqual(rewritten.count("zeroinitializer"), 1)
         self.assertIn("ret i32 0", rewritten)
         self.assertNotIn("@code", rewritten)
         self.assertNotIn("@descriptors", rewritten)
+
+    def test_storage_offsets_align_tables_and_decrypt_into_one_protected_mapping(self):
+        source, coverage = fixture(code=CODE[:-1])
+        rewritten, files, details = self.seal(source, coverage)
+        plaintext = open_asset(document_from_files(files), self.key, **ASSET_CONTEXT)
+        entries = {item["kind"]: item for item in details["storage"]}
+        self.assertEqual(entries["bytecode"]["offset_bytes"], 0)
+        self.assertEqual(entries["descriptor"]["offset_bytes"], 64)
+        self.assertEqual(entries["guard_expected"]["offset_bytes"], 128)
+        self.assertEqual(plaintext[:63], CODE[:-1])
+        self.assertEqual(plaintext[63], 0)
+        self.assertEqual(plaintext[64:120], DESCRIPTORS[:56])
+        self.assertEqual(plaintext[120:128], plaintext[128:136])
+        loader = files["releaseguard_native_code.cpp"].decode()
+        self.assertIn("open_native_asset_into", loader)
+        self.assertIn("secure_buffer_options{true, true}", loader)
+        self.assertIn("pending->make_read_only()", loader)
+        self.assertNotIn("std::vector", loader)
+        self.assertNotIn("std::memcpy", loader)
+        for item in details["storage"]:
+            self.assertIn("icmp ne ptr", rewritten)
+            if item["kind"] != "bytecode":
+                self.assertEqual(item["offset_bytes"] % 8, 0)
+        self.assertTrue(details["memory_protection"]["direct_authenticated_decryption"])
+
+    def test_storage_constant_expressions_fail_before_emission(self):
+        source = self.source.replace("load i8, ptr @code, align 1",
+                                     "load i8, ptr getelementptr ([64 x i8], ptr @code, i64 0, i64 1), align 1")
+        with self.assertRaisesRegex(GuardError, "constant-expression"):
+            self.seal(source=source)
+
+    def test_wrappers_cannot_directly_read_storage_and_helpers_need_global_reads(self):
+        source = self.source.replace("%wide = zext i32 %x to i64",
+                                     "%wide = load i64, ptr @descriptors, align 8")
+        with self.assertRaisesRegex(GuardError, "wrapper has unsupported global dependencies"):
+            self.seal(source=source)
+        for attribute in ("readnone", "argmemonly", "memory(none)", "memory(argmem: readwrite)",
+                          "speculatable memory(read)"):
+            source = self.source.replace("ptr %arguments) {", "ptr %arguments) #99 {")
+            source += "\nattributes #99 = { " + attribute + " }\n"
+            with self.subTest(attribute=attribute), self.assertRaisesRegex(GuardError, "helper memory attributes"):
+                self.seal(source=source)
 
     def test_descriptor_guards_are_fresh_and_report_only_their_shape(self):
         first, second = self.seal(), self.seal()
@@ -346,8 +391,7 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
     def assert_cleared(self, loaded, details):
         self.assertEqual(ctypes.c_ubyte.in_dll(loaded, details["ready_symbol"]).value, 0)
         for item in details["storage"]:
-            memory = (ctypes.c_ubyte * item["bytes"]).in_dll(loaded, item["symbol"])
-            self.assertEqual(bytes(memory), bytes(item["bytes"]))
+            self.assertIsNone(ctypes.c_void_p.in_dll(loaded, item["symbol"]).value)
 
     def test_unlock_clear_and_failed_reinitialization(self):
         loaded = self.normal
@@ -379,6 +423,268 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
         finally:
             loaded.rg_clear()
         self.assert_cleared(loaded, self.bundle[2])
+
+    def test_storage_has_aligned_read_only_locked_dump_excluded_mapping(self):
+        loaded = self.normal
+        self.addCleanup(loaded.rg_clear)
+        self.assertTrue(loaded.rg_initialize(self.key))
+        payload = open_asset(document_from_files(self.bundle[1]), self.key, **ASSET_CONTEXT)
+        base = ctypes.c_void_p.in_dll(loaded, self.bundle[2]["storage"][0]["symbol"]).value
+        self.assertEqual(base % os.sysconf("SC_PAGESIZE"), 0)
+        for item in self.bundle[2]["storage"]:
+            address = ctypes.c_void_p.in_dll(loaded, item["symbol"]).value
+            self.assertEqual(address, base + item["offset_bytes"])
+            self.assertEqual(ctypes.string_at(address, item["bytes"]),
+                             payload[item["offset_bytes"]:item["offset_bytes"] + item["bytes"]])
+            if item["kind"] != "bytecode":
+                self.assertEqual(address % 8, 0)
+        try:
+            mappings = Path("/proc/self/smaps").read_text()
+        except OSError as error:
+            if os.environ.get("RELEASEGUARD_REQUIRE_NATIVE_VIRTUALIZATION") == "1":
+                raise AssertionError("Required native memory observations unavailable") from error
+            self.skipTest(str(error))
+        ranges = list(re.finditer(r"^([0-9a-f]+)-([0-9a-f]+) ([rwxps-]+) .*$", mappings, re.MULTILINE))
+        region = next(index for index, row in enumerate(ranges) if int(row[1], 16) <= base < int(row[2], 16))
+        self.assertEqual(ranges[region][3], "r--p")
+        end = ranges[region + 1].start() if region + 1 < len(ranges) else len(mappings)
+        flags = re.search(r"^VmFlags:\s*(.*)$", mappings[ranges[region].start():end], re.MULTILINE)[1].split()
+        self.assertIn("lo", flags)
+        self.assertIn("dd", flags)
+
+    def test_missing_storage_binding_locks_wrapper_and_clear_unmaps_payload(self):
+        loaded = self.normal
+        self.addCleanup(loaded.rg_clear)
+        self.assertTrue(loaded.rg_initialize(self.key))
+        for item in self.bundle[2]["storage"]:
+            binding = ctypes.c_void_p.in_dll(loaded, item["symbol"])
+            original = binding.value
+            binding.value = None
+            try:
+                self.assertEqual(loaded.rg_compute(123), 0)
+            finally:
+                binding.value = original
+        base = ctypes.c_void_p.in_dll(loaded, self.bundle[2]["storage"][0]["symbol"]).value
+        libc = ctypes.CDLL(None, use_errno=True)
+        libc.mincore.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_ubyte)]
+        libc.mincore.restype = ctypes.c_int
+        residency = ctypes.c_ubyte()
+        page = os.sysconf("SC_PAGESIZE")
+        loaded.rg_clear()
+        self.assert_cleared(loaded, self.bundle[2])
+        ctypes.set_errno(0)
+        self.assertEqual(libc.mincore(base, page, ctypes.byref(residency)), -1)
+        self.assertEqual(ctypes.get_errno(), errno.ENOMEM)
+        loaded.rg_clear()
+
+    def test_authenticated_vm_storage_rejects_process_writes(self):
+        namespace = self.bundle[2]["cpp_namespace"]
+        symbol = self.bundle[2]["storage"][0]["symbol"]
+        source = self.folder / "write-protection.cpp"
+        source.write_text('''#include "releaseguard_native_code.hpp"
+#include <cstdio>
+#include <sys/resource.h>
+extern "C" unsigned char* ''' + symbol + ''';
+int main(int argc, char**) {
+    rlimit limit{0, 0};
+    if (setrlimit(RLIMIT_CORE, &limit) != 0) return 2;
+    releaseguard::native_asset_key key{};
+    if (std::fread(key.data(), 1, key.size(), stdin) != key.size()) return 3;
+    const bool opened = ''' + namespace + '''::initialize_native_code(key);
+    OPENSSL_cleanse(key.data(), key.size());
+    if (!opened) return 4;
+    if (argc > 1) {
+        volatile unsigned char* output = ''' + symbol + ''';
+        *output = 0;
+        return 5;
+    }
+    ''' + namespace + '''::clear_native_code();
+    return 0;
+}
+''')
+        app = self.folder / "write-protection"
+        self.run_tool([self.cxx, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+                       self.folder / "protected.o", self.folder / "releaseguard_native_code.cpp",
+                       source, "-lcrypto", "-o", app])
+        for arguments, expected in (([], 0), (["write"], -signal.SIGSEGV)):
+            result = subprocess.run([str(app), *arguments], input=self.key, capture_output=True, timeout=30)
+            self.assertEqual((result.returncode, result.stdout, result.stderr), (expected, b"", b""))
+
+    def test_fork_wipes_child_vm_storage_and_preserves_parent(self):
+        loaded = self.normal
+        self.addCleanup(loaded.rg_clear)
+        self.assertTrue(loaded.rg_initialize(self.key))
+        expected = ((123 ^ WORDS[0]) + CODE[0]) & 0xffffffff
+        child = os.fork()
+        if child == 0:
+            signal.alarm(10)
+            try:
+                if loaded.rg_compute(123) != 0:
+                    os._exit(11)
+                for item in self.bundle[2]["storage"]:
+                    address = ctypes.c_void_p.in_dll(loaded, item["symbol"]).value
+                    if ctypes.string_at(address, item["bytes"]) != bytes(item["bytes"]):
+                        os._exit(12)
+                if not loaded.rg_initialize(self.key) or loaded.rg_compute(123) != expected:
+                    os._exit(13)
+                loaded.rg_clear()
+                os._exit(0)
+            except BaseException:
+                os._exit(14)
+        _, status = os.waitpid(child, 0)
+        self.assertTrue(os.WIFEXITED(status), status)
+        self.assertEqual(os.WEXITSTATUS(status), 0)
+        self.assertEqual(loaded.rg_compute(123), expected)
+
+    def test_global_user_initialization_and_destruction_preserve_owner_order(self):
+        namespace = self.bundle[2]["cpp_namespace"]
+        source = self.folder / "global-user.cpp"
+        source.write_text('''#include "releaseguard_native_code.hpp"
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+extern "C" std::uint32_t rg_compute(std::uint32_t);
+struct user_lifetime {
+    user_lifetime() {
+        releaseguard::native_asset_key key{};
+        if (std::fread(key.data(), 1, key.size(), stdin) != key.size()) std::exit(2);
+        const bool opened = ''' + namespace + '''::initialize_native_code(key);
+        OPENSSL_cleanse(key.data(), key.size());
+        if (!opened) std::exit(3);
+    }
+    ~user_lifetime() {
+        std::printf("%u\\n", rg_compute(123));
+        ''' + namespace + '''::clear_native_code();
+    }
+};
+user_lifetime user;
+int main() { std::printf("%u\\n", rg_compute(123)); }
+''')
+        expected = f"{((123 ^ WORDS[0]) + CODE[0]) & 0xffffffff}\n".encode() * 2
+        loader = self.folder / "releaseguard_native_code.cpp"
+        for order, inputs in (("user-first", [source, loader]), ("loader-first", [loader, source])):
+            app = self.folder / order
+            self.run_tool([self.cxx, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+                           *inputs, self.folder / "protected.o", "-lcrypto", "-o", app])
+            result = subprocess.run([str(app)], input=self.key, capture_output=True, timeout=30)
+            self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, b""))
+
+    def test_loader_os_failures_revoke_bindings_and_release_every_mapping(self):
+        namespace = self.bundle[2]["cpp_namespace"]
+        declarations, null_checks = [], []
+        for item in self.bundle[2]["storage"]:
+            ctype = "unsigned char" if item["kind"] == "bytecode" else "std::uint64_t"
+            declarations.append(f'extern "C" {ctype}* {item["symbol"]};')
+            null_checks.append(f'    if ({item["symbol"]} != nullptr) return 20;')
+        source = self.folder / "memory-failures.cpp"
+        source.write_text('''#include "releaseguard_native_code.hpp"
+#include <cerrno>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <sys/mman.h>
+#include <unistd.h>
+''' + "\n".join(declarations) + '''
+extern "C" unsigned char ''' + self.bundle[2]["ready_symbol"] + ''';
+extern "C" void* __real_mmap(void*, std::size_t, int, int, int, off_t);
+extern "C" int __real_mprotect(void*, std::size_t, int);
+extern "C" int __real_mlock(const void*, std::size_t);
+extern "C" int __real_madvise(void*, std::size_t, int);
+extern "C" int __real_munmap(void*, std::size_t);
+static int mode = 0;
+static void* reservation = nullptr;
+static unsigned char* payload = nullptr;
+static std::size_t payload_bytes = 0;
+static bool writable = false, read_only = false;
+static unsigned active = 0, released = 0, unwiped = 0, violations = 0;
+extern "C" void* __wrap_mmap(void* address, std::size_t size, int protection,
+                              int flags, int fd, off_t offset) {
+    if (mode == 1) { errno = ENOMEM; return MAP_FAILED; }
+    void* result = __real_mmap(address, size, protection, flags, fd, offset);
+    if (result != MAP_FAILED) {
+        if (active != 0) ++violations;
+        ++active;
+        reservation = result;
+        const auto page = static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+        payload = static_cast<unsigned char*>(result) + page;
+        payload_bytes = size - 2 * page;
+        writable = read_only = false;
+    }
+    return result;
+}
+extern "C" int __wrap_mprotect(void* address, std::size_t size, int protection) {
+    if ((mode == 2 && protection == (PROT_READ | PROT_WRITE)) ||
+        (mode == 6 && protection == PROT_READ) ||
+        (mode == 7 && read_only && protection == (PROT_READ | PROT_WRITE))) {
+        errno = EACCES;
+        return -1;
+    }
+    const int result = __real_mprotect(address, size, protection);
+    if (result == 0 && address == payload) {
+        writable = (protection & PROT_WRITE) != 0;
+        read_only = protection == PROT_READ;
+    }
+    return result;
+}
+extern "C" int __wrap_mlock(const void* address, std::size_t size) {
+    if (mode == 3) { errno = EAGAIN; return -1; }
+    return __real_mlock(address, size);
+}
+extern "C" int __wrap_madvise(void* address, std::size_t size, int advice) {
+    if ((mode == 4 && advice == MADV_DONTDUMP) || (mode == 5 && advice == MADV_WIPEONFORK)) {
+        errno = EINVAL;
+        return -1;
+    }
+    return __real_madvise(address, size, advice);
+}
+extern "C" int __wrap_munmap(void* address, std::size_t size) {
+    if (address != reservation || active != 1) ++violations;
+    if (writable) {
+        for (std::size_t index = 0; index < payload_bytes; ++index) {
+            if (payload[index] != 0) { ++violations; break; }
+        }
+    } else if (read_only) {
+        ++unwiped;
+    }
+    const int result = __real_munmap(address, size);
+    if (result == 0) { --active; ++released; reservation = nullptr; }
+    return result;
+}
+int main(int argc, char** argv) {
+    if (argc != 2) return 2;
+    const int requested = std::atoi(argv[1]);
+    mode = requested == 8 ? 0 : requested;
+    releaseguard::native_asset_key key{};
+    if (std::fread(key.data(), 1, key.size(), stdin) != key.size()) return 3;
+    if (mode == 9) key[0] ^= 1;
+    bool opened = ''' + namespace + '''::initialize_native_code(key);
+    if (requested == 8) {
+        if (!opened) return 4;
+        mode = 3;
+        opened = ''' + namespace + '''::initialize_native_code(key);
+    }
+    OPENSSL_cleanse(key.data(), key.size());
+    if (opened != (requested == 0 || requested == 7)) return 5;
+    ''' + namespace + '''::clear_native_code();
+    if (''' + self.bundle[2]["ready_symbol"] + ''' != 0) return 6;
+''' + "\n".join(null_checks) + '''
+    if (active || violations) return 7;
+    std::printf("%u %u\\n", released, unwiped);
+    return 0;
+}
+''')
+        app = self.folder / "memory-failures"
+        wraps = ["-Wl,--wrap=" + name for name in ("mmap", "mprotect", "mlock", "madvise", "munmap")]
+        self.run_tool([self.cxx, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+                       self.folder / "protected.o", self.folder / "releaseguard_native_code.cpp",
+                       source, *wraps, "-lcrypto", "-o", app])
+        for mode in range(10):
+            with self.subTest(failure=mode):
+                result = subprocess.run([str(app), str(mode)], input=self.key,
+                                        capture_output=True, timeout=30)
+                released = 0 if mode == 1 else 2 if mode == 8 else 1
+                expected = f"{released} {int(mode == 7)}\n".encode()
+                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, b""))
 
     def test_supported_integer_return_and_parameter_abis(self):
         source, coverage = fixture(tuple(("rg_width_" + str(width), width) for width in (1, 8, 16, 32, 64)))

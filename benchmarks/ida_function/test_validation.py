@@ -50,6 +50,24 @@ class ModernIDAValidation(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "original bytes"):
             validate_report(self.report, self.raw, self.code)
 
+    def test_entry_outside_function_body_is_rejected(self):
+        self.function["entry"] = "0x2000"
+        self.report["target_entry"] = "0x2000"
+        self.report["function_inventory"][0]["entry"] = "0x2000"
+        with self.assertRaisesRegex(RuntimeError, "entry is outside its body"):
+            validate_report(self.report, self.raw, self.code)
+
+    def test_entry_inside_instruction_is_rejected(self):
+        self.raw = b"\x7fELF\x66\x90"
+        digest = hashlib.sha256(self.raw).hexdigest()
+        self.report.update(input_sha256=digest, idb_input_sha256=digest, target_entry="0x1001")
+        self.report["function_inventory"][0]["entry"] = "0x1001"
+        self.function.update(entry="0x1001", instruction_count=1,
+                             instructions=[{"address": "0x1000", "size": 2, "hex": "6690"}])
+        self.function["byte_ranges"][0].update(hex="6690", loaded_hex="6690")
+        with self.assertRaisesRegex(RuntimeError, "entry is not a verified instruction start"):
+            validate_report(self.report, self.raw, self.code)
+
     def test_omitted_helper_is_rejected(self):
         self.report["function_inventory"].append({"entry": "0x2000", "name": "helper"})
         with self.assertRaisesRegex(RuntimeError, "omit or duplicate"):

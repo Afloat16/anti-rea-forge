@@ -12,6 +12,7 @@ def require(condition, message):
 
 
 def validate_function(row, raw):
+    entry = int(row["entry"], 16)
     original, loaded = {}, {}
     for block in row["byte_ranges"]:
         start, offset = int(block["start"], 16), block["file_offset"]
@@ -33,7 +34,9 @@ def validate_function(row, raw):
         body.update(addresses)
     require(body == original.keys() and len(body) == row["body_bytes"] > 0,
             "IDA original-byte coverage is incomplete")
+    require(entry in body, "IDA function entry is outside its body")
     decoded = set()
+    instruction_starts = set()
     for instruction in row["instructions"]:
         start = int(instruction["address"], 16)
         data = bytes.fromhex(instruction["hex"])
@@ -43,6 +46,8 @@ def validate_function(row, raw):
         require(all(loaded[start + index] == value for index, value in enumerate(data)),
                 "IDA instruction bytes differ from the loaded database")
         decoded.update(addresses)
+        instruction_starts.add(start)
+    require(entry in instruction_starts, "IDA function entry is not a verified instruction start")
     require(len(row["instructions"]) == row["instruction_count"] > 0
             and len(body - decoded) == row["undecoded_bytes"], "Inconsistent IDA instruction counts")
     require(sum(original[address] != loaded[address] for address in body) == row["loaded_byte_changes"],

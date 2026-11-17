@@ -1,0 +1,169 @@
+{
+  "schema": "releaseguard-native-code-memory/v1",
+  "date": "2026-11-17",
+  "base_commit": "11c5e5b0e19e311e06b86047bcd3da671e893817",
+  "code_seal_format": "open-release-guard-sealed-native-code/v2",
+  "implementation": {
+    "direct_decryption_into_owned_mapping": true,
+    "required_protections": [
+      "guard pages",
+      "mlock",
+      "MADV_DONTDUMP",
+      "MADV_WIPEONFORK",
+      "read-only before ready"
+    ],
+    "aligned_descriptor_and_guard_tables": true,
+    "clear_revokes_pointers_before_release": true,
+    "restore_writable_failure": "Mapping is still unmapped, without a guaranteed explicit userspace wipe",
+    "exclusive_initialize_and_clear_required": true
+  },
+  "local_llvm_c_api": {
+    "toolchain": "LLVM C API",
+    "llvm_version": "19.1.7",
+    "library": "/lib/x86_64-linux-gnu/libLLVM.so.19.1",
+    "replaced_test_method": "NativeCodeSealCompiled.emit",
+    "amice_executed": false,
+    "ghidra_executed": false,
+    "input_sha256": {
+      "src/releaseguard/native_code_seal.py": "b9f672e70d0b0eaea017c5a95007127481ceddc38aead49ed976375dd06d9aa5",
+      "tests/test_native_code_seal.py": "aba99880a3519655f23501edbe74f7f2f10756b65d6d34a5b3c0ee5b3753972d",
+      "src/releaseguard/data/include/releaseguard/sealed_asset.hpp": "cd890bf001fd29995a5f86ab06cf80e29d0d4b830b537555c055937e810770ad",
+      "src/releaseguard/data/include/releaseguard/secure_buffer.hpp": "cf4231cd8d17c3d4cef18de02f2d44b82c2e72affb8d35b25fcf9fdc84210170"
+    },
+    "test_names": [
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_authenticated_length_digest_tamper_and_context_fail_before_copy",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_authenticated_vm_storage_rejects_process_writes",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_cleared_storage_rejects_even_with_ready_forced",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_forced_gcm_final_success_still_rejects_wrong_key",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_fork_wipes_child_vm_storage_and_preserves_parent",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_global_user_initialization_and_destruction_preserve_owner_order",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_loader_os_failures_revoke_bindings_and_release_every_mapping",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_missing_storage_binding_locks_wrapper_and_clear_unmaps_payload",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_storage_has_aligned_read_only_locked_dump_excluded_mapping",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_supported_integer_return_and_parameter_abis",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_two_modules_link_and_initialize_independently",
+      "tests.test_native_code_seal.NativeCodeSealCompiled.test_unlock_clear_and_failed_reinitialization"
+    ],
+    "parsed_modules": 8,
+    "verified_modules": 8,
+    "pic_objects": 8,
+    "tests_run": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 10.740662,
+    "successful": true
+  },
+  "secure_buffer_tests": {
+    "tests": 16,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "native_asset_tests": {
+    "tests": 21,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "javascript": {
+    "unit_passed": 63,
+    "integration_passed": 9
+  },
+  "modern_ida": {
+    "engine_execution": "pending_compatible_engine",
+    "adapter_tests_passed": 10,
+    "entry_checks": [
+      "inside verified function body",
+      "at verified instruction start"
+    ],
+    "environment_rechecked": "2026-11-17",
+    "official_free_edition_has_idapython": false,
+    "account_required_for_official_download": true,
+    "sources": [
+      "https://hex-rays.com/faqs/is-it-mandatory-to-have-my-hex-rays-account-to-use-hex-rays-products",
+      "https://hex-rays.com/faqs/am-i-getting-access-to-the-ida-development-kits-with-ida-free"
+    ]
+  },
+  "llvm18_amice_ghidra_ci": {
+    "status": "completed",
+    "conclusion": "success",
+    "tested_commit": "f8f9df6528cd1a1e2a996ca657a74df7a8a08f18",
+    "workflow_run_id": 44092281985,
+    "url": "https://github.com/Afloat16/anti-rea-forge/actions/runs/44092281985",
+    "passed_jobs": 9,
+    "mandatory_native_tests": 145,
+    "mandatory_native_skipped": 0,
+    "ida_adapter_tests": 10,
+    "llvm_version": "18.1.3",
+    "ghidra_version": "12.2",
+    "artifact_id": 14333245203,
+    "artifact_sha256": "d380ddb8c15403a11d9d8e1b269ef26146cde1c338e6bd670fdfa3c4c8dee910",
+    "sealed_controls_report": "native-code-memory-controls.json",
+    "sealed_controls_sha256": "3367f09ad7c5c66a1b5bd2241a6ace3f617da6271d07818c4ba00d6162ac6dd3",
+    "sample_binary_hashes_verified_from_artifact": 3
+  },
+  "scope": {
+    "platform": "Linux x86-64",
+    "function_profile": "self-contained scalar-integer computation",
+    "authorized_memory_contains_readable_plaintext": true,
+    "fork_wipe_covers": "owned VM mapping only",
+    "caller_key_lifecycle": "caller responsibility",
+    "independent_reconstruction_of_v2": "not_performed",
+    "historical_v1_recovery_evidence": "native-code-hardening.json"
+  },
+  "local_python_suite": {
+    "tests_run": 607,
+    "failures": 0,
+    "errors": 0,
+    "skipped": [
+      [
+        "setUpClass (test_cmake_integration.CMakeIntegrationTests)",
+        "CMake is not installed; set RELEASEGUARD_CMAKE to its executable"
+      ],
+      [
+        "setUpClass (test_native_code_controls.NativeCodeControlsLLVM)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN"
+      ],
+      [
+        "setUpClass (test_native_code_obfuscation.SealedNativeObfuscationLLVM)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds"
+      ],
+      [
+        "setUpClass (test_native_code_seal.NativeCodeSealCompiled)",
+        "requires RELEASEGUARD_LLVM_BIN plus C++17/OpenSSL development files"
+      ],
+      [
+        "setUpClass (test_native_obfuscation.NativeObfuscationLLVM)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN for LLVM 18 builds"
+      ],
+      [
+        "setUpClass (test_native_obfuscation_cli.NativeObfuscationLLVMCLI)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN for LLVM 18 CLI builds"
+      ],
+      [
+        "setUpClass (test_native_virtualization.NativeVirtualizationLLVM)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds"
+      ],
+      [
+        "setUpClass (test_native_virtualization_cli.NativeVirtualizationRealCLI)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds"
+      ],
+      [
+        "setUpClass (test_native_vm_integers.NativeVMIntegerExecution)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds"
+      ],
+      [
+        "setUpClass (test_sealed_code_controls.SealedControlsLLVM)",
+        "requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN"
+      ]
+    ],
+    "seconds": 43.965,
+    "successful": true
+  },
+  "additional_attribute_regression": {
+    "rejected": "speculatable on affected VM storage consumers or their callers",
+    "reason": "Mutable nullable bindings cannot retain the original speculative-execution promise",
+    "source": "https://releases.llvm.org/18.1.6/docs/LangRef.html#function-attributes"
+  }
+}

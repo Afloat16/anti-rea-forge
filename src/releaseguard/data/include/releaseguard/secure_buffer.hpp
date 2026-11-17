@@ -9,8 +9,9 @@
 //
 // Two inaccessible guard pages surround the PAGE-ROUNDED payload allocation.
 // Rounding leaves a padding gap after size(): guards are not bounds checks for
-// individual objects or every overflow. The payload is mapped read/write, with
-// no executable permission requested. Callers must provide synchronization.
+// individual objects or every overflow. The payload starts read/write and can
+// be made read-only. No executable permission is requested. Callers must
+// provide synchronization for access and permission changes.
 
 #include <cstddef>
 #include <limits>
@@ -46,6 +47,7 @@ struct secure_buffer_status {
     bool dump_excluded = false;
     bool guard_pages = false;
     dump_exclusion_kind dump_exclusion = dump_exclusion_kind::none;
+    bool read_only = false;
 };
 
 class secure_buffer final {
@@ -98,8 +100,13 @@ public:
     std::size_t size() const noexcept { return size_; }
     secure_buffer_status protection_status() const noexcept { return status_; }
 
+    bool make_read_only() noexcept { return set_read_only(true); }
+    bool make_writable() noexcept { return set_read_only(false); }
+
+    // A failed permission change preserves the read-only mapping and status.
+    // Callers can inspect protection_status() and retry before releasing it.
     void clear() noexcept {
-        if (!writable_) {
+        if (!make_writable()) {
             return;
         }
         // Include page padding, not just the requested visible byte count.
@@ -114,6 +121,30 @@ public:
     }
 
 private:
+    bool set_read_only(bool read_only) noexcept {
+        if (!writable_ && !status_.read_only) {
+            return false;
+        }
+        if (status_.read_only == read_only) {
+            return true;
+        }
+#if defined(_WIN32)
+        DWORD previous = 0;
+        const DWORD protection = read_only ? PAGE_READONLY : PAGE_READWRITE;
+        if (VirtualProtect(payload_, payload_bytes_, protection, &previous) == 0) {
+            return false;
+        }
+#else
+        const int protection = read_only ? PROT_READ : PROT_READ | PROT_WRITE;
+        if (::mprotect(payload_, payload_bytes_, protection) != 0) {
+            return false;
+        }
+#endif
+        writable_ = !read_only;
+        status_.read_only = read_only;
+        return true;
+    }
+
     static std::size_t page_size() {
 #if defined(_WIN32)
         SYSTEM_INFO information{};
@@ -210,8 +241,11 @@ private:
         if (reservation_ == nullptr) {
             return;
         }
-        // Wipe while the pages are still mapped, writable and (if acquired)
-        // locked. Failure during partial construction also follows this path.
+        // Restore write access and wipe while the pages are still mapped and
+        // (if acquired) locked. If restoration fails, clear preserves read-only
+        // access. We still unlock and unmap safely, but cannot guarantee an
+        // explicit user-space wipe on that failure path. Partial construction
+        // with inaccessible pages also reaches this cleanup without a write.
         clear();
 #if defined(_WIN32)
         if (status_.locked) {

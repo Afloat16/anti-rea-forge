@@ -114,11 +114,14 @@ class NativeAssetFiles(unittest.TestCase):
 
 FIXTURE = r"""
 #include "releaseguard_asset.hpp"
+#include <algorithm>
 #include <iostream>
 #include <string_view>
 
 int main(int argc, char** argv) {
-    const std::string_view mode = argc > 1 ? argv[1] : "ordinary";
+    const std::string_view requested = argc > 1 ? argv[1] : "ordinary";
+    const bool direct = requested.substr(0, 7) == "direct-";
+    const std::string_view mode = direct ? requested.substr(7) : requested;
     releaseguard::native_asset_key key{};
     std::cin.read(reinterpret_cast<char*>(key.data()), key.size());
     if (std::cin.gcount() != 32 || std::cin.peek() != EOF) return 2;
@@ -145,6 +148,38 @@ int main(int argc, char** argv) {
 #else
         return 77;
 #endif
+    }
+    if (direct) {
+        const std::size_t payload_size = releaseguard::embedded_asset_ciphertext.size() - 16;
+        std::size_t capacity = payload_size == 0 ? 1 : payload_size;
+        if (mode == "extra-capacity") capacity += 11;
+        if (mode == "small-capacity") --capacity;
+        if (mode == "zero-capacity") capacity = 0;
+        std::vector<unsigned char> buffer(capacity + 2, 0xab);
+        unsigned char* output = mode == "null-output" ? nullptr : buffer.data() + 1;
+        std::size_t output_size = 137;
+        bool result = releaseguard::open_native_asset_into(key, asset, output, capacity, output_size);
+        const bool first_opened = result;
+        if (mode == "repeat-wrong-key" && result) {
+            key.front() ^= 1;
+            output_size = 137;
+            result = releaseguard::open_native_asset_into(key, asset, output, capacity, output_size);
+        }
+        OPENSSL_cleanse(key.data(), key.size());
+        if (mode == "repeat-wrong-key" && !first_opened) return 4;
+        if (buffer.front() != 0xab || buffer.back() != 0xab) return 4;
+        if (!result) {
+            const unsigned char expected = output == nullptr ? 0xab : 0;
+            const bool cleared = std::all_of(buffer.begin() + 1, buffer.end() - 1,
+                                            [expected](unsigned char value) { return value == expected; });
+            return output_size == 0 && cleared ? 3 : 4;
+        }
+        if (output_size != payload_size || output_size > capacity) return 4;
+        if (!std::all_of(buffer.begin() + 1 + output_size, buffer.end() - 1,
+                         [](unsigned char value) { return value == 0; })) return 4;
+        std::cout.write(reinterpret_cast<const char*>(output), output_size);
+        OPENSSL_cleanse(output, capacity);
+        return 0;
     }
     std::vector<unsigned char> output(137, 0xab);
     const bool result = mode == "wrapper"
@@ -211,6 +246,103 @@ class CompiledNativeAsset(unittest.TestCase):
             self.assertEqual(result.stdout, self.payload)
         self.assertNotIn(self.key, self.app.read_bytes())
         self.assertNotIn(self.payload, self.app.read_bytes())
+
+    def test_direct_buffer_exact_capacity_and_cleansed_padding(self):
+        for mode in ("direct-ordinary", "direct-extra-capacity"):
+            with self.subTest(mode=mode):
+                result = self.call(self.key, mode)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, self.payload)
+
+    def test_direct_buffer_rejects_short_null_and_zero_capacities(self):
+        for mode in ("direct-small-capacity", "direct-null-output", "direct-zero-capacity"):
+            with self.subTest(mode=mode):
+                result = self.call(self.key, mode)
+                self.assertEqual(result.returncode, 3, result.stderr)
+                self.assertEqual(result.stdout, b"")
+
+    def test_direct_buffer_failures_wipe_previous_output_and_reset_size(self):
+        wrong = bytes([self.key[0] ^ 1]) + self.key[1:]
+        calls = [("wrong-key", self.call(wrong, "direct-ordinary"))]
+        modes = ("bad-tag", "bad-ciphertext", "bad-context", "bad-salt", "bad-nonce",
+                 "truncated", "short-tag", "oversized", "null-ciphertext", "null-aad",
+                 "empty-aad", "oversized-aad", "repeat-wrong-key")
+        calls.extend((mode, self.call(self.key, "direct-" + mode)) for mode in modes)
+        for mode, result in calls:
+            with self.subTest(mode=mode):
+                self.assertEqual(result.returncode, 3, result.stderr)
+                self.assertEqual(result.stdout, b"")
+        result = self.call(self.key, "direct-no-provider")
+        if result.returncode == 77:
+            self.skipTest("OpenSSL provider controls require OpenSSL 3")
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertEqual(result.stdout, b"")
+
+    def test_direct_buffer_uses_no_cpp_plaintext_allocation(self):
+        source = self.work / "no-plaintext-allocation.cpp"
+        source.write_text(r'''
+#include "releaseguard_asset.hpp"
+#include <cstdio>
+#include <new>
+
+extern bool refuse_allocation;
+
+int main(int argc, char**) {
+    releaseguard::native_asset_key key{};
+    if (std::fread(key.data(), 1, key.size(), stdin) != key.size()) return 2;
+    std::array<unsigned char, 32> output{};
+    std::size_t output_size = 137;
+    bool opened = false;
+    refuse_allocation = true;
+    try {
+        if (argc > 1) {
+            std::vector<unsigned char> ordinary;
+            opened = releaseguard::open_native_asset(key, releaseguard::embedded_asset, ordinary);
+        } else {
+            opened = releaseguard::open_native_asset_into(
+                key, releaseguard::embedded_asset, output.data(), output.size(), output_size);
+        }
+    } catch (const std::bad_alloc&) {
+        OPENSSL_cleanse(key.data(), key.size());
+        return 3;
+    }
+    refuse_allocation = false;
+    OPENSSL_cleanse(key.data(), key.size());
+    if (!opened || output_size != output.size()) return 4;
+    const bool written = std::fwrite(output.data(), 1, output.size(), stdout) == output.size();
+    OPENSSL_cleanse(output.data(), output.size());
+    return written ? 0 : 5;
+}
+''', encoding="ascii")
+        allocator = self.work / "allocation-control.cpp"
+        allocator.write_text(r'''
+#include <cstdlib>
+#include <new>
+
+bool refuse_allocation = false;
+void* operator new(std::size_t size) {
+    if (refuse_allocation) throw std::bad_alloc();
+    void* memory = std::malloc(size == 0 ? 1 : size);
+    if (!memory) throw std::bad_alloc();
+    return memory;
+}
+void operator delete(void* memory) noexcept { std::free(memory); }
+void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
+''', encoding="ascii")
+        app = self.work / "no-plaintext-allocation"
+        compiled = subprocess.run(
+            [self.cxx, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+             "-I", str(self.app.parent / "include"), str(source), str(allocator),
+             "-lcrypto", "-o", str(app)],
+            capture_output=True, text=True, timeout=120)
+        self.assertEqual(compiled.returncode, 0, compiled.stderr)
+        for arguments, expected_code, expected_output in (
+            ([], 0, self.payload), (["vector-control"], 3, b""),
+        ):
+            result = subprocess.run([str(app), *arguments], input=self.key,
+                                    capture_output=True, timeout=20)
+            self.assertEqual(result.returncode, expected_code, result.stderr)
+            self.assertEqual(result.stdout, expected_output)
 
     def test_two_assets_in_separate_translation_units_keep_their_own_data(self):
         translation_units = []
@@ -281,4 +413,10 @@ class CompiledNativeAsset(unittest.TestCase):
                 self.assertEqual(result.stdout, payload)
                 result = self.call(self.key, "bad-tag", app)
                 self.assertEqual(result.returncode, 3)
+                self.assertEqual(result.stdout, b"")
+                result = self.call(self.key, "direct-ordinary", app)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, payload)
+                result = self.call(self.key, "direct-bad-tag", app)
+                self.assertEqual(result.returncode, 3, result.stderr)
                 self.assertEqual(result.stdout, b"")
