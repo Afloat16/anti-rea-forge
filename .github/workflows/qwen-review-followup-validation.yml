@@ -23,13 +23,13 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           repository: Afloat16/qwen-code
-          ref: '80d12cd242a153e727096a2d01d63559b351b3e9'
+          ref: 'a2d97961fd1a82de0117c9da4235a213eeab5d26'
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 3
       - name: Verify source identity
         env:
-          EXPECTED_SHA: '80d12cd242a153e727096a2d01d63559b351b3e9'
-          EXPECTED_PARENT: 'ea860cf1392cf9f14e74500e81ef209f3876262b'
+          EXPECTED_SHA: 'a2d97961fd1a82de0117c9da4235a213eeab5d26'
+          EXPECTED_PARENT: '80d12cd242a153e727096a2d01d63559b351b3e9'
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "$(git rev-parse HEAD^)" = "$EXPECTED_PARENT"
@@ -86,6 +86,43 @@ jobs:
           assert source.read_bytes() == original
           PY
           git diff --exit-code
+      - name: Prove error-delivery regression rejects first reviewed candidate
+        env:
+          REGRESSION_SHA: '80d12cd242a153e727096a2d01d63559b351b3e9'
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          import xml.etree.ElementTree as ET
+
+          source = Path('packages/sdk-python/src/qwen_code_sdk/transport.py')
+          original = source.read_bytes()
+          reviewed = subprocess.check_output(['git', 'show', os.environ['REGRESSION_SHA'] + ':' + str(source)])
+          assert reviewed != original
+          report = Path(os.environ['RUNNER_TEMP']) / 'stdout-shutdown-reviewed.xml'
+          try:
+              source.write_bytes(reviewed)
+              result = subprocess.run([
+                  sys.executable, '-m', 'pytest', '-c', 'packages/sdk-python/pyproject.toml',
+                  'packages/sdk-python/tests/unit/test_transport_shutdown.py', '-q',
+                  '--junitxml=' + str(report),
+              ], timeout=180)
+              assert result.returncode == 1, 'The first candidate must fail the new error-delivery assertion'
+              cases = list(ET.parse(report).getroot().iter('testcase'))
+              errors = [case.attrib['name'] for case in cases if case.find('error') is not None]
+              failed = {case.attrib['name'] for case in cases if case.find('failure') is not None}
+              passed = [case.attrib['name'] for case in cases if case.find('failure') is None and case.find('error') is None and case.find('skipped') is None]
+              assert not errors, errors
+              assert failed == {'test_stdout_read_error_reaches_consumer_and_finishes_stream'}, failed
+              assert len(passed) == 11, passed
+              print('Reviewed-candidate negative control:', {'failed': sorted(failed), 'passed': passed})
+          finally:
+              source.write_bytes(original)
+          assert source.read_bytes() == original
+          PY
+          git diff --exit-code
       - name: Build Python distribution wheel
         run: python -m pip wheel --no-deps ./packages/sdk-python --wheel-dir "$RUNNER_TEMP/python-sdk-wheel"
   workspace:
@@ -102,12 +139,12 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           repository: Afloat16/qwen-code
-          ref: '80d12cd242a153e727096a2d01d63559b351b3e9'
+          ref: 'a2d97961fd1a82de0117c9da4235a213eeab5d26'
           persist-credentials: false
           fetch-depth: 2
       - name: Verify source identity
         env:
-          EXPECTED_SHA: '80d12cd242a153e727096a2d01d63559b351b3e9'
+          EXPECTED_SHA: 'a2d97961fd1a82de0117c9da4235a213eeab5d26'
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Set up Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
