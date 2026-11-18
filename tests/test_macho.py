@@ -80,7 +80,7 @@ def make_macho(*, bits=64, endian="<", cpu=None, subtype=3, debug=False,
 
 
 def command_offset(data, wanted):
-    endian, bits = macho._THIN_MAGICS[data[:4]]
+    endian, bits = macho._THIN_MAGICS[bytes(data[:4])]
     offset = 28 if bits == 32 else 32
     count = struct.unpack_from(endian + "I", data, 16)[0]
     for _ in range(count):
@@ -95,6 +95,24 @@ def replace_u32(data, offset, value, endian="<"):
     result = bytearray(data)
     struct.pack_into(endian + "I", result, offset, value)
     return bytes(result)
+
+
+def make_stripped_macho(*, bits=64, endian="<", name=b"radr://5614542",
+                        kind=0x3C, section=0, descriptor=0, value=0x05614542,
+                        debug=False):
+    """Apple strip's fixed compatibility record plus public binding symbols."""
+    groups = [0, 1, 1, 1, 2, 1] + [0] * 12
+    data = bytearray(make_macho(
+        bits=bits, endian=endian, debug=debug,
+        symbols=[(name, kind, section), (b"_public_api", 0xF, 1), (b"_puts", 1, 0)],
+        extra=struct.pack(endian + "20I", 0xB, 80, *groups)))
+    symoff = struct.unpack_from(endian + "I", data, command_offset(data, 2) + 8)[0]
+    struct.pack_into(endian + "H", data, symoff + 6, descriptor)
+    struct.pack_into(endian + ("I" if bits == 32 else "Q"), data, symoff + 8, value)
+    # One bounded indirect entry refers to the undefined public symbol.
+    struct.pack_into(endian + "II", data, command_offset(data, 0xB) + 56, len(data), 1)
+    data.extend(struct.pack(endian + "I", 2))
+    return bytes(data)
 
 
 def make_fat(images, *, bits=32, align=6):
@@ -173,6 +191,62 @@ class MachOReaderTests(unittest.TestCase):
                 self.assertTrue(report["evidence"]["private_symbols_present"])
                 self.assertEqual(report["architectures"][0]["private_symbols"], 1)
                 self.assertNotIn("_private_pricing", json.dumps(report))
+
+    def test_exact_apple_strip_compatibility_record_is_not_private_debug_data(self):
+        for bits in (32, 64):
+            for endian in ("<", ">"):
+                with self.subTest(bits=bits, endian=endian):
+                    report = self.inspect(make_stripped_macho(bits=bits, endian=endian))
+                    item = report["architectures"][0]
+                    self.assertEqual(item["stab_symbols"], 1)
+                    self.assertEqual(item["strip_compatibility_symbols"], 1)
+                    self.assertEqual(item["public_symbols"], 2)
+                    self.assertFalse(any(report["evidence"].values()))
+
+    def test_strip_marker_lookalikes_cannot_hide_debug_data(self):
+        variants = (
+            {"name": b"radr://5614542-private-source.c"},
+            {"name": b"radr://5614542/"}, {"name": b""},
+            {"kind": 0x64}, {"section": 1}, {"descriptor": 1}, {"value": 0},
+        )
+        for variant in variants:
+            with self.subTest(variant=variant):
+                report = self.inspect(make_stripped_macho(**variant))
+                self.assertTrue(report["evidence"]["debug_metadata_present"])
+                self.assertEqual(report["architectures"][0]["strip_compatibility_symbols"], 0)
+
+    def test_strip_compatibility_requires_its_indirect_and_local_table_context(self):
+        original = make_stripped_macho()
+        dynamic = command_offset(original, 0xB)
+        no_indirect = replace_u32(original, dynamic + 60, 0)
+        # Keep the symbol groups complete while claiming a second local symbol.
+        extra_local = replace_u32(original, dynamic + 12, 2)
+        extra_local = replace_u32(extra_local, dynamic + 16, 2)
+        extra_local = replace_u32(extra_local, dynamic + 20, 0)
+        for data in (no_indirect, extra_local):
+            with self.subTest(length=len(data), dynamic=data[dynamic:dynamic + 80]):
+                report = self.inspect(data)
+                self.assertTrue(report["evidence"]["debug_metadata_present"])
+                self.assertEqual(report["architectures"][0]["strip_compatibility_symbols"], 0)
+        malformed = replace_u32(original, dynamic + 56, len(original))
+        self.rejected(malformed)
+
+    def test_strip_compatibility_record_does_not_mask_dwarf_or_additional_stabs(self):
+        report = self.inspect(make_stripped_macho(debug=True))
+        self.assertTrue(report["evidence"]["debug_metadata_present"])
+        self.assertEqual(report["architectures"][0]["strip_compatibility_symbols"], 1)
+        data = bytearray(make_stripped_macho())
+        symoff = struct.unpack_from("<I", data, command_offset(data, 2) + 8)[0]
+        data[symoff + 16 + 4] = 0x64
+        report = self.inspect(bytes(data))
+        self.assertTrue(report["evidence"]["debug_metadata_present"])
+        self.assertEqual(report["architectures"][0]["stab_symbols"], 2)
+
+    def test_oso_stab_cpu_subtype_byte_is_not_a_section_index(self):
+        report = self.inspect(make_macho(symbols=[(b"/owned/private/object.o", 0x66, 255)]))
+        self.assertTrue(report["evidence"]["debug_metadata_present"])
+        self.assertEqual(report["architectures"][0]["stab_symbols"], 1)
+        self.assertNotIn("private/object.o", json.dumps(report))
 
     def test_empty_local_names_and_empty_symbol_table_do_not_disclose_names(self):
         for symbols in ([], [(b"", 2, 0)]):

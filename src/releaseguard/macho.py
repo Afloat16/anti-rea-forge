@@ -41,6 +41,7 @@ _MAX_READ_BYTES = 32 * 1024 * 1024
 _MAX_JAVA_BYTES = 8 * 1024 * 1024
 _MAX_JAVA_ITEMS = 100000
 _CHUNK_BYTES = 65536
+_STRIP_COMPATIBILITY_NAME = b"radr://5614542\0"
 
 _LINKEDIT_COMMANDS = {
     0x1D, 0x1E, 0x26, 0x29, 0x2B, 0x2E, 0x80000033, 0x80000034,
@@ -605,16 +606,30 @@ def _thin(reader: _Reader) -> dict:
         # total work. Repeated .find from attacker-selected indices is quadratic.
         return strings[index] != 0
 
-    private = public = stabs = 0
+    private = public = stabs = strip_compatibility_symbols = 0
     for index in range(nsyms):
-        name_index, kind, section, _, value = struct.unpack_from(
+        name_index, kind, section, descriptor, value = struct.unpack_from(
             endian + ("IBBHI" if bits == 32 else "IBBHQ"), symbols, index * stride)
         has_name = named(name_index)
-        if section > sections:
-            raise ValueError("Mach-O symbol section index is out of range")
         if kind & 0xE0:
             stabs += 1
+            # Apple strip adds this exact N_OPT record when its output has an
+            # indirect symbol table but no remaining locals (cctools misc/strip.c,
+            # hack_5614542). It is public compatibility data, not source/debug
+            # metadata. Require the complete fixed record and its table context;
+            # arbitrary N_OPT records and lookalike names remain debug evidence.
+            if (index == 0 and kind == 0x3C and section == 0 and descriptor == 0
+                    and value == 0x05614542 and has_name
+                    and strings[name_index:name_index + len(_STRIP_COMPATIBILITY_NAME)]
+                    == _STRIP_COMPATIBILITY_NAME
+                    and dysymtab is not None and dysymtab[:2] == (0, 1)
+                    and dysymtab[13] > 0):
+                strip_compatibility_symbols += 1
             continue
+        # STABS repurpose this byte: N_OSO can store a CPU subtype rather than
+        # a section index (Apple mach-o/stab.h). Those entries stay debug evidence.
+        if section > sections:
+            raise ValueError("Mach-O symbol section index is out of range")
         symbol_type = kind & 0xE
         if symbol_type not in (0, 2, 0xA, 0xC, 0xE):
             raise ValueError("Unknown Mach-O symbol type")
@@ -655,9 +670,11 @@ def _thin(reader: _Reader) -> dict:
         "section_count": sections, "symbol_table_present": True,
         "symbol_count": nsyms, "public_symbols": public,
         "private_symbols": private, "stab_symbols": stabs,
+        "strip_compatibility_symbols": strip_compatibility_symbols,
         "debug_sections": debug_sections,
         "evidence": {
-            "debug_metadata_present": bool(debug_sections or debug_segment or legacy_debug or stabs),
+            "debug_metadata_present": bool(debug_sections or debug_segment or legacy_debug
+                                           or stabs > strip_compatibility_symbols),
             "private_symbols_present": bool(private),
         },
     }
