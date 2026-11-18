@@ -1,0 +1,202 @@
+name: Qwen Java assistant identity validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-java-identity-20261118'
+
+permissions:
+  contents: read
+
+jobs:
+  qwencode:
+    name: 'Qwencode SDK ${{ matrix.os }} Java ${{ matrix.java }}'
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: '${{ matrix.os }}'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - os: ubuntu-latest
+            java: '11'
+          - os: ubuntu-latest
+            java: '17'
+          - os: ubuntu-latest
+            java: '21'
+          - os: macos-latest
+            java: '21'
+          - os: windows-latest
+            java: '21'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout exact invited candidate
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '3fd14543d03d47e103b19ccbb464800f25724127'
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify source identity
+        run: |
+          test "$(git rev-parse HEAD)" = '3fd14543d03d47e103b19ccbb464800f25724127'
+          test "$(git rev-parse HEAD^)" = '5fc5a98ecc08d2e89f29cbea57934928224977b5'
+          test "$(git rev-parse HEAD:packages/sdk-java/qwencode/src/main/java/com/alibaba/qwen/code/cli/protocol/message/assistant/SDKPartialAssistantMessage.java)" = '7d7da37dd43d5043b2272b76051f3227055e0f0f'
+          test "$(git rev-parse HEAD:packages/sdk-java/qwencode/src/main/java/com/alibaba/qwen/code/cli/session/event/consumers/SessionEventSimpleConsumers.java)" = 'b5a42d43f45bab886776ec53b4823b0a020b1f4f'
+          test "$(git rev-parse HEAD:packages/sdk-java/qwencode/src/test/java/com/alibaba/qwen/code/cli/AssistantContentIdentityTest.java)" = '4b61886e2ece97405ab4c8ae35ff78385c016dc8'
+          git show -s --format='%H %T %P'
+      - name: Set up Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
+        with:
+          distribution: temurin
+          java-version: '${{ matrix.java }}'
+          cache: maven
+          cache-dependency-path: packages/sdk-java/qwencode/pom.xml
+      - name: Set up Node for existing module tests
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Set up report parser
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+      - name: Normal complete qwencode Maven test suite
+        run: |
+          mvn --version
+          mvn --batch-mode --no-transfer-progress -f packages/sdk-java/qwencode/pom.xml clean test
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import sys
+          import xml.etree.ElementTree as ET
+
+          reports = sorted(Path('packages/sdk-java/qwencode/target/surefire-reports').glob('TEST-*.xml'))
+          assert reports, 'No Surefire reports'
+          totals = {key: 0 for key in ('tests', 'failures', 'errors', 'skipped')}
+          for path in reports:
+              suite = ET.parse(path).getroot()
+              for key in totals:
+                  totals[key] += int(suite.attrib.get(key, 0))
+          assert totals['tests'] > 0 and totals['failures'] == totals['errors'] == 0, totals
+          target = Path('packages/sdk-java/qwencode/target/surefire-reports/TEST-com.alibaba.qwen.code.cli.AssistantContentIdentityTest.xml')
+          suite = ET.parse(target).getroot()
+          cases = list(suite.iter('testcase'))
+          control = [case for case in cases if case.attrib['name'].startswith('missingUuidPreservesTheLegacyPartialMessageIdentifier')]
+          params = [case for case in cases if case.attrib['name'].startswith('contentCallbacksKeepIdentityTextAndOrder')]
+          assert len(control) == 1 and len(cases) == len(control) + len(params), [case.attrib for case in cases]
+          assert all(control[0].find(tag) is None for tag in ('failure', 'error', 'skipped'))
+          assert int(suite.attrib['failures']) == int(suite.attrib['errors']) == 0, suite.attrib
+          if sys.platform == 'win32':
+              assert params and all(case.find('skipped') is not None for case in params), [case.attrib for case in cases]
+              assert int(suite.attrib['skipped']) == len(params), suite.attrib
+              print('Windows scope: legacy-ID control passed; POSIX subprocess template/cases skipped:', len(params))
+          else:
+              assert len(params) == 4 and int(suite.attrib['tests']) == 5 and int(suite.attrib['skipped']) == 0, suite.attrib
+              print('POSIX identity regression suite: 5 passed')
+          print('Complete qwencode suite:', json.dumps(totals), 'target suite:', json.dumps(suite.attrib))
+          PY
+      - name: Explicit module Checkstyle
+        run: mvn --batch-mode --no-transfer-progress -f packages/sdk-java/qwencode/pom.xml checkstyle:check
+      - name: Exact-parent negative control and restored regression suite
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import shutil
+          import subprocess
+          import sys
+          import xml.etree.ElementTree as ET
+
+          sources = [
+              Path('packages/sdk-java/qwencode/src/main/java/com/alibaba/qwen/code/cli/protocol/message/assistant/SDKPartialAssistantMessage.java'),
+              Path('packages/sdk-java/qwencode/src/main/java/com/alibaba/qwen/code/cli/session/event/consumers/SessionEventSimpleConsumers.java'),
+          ]
+          test = Path('packages/sdk-java/qwencode/src/test/java/com/alibaba/qwen/code/cli/AssistantContentIdentityTest.java')
+          test_original = test.read_bytes()
+          originals = {source: source.read_bytes() for source in sources}
+          parents = {source: subprocess.check_output(['git', 'show', '5fc5a98ecc08d2e89f29cbea57934928224977b5:' + source.as_posix()]) for source in sources}
+          assert all(parents[source] != originals[source] for source in sources)
+          maven = shutil.which('mvn')
+          assert maven, 'Maven executable missing'
+          command = [maven, '--batch-mode', '--no-transfer-progress', '-f', 'packages/sdk-java/qwencode/pom.xml', '-Dtest=AssistantContentIdentityTest', 'clean', 'test']
+          report = Path('packages/sdk-java/qwencode/target/surefire-reports/TEST-com.alibaba.qwen.code.cli.AssistantContentIdentityTest.xml')
+
+          def verify_unchanged_control_and_platform(suite, expect_failures):
+              cases = list(suite.iter('testcase'))
+              assert int(suite.attrib['errors']) == 0, suite.attrib
+              control = [case for case in cases if case.attrib['name'].startswith('missingUuidPreservesTheLegacyPartialMessageIdentifier')]
+              params = [case for case in cases if case.attrib['name'].startswith('contentCallbacksKeepIdentityTextAndOrder')]
+              assert len(control) == 1 and len(cases) == len(control) + len(params), [case.attrib for case in cases]
+              assert all(control[0].find(tag) is None for tag in ('failure', 'error', 'skipped'))
+              if sys.platform == 'win32':
+                  assert int(suite.attrib['failures']) == 0 and params
+                  assert all(case.find('skipped') is not None for case in params)
+                  assert int(suite.attrib['skipped']) == len(params)
+                  print('Windows: unchanged legacy-ID control passes; POSIX callback regressions are not executed:', suite.attrib)
+              else:
+                  assert len(params) == 4 and int(suite.attrib['tests']) == 5 and int(suite.attrib['skipped']) == 0, suite.attrib
+                  failed = [case.attrib['name'] for case in cases if case.find('failure') is not None]
+                  if expect_failures:
+                      indexes = [re.search(r'\[(\d+)\]', name) for name in failed]
+                      assert all(indexes) and sorted(int(match.group(1)) for match in indexes) == [1, 2], failed
+                      assert all(name.startswith('contentCallbacksKeepIdentityTextAndOrder') for name in failed), failed
+                      assert int(suite.attrib['failures']) == 2, suite.attrib
+                      print('Exact-parent negative control: only identified complete/streaming invocations fail; 3 controls pass:', failed)
+                  else:
+                      assert not failed and int(suite.attrib['failures']) == 0, suite.attrib
+                      print('Restored exact candidate: all 5 identity cases passed')
+
+          try:
+              for source in sources:
+                  source.write_bytes(parents[source])
+              assert test.read_bytes() == test_original, 'Negative control must retain candidate tests'
+              result = subprocess.run(command, timeout=300)
+              assert result.returncode == (0 if sys.platform == 'win32' else 1), result.returncode
+              verify_unchanged_control_and_platform(ET.parse(report).getroot(), True)
+          finally:
+              for source in sources:
+                  source.write_bytes(originals[source])
+          assert all(source.read_bytes() == originals[source] for source in sources)
+          assert test.read_bytes() == test_original
+          subprocess.run(command, timeout=300, check=True)
+          verify_unchanged_control_and_platform(ET.parse(report).getroot(), False)
+          PY
+          git diff --exit-code
+  workspace:
+    name: Normal workspace build, bundle and typecheck
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: 'true'
+      QWEN_SKIP_PREPARE: '1'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+    steps:
+      - name: Checkout exact invited candidate
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '3fd14543d03d47e103b19ccbb464800f25724127'
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify source identity
+        run: |
+          test "$(git rev-parse HEAD)" = '3fd14543d03d47e103b19ccbb464800f25724127'
+          test "$(git rev-parse HEAD^)" = '5fc5a98ecc08d2e89f29cbea57934928224977b5'
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Install frozen dependencies
+        run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: Normal build, development bundle and typecheck
+        run: |
+          npm run build
+          DEV=true npm run bundle
+          npm run typecheck
+          git diff --exit-code
