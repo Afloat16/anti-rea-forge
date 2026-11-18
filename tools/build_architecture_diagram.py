@@ -11,9 +11,9 @@ COPY = {
         "labels": ["01  TRUSTED BUILD", "02  PUBLIC DISTRIBUTION", "03  AUTHORIZED USE"],
         "titles": ["Separate & inspect", "Ship verified artifacts", "Authenticate & open"],
         "rows": [
-            [("PRIVATE INPUTS", ["Source, symbols and selected data", "External keys stay outside the build output"]),
-             ("BUILD TRANSFORMS", ["Split maps and private debug sections", "Seal selected assets or VM instructions"]),
-             ("RELEASE GATE", ["Bounded format + disclosure checks", "Full inventory, key checks, final recheck"])],
+            [("PRIVATE INPUTS", ["Source, symbols and selected data", "Keys stay outside build outputs"]),
+             ("BUILD TRANSFORMS", ["Split maps, ELF and Wasm debug data", "Seal selected assets or VM instructions"]),
+             ("RELEASE GATE", ["Bounded format + JSON/DER key checks", "Full inventory, key checks, final recheck"])],
             [("APPLICATION", ["Public code + authenticated ciphertext", "Required ABI and runtime behavior retained"]),
              ("SIGNED MANIFEST", ["Exact paths, sizes and file hashes", "Version and product bound to the signature"]),
              ("PUBLICATION RULE", ["Known unsupported format or ambiguity?", "Stop the release and report the reason."])],
@@ -22,7 +22,7 @@ COPY = {
              ("SENSITIVE OPERATIONS", ["Trusted service verifies scoped capability", "Expiry and replay checks before admission"])],
         ],
         "footerlabel": "TRUSTED ISSUER / PRIVATE STORAGE",
-        "footers": ["Private source maps + symbols", "External keys + signing authority", "Authenticated subject + replay state"],
+        "footers": ["Maps + ELF / Wasm originals", "External keys + signing", "Identity + replay state"],
         "note": "Trust boundary: a public client, target-supplied notice or patched local check cannot grant server authority.",
     },
     "zh-CN": {
@@ -32,8 +32,8 @@ COPY = {
         "titles": ["分离敏感内容，检查产物", "发布经过验证的文件", "先认证，再开放数据"],
         "rows": [
             [("私有输入", ["源代码、符号与选定的数据", "外部密钥保持在发布目录之外"]),
-             ("构建处理", ["分离 source map 与私有调试信息", "封装选定资产或 VM 指令"]),
-             ("发布门禁", ["有界格式检查与泄露检查", "完整清单、密钥检查、最终复核"])],
+             ("构建处理", ["分离 map、ELF 与 Wasm 调试资料", "封装选定资产或 VM 指令"]),
+             ("发布门禁", ["有界格式与 JSON/DER 密钥检查", "完整清单、密钥检查、最终复核"])],
             [("应用产物", ["公开代码与经过认证的密文", "保留必要 ABI 和运行行为"]),
              ("签名清单", ["精确绑定路径、大小和文件哈希", "签名同时绑定产品与版本"]),
              ("发布规则", ["已识别的未支持格式、变化或歧义？", "阻止发布，并给出明确原因。"])],
@@ -42,7 +42,7 @@ COPY = {
              ("敏感操作", ["可信服务验证限定范围的能力凭证", "进入处理函数前核对过期与重放"])],
         ],
         "footerlabel": "可信签发方 / 私有存储",
-        "footers": ["私有 source map 与符号", "独立密钥与签名权限", "已认证身份与重放状态"],
+        "footers": ["私有 map、ELF / Wasm 调试原件", "独立密钥与签名权限", "已认证身份与重放状态"],
         "note": "信任边界：公开客户端、目标文件中的声明、被修改的本地校验，都不能授予服务端权限。",
     },
 }

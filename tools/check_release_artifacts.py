@@ -117,10 +117,37 @@ def installation(artifact: Path, version: str, work: Path) -> tuple[Path, dict]:
     require(any(item["code"] == "asset_key_exposure" for item in rejected["findings"]),
             "Leaked asset key was not reported")
     (release / "leaked.dat").unlink()
+    # Exercise new modules through the installed wheel/sdist, outside the tree.
+    (release / "encoded-key.json").write_text(json.dumps({"key": list(key.read_bytes())}), encoding="ascii")
+    structured = cli(python, work, "scan-release", "--root", str(release),
+                     "--policy", str(policy), "--asset-key-file", str(key), expected=3)
+    require(structured["checks"]["structured_secret_scan_completed"] is True
+            and any(item["code"] == "asset_key_exposure" for item in structured["findings"]),
+            "Encoded key was not inspected and rejected")
+    (release / "encoded-key.json").unlink()
+    wasm_header = b"\0asm\1\0\0\0"
+    wasm_input = work / "owned.wasm"
+    wasm_bytes = wasm_header + b"\0\5\4name"
+    wasm_input.write_bytes(wasm_bytes)
+    private_dir = work / "wasm-private"
+    private_dir.mkdir()
+    public_wasm, private_wasm = release / "owned.wasm", private_dir / "original.wasm"
+    split = cli(python, work, "split-wasm-debug", "--input", str(wasm_input),
+                "--public", str(public_wasm), "--private", str(private_wasm))
+    require(split["ok"] is True and split["checks"]["retained_bytes_identical"] is True
+            and public_wasm.read_bytes() == wasm_header and private_wasm.read_bytes() == wasm_bytes,
+            "Installed Wasm splitter failed byte preservation")
+    public_check = cli(python, work, "scan-release", "--root", str(release), "--policy", str(policy))
+    private_check = cli(python, work, "scan-release", "--root", str(private_dir),
+                        "--policy", str(policy), expected=3)
+    require(public_check["ok"] is True and any(item["code"] == "native_debug_metadata"
+            and item["format"] == "wasm" for item in private_check["findings"]),
+            "Installed Wasm metadata scan failed its paired control")
     return python, {"artifact": artifact.name, "version": version,
                     "isolated_import": True, "clean_release_accepted": True,
                     "renamed_source_map_blocked": True, "native_resources_present": len(resources),
-                    "asset_roundtrip_bytes": len(payload.read_bytes()), "leaked_key_blocked": True}
+                    "asset_roundtrip_bytes": len(payload.read_bytes()), "leaked_key_blocked": True,
+                    "structured_key_blocked": True, "wasm_split_verified": True}
 
 
 def main() -> int:

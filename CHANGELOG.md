@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 — 2026-11-18
+
+- Detect supported private WebAssembly custom sections by content, including renamed modules and modules inside inspected ZIP/ASAR archives. Reject malformed, ambiguous and over-budget recognized section envelopes.
+- Add `split-wasm-debug --input --public --private`: separate supported debug sections, preserve every retained byte and section order, verify both new output files, retain the entire original privately, and roll back failed output. No target code is executed.
+- Extend private-key and configured asset-key checks to decoded JSON strings (including root strings), property names, integer byte arrays and supported JWK private material. Missing public JWK fields cannot conceal directly recoverable private components.
+- Add bounded standalone unencrypted DER private-key recognition, with a 128-byte admission prefix and 64 KiB decode cap. Preserve public-key/certificate compatibility; explicitly reject recognized uninspectable private structures.
+- Execute paired recovery controls against both published REA 6.9.0 and an exact clean source build of c338e54c33213ca8dd157d30fbc922b65a04c49b. Real WABT controls recover 3/0/3 private identifiers; actual REA/source-map controls recover 1/0/1 original sources. The public executable logic remains analyzable.
+- Compare five actually recoverable key representations against the SHA-256-verified public 1.0.0 wheel; all five now receive positive disclosure findings and both nonsecret controls pass.
+- Require the new Wasm and structured-key behaviors in fresh wheel/source installations on Linux, Windows and macOS; retain the exact 13-job release gate and verified uploaded assets.
+- Refresh the bilingual README, architecture SVGs, integration guide and machine-readable evidence. Existing v1 signed-document and policy formats remain compatible.
+
 ## 1.0.0 — 2026-11-18
 
 - Raise the cryptography dependency floor to 50.0.2 while keeping the <51 major bound, following upstream security and bundled OpenSSL fixes.

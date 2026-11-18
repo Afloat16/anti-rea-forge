@@ -1,0 +1,224 @@
+{
+  "schema": "releaseguard/wasm-recovery/v1",
+  "ok": true,
+  "recorded_at": "2026-11-18T04:45:30.239Z",
+  "node": "v24.22.1",
+  "host": "linux/x64",
+  "rea_cli_executed": true,
+  "mode": "rea-source-cli-and-wabt",
+  "dependency_lock_sha256": "caa0d17241b447eb4036edb4e9852265e67c5733d89247c5f79559779e071422",
+  "tools": {
+    "rea-agents": {
+      "distribution": "source-build",
+      "version_field": "6.9.0",
+      "source_repository": "https://github.com/morluto/rea",
+      "source_commit": "c338e54c33213ca8dd157d30fbc922b65a04c49b",
+      "source_tree": "78b2635a66e1e2d6e80788ee60eeba5d5658d83a",
+      "tracked_source_clean": true,
+      "source_package_lock_sha256": "9007a84043338a39ef2d766cb1323846813d43ce040e2cf09ddcaa4f5939a0bf",
+      "installed_lock_sha256": "0cbddc686839c688658455dad6fab84a6040007c59f9c51b1d510cb4ee82da8f",
+      "build_script": "node scripts/clean-build-output.mjs && node scripts/run-typescript.mjs -p tsconfig.build.json && node scripts/record-catalog-digests.mjs && node scripts/record-mcp-catalog.mjs && node scripts/record-cli-commands.mjs && node scripts/bundle-runtime.mjs",
+      "installed_build_tools": {
+        "tsrs": {
+          "version": "0.18.0-ts7.1.0-dev.20260929",
+          "npm_integrity": "sha512-9T0b4Uam/yMFIK16GUx0fUrJqYZnJ/gvSmV9JB8NTyDePvwCI45WFWxyEV/UMV3KfdNRJG/PBsm3fSIB9WmWsA=="
+        },
+        "typescript": {
+          "version": "7.0.2",
+          "npm_integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="
+        },
+        "rolldown": {
+          "version": "1.2.12",
+          "npm_integrity": "sha512-8wafseiaG80xmXSfqidUNqZcylTlhmPZZt+za2m+js2sFZ8dTNlhIOV2WcbIPx2hgwPBJpEUGFAMZ9bgBBLTSQ=="
+        }
+      },
+      "launcher_sha256": "e73f40ef2f63092ed5c6f2c480c89d79f8d85c2e3fd73c1bb8781ccb29ec4e5b",
+      "compiled_runtime": {
+        "files": 3454,
+        "bytes": 62317909,
+        "inventory_sha256": "9a7c608f982c648b2dd032c3c14397c5f1154f8d9fdd9c1ff88bef963f458414"
+      }
+    },
+    "wabt": {
+      "version": "1.0.42",
+      "source_commit": "ff0ef7e0009402740c805a9744c09b05be063e48",
+      "release_asset": "https://github.com/WebAssembly/wabt/releases/download/1.0.42/wabt-1.0.42-linux-x64.tar.gz",
+      "release_asset_sha256": "84895407a6bbb80e918f33b16b2fb2206021c150b6bc9ff6f761263a745ab131",
+      "executable_sha256": {
+        "wasm-validate": "6b722ed0df68204cfc7a8effdf1fc2ddeac2d184bd211cdf7fdfa5f9d49d3eb5",
+        "wasm-objdump": "dad264def1a3b7755859c5bf48227f01259a95fa82b7c38358b12b9e70b27a41",
+        "wasm2wat": "4322d652f650c1ee117b549c9722f42fc93eb4676ff046d60ba033b5639697a5",
+        "wat2wasm": "9e9ec8f737c890553951defcb1ee7f82de99fcafa32bef54990de27413794e7f"
+      }
+    }
+  },
+  "fixture_source_sha256": "974da55e6e2789985432dda9101b881f22b3befb64fba5d2076e0c481b4c0e2c",
+  "expected_private_identifiers": 3,
+  "inputs": [
+    -2147483648,
+    -1000000,
+    -2,
+    -1,
+    0,
+    1,
+    11,
+    1000000,
+    2147483647
+  ],
+  "expected_outputs": [
+    -2147483645,
+    -6999997,
+    -11,
+    -4,
+    3,
+    10,
+    80,
+    7000003,
+    2147483644
+  ],
+  "exact_private_backup": true,
+  "executable_sections_unchanged": true,
+  "retained_public_custom_section": "public-notice",
+  "sides": {
+    "baseline": {
+      "sha256": "f2542ceb11aaf6b71e1306fedbfc09fd47fcc802f43e9d2d71c73a41b8d2a3b4",
+      "bytes": 255,
+      "core_sections_sha256": "585278390e9d5dc47b40797e1c8b2aefd82e2ac4cda07de62453f3fb45cf24be",
+      "fixture_outputs": [
+        -2147483645,
+        -6999997,
+        -11,
+        -4,
+        3,
+        10,
+        80,
+        7000003,
+        2147483644
+      ],
+      "gate_ok": false,
+      "findings": [
+        {
+          "code": "native_debug_metadata",
+          "path": "module.wasm",
+          "format": "wasm"
+        },
+        {
+          "code": "native_symbol_table",
+          "path": "module.wasm",
+          "format": "wasm"
+        }
+      ],
+      "rea": {
+        "exit_code": 0,
+        "operation": "inspect_wasm_artifact",
+        "provider": "wabt-artifact",
+        "artifact_sha256": "f2542ceb11aaf6b71e1306fedbfc09fd47fcc802f43e9d2d71c73a41b8d2a3b4",
+        "artifact_bytes": 255,
+        "evidence_id": "ev_f481ab0f35031d7fd2893285badbf2331cc6e23b5c4d15cc9bb18e0e41e9138a",
+        "evidence_stdout_sha256": "5ceda0481327cb7ec8a5d6a24cf6d0c95f411f972cf687659d2adf366147103e",
+        "evidence_stdout_bytes": 7572,
+        "validation": "valid",
+        "interface_state": "complete",
+        "decoded_sections": 6,
+        "debug_name_metadata": "complete",
+        "private_identifiers_recovered": 3,
+        "wat_sha256": "7ffee464d81874625628918963b951ce01659dde6b9db4a7959d036a64139924",
+        "wat_bytes": 629,
+        "arithmetic_instructions_visible": true,
+        "custom_section_warnings": []
+      }
+    },
+    "public": {
+      "sha256": "eabe0a584bab88edebc98668af45d5b51787747c56d25109d8a00b6268d06937",
+      "bytes": 134,
+      "core_sections_sha256": "585278390e9d5dc47b40797e1c8b2aefd82e2ac4cda07de62453f3fb45cf24be",
+      "fixture_outputs": [
+        -2147483645,
+        -6999997,
+        -11,
+        -4,
+        3,
+        10,
+        80,
+        7000003,
+        2147483644
+      ],
+      "gate_ok": true,
+      "findings": [],
+      "rea": {
+        "exit_code": 0,
+        "operation": "inspect_wasm_artifact",
+        "provider": "wabt-artifact",
+        "artifact_sha256": "eabe0a584bab88edebc98668af45d5b51787747c56d25109d8a00b6268d06937",
+        "artifact_bytes": 134,
+        "evidence_id": "ev_72d06133bbf6109586b9a039483256aa34b6cc5ca22e9be38deac2edb82366b8",
+        "evidence_stdout_sha256": "ec683afe1e57cbf012fd5b96f2163a55cc6470744671cb5e1a4ce6757ba8082c",
+        "evidence_stdout_bytes": 6659,
+        "validation": "valid",
+        "interface_state": "complete",
+        "decoded_sections": 5,
+        "debug_name_metadata": "not-present",
+        "private_identifiers_recovered": 0,
+        "wat_sha256": "e5be9b87552f36d880b8edeb95fa397deaab965599fd647d40e1cc615765f67e",
+        "wat_bytes": 309,
+        "arithmetic_instructions_visible": true,
+        "custom_section_warnings": []
+      }
+    },
+    "private_restored": {
+      "sha256": "f2542ceb11aaf6b71e1306fedbfc09fd47fcc802f43e9d2d71c73a41b8d2a3b4",
+      "bytes": 255,
+      "core_sections_sha256": "585278390e9d5dc47b40797e1c8b2aefd82e2ac4cda07de62453f3fb45cf24be",
+      "fixture_outputs": [
+        -2147483645,
+        -6999997,
+        -11,
+        -4,
+        3,
+        10,
+        80,
+        7000003,
+        2147483644
+      ],
+      "gate_ok": false,
+      "findings": [
+        {
+          "code": "native_debug_metadata",
+          "path": "module.wasm",
+          "format": "wasm"
+        },
+        {
+          "code": "native_symbol_table",
+          "path": "module.wasm",
+          "format": "wasm"
+        }
+      ],
+      "rea": {
+        "exit_code": 0,
+        "operation": "inspect_wasm_artifact",
+        "provider": "wabt-artifact",
+        "artifact_sha256": "f2542ceb11aaf6b71e1306fedbfc09fd47fcc802f43e9d2d71c73a41b8d2a3b4",
+        "artifact_bytes": 255,
+        "evidence_id": "ev_9534dd2c129613ef6d5dfc4e6422a046fa0da04b3eda27de448c6b10849ce6bc",
+        "evidence_stdout_sha256": "37ee8ceb761e7f9669001a0b7c8a20af08931411537cb20708e5acd7fb9dfa99",
+        "evidence_stdout_bytes": 7620,
+        "validation": "valid",
+        "interface_state": "complete",
+        "decoded_sections": 6,
+        "debug_name_metadata": "complete",
+        "private_identifiers_recovered": 3,
+        "wat_sha256": "7ffee464d81874625628918963b951ce01659dde6b9db4a7959d036a64139924",
+        "wat_bytes": 629,
+        "arithmetic_instructions_visible": true,
+        "custom_section_warnings": []
+      }
+    }
+  },
+  "scope": "Recovery of three original debug identifiers in one authored core Wasm module, through the actual REA WABT provider.",
+  "limitations": [
+    "WAT arithmetic remains decoded on every side; this does not hide or prevent reconstruction of the algorithm.",
+    "The private original contains the entire recoverable module and must never be published. No runtime-secret or memory protection is claimed.",
+    "This runs the compiled, tracked-clean source commit identified in tools; it is a separate experiment from the published npm package.",
+    "One Linux x64 fixture and three names are not independent applications, attack success-rate estimates or an unrestricted AI agent evaluation."
+  ]
+}
