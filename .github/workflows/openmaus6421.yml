@@ -1,0 +1,46 @@
+name: Validate OpenMaus 6421 exact candidate
+
+on:
+  push:
+    branches: [validation/openmaus6421-20261118]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Afloat16/OpenMausBot
+          ref: 2e028f6aacecd6773b5e8bb70ca023d2f1a49a0a
+          persist-credentials: false
+      - uses: pnpm/action-setup@ff378ebe6b225b0680b81c1ad4498ae0d1d3a5e3
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.22.1
+          cache: pnpm
+      - name: Verify source identity and install locked dependencies
+        run: |
+          test "$(git rev-parse HEAD)" = 2e028f6aacecd6773b5e8bb70ca023d2f1a49a0a
+          pnpm install --frozen-lockfile
+      - name: Normal complete typecheck
+        run: pnpm typecheck
+      - name: Export regressions and adjacent CLI suites
+        run: pnpm exec vitest run server/headless/export.test.ts server/headless/run-export.test.ts server/headless/run.test.ts server/headless/main.test.ts --retry=0
+      - name: Scope lint and source guards
+        run: |
+          pnpm exec oxlint --deny-warnings server/headless/export.ts server/headless/export.test.ts
+          pnpm exec vitest run scripts/testing/file-size-ratchet.test.ts src/locales/vocabulary.test.ts --retry=0
+      - name: Native isolated CLI workflow
+        run: pnpm exec vitest run server/headless-cli.e2e.test.ts --retry=0 -t 'rehearses a launch'
+      - name: Confirm source and lockfile remained unchanged
+        run: git diff --exit-code
