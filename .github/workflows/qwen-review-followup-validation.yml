@@ -20,7 +20,7 @@ jobs:
       matrix:
         include:
           - pr: '17578'
-            sha: '66973be53b0588576cda98a60b23eea55c2ab61b'
+            sha: '0bc93ec91c3f88233822f1884a6c65e7cfb29179'
             package: 'cli'
     env:
       CI: 'true'
@@ -45,22 +45,70 @@ jobs:
           package-manager-cache: false
       - name: Install pinned dependencies
         run: corepack pnpm install --frozen-lockfile --reporter=append-only
-      - name: Produce exact repository formatter output
+      - name: Build and bundle normal workspace
+        run: |
+          npm run build
+          DEV=true npm run bundle
+      - name: CLI renderer, copy command and continuation tests
+        working-directory: packages/cli
+        run: corepack pnpm exec vitest run src/ui/utils/MarkdownDisplayCopy.test.tsx src/ui/utils/MarkdownDisplay.test.tsx src/ui/commands/copyCommand.test.ts src/ui/components/MainContent.test.tsx --retry=0
+      - name: Web Shell copy command parity tests
+        working-directory: packages/web-shell
+        run: corepack pnpm exec vitest run --config vitest.config.ts client/utils/copyCommand.test.ts --retry=0
+      - name: Prove new tests fail with the exact preceding renderer
+        working-directory: packages/cli
+        env:
+          BASELINE_SHA: 'ed7fb8a54cb9d44d4263e68f94f8f321ea51af91'
         run: |
           node --input-type=module <<'NODE'
-          import * as prettier from 'prettier';
-          import { readFileSync } from 'node:fs';
-          import { execFileSync } from 'node:child_process';
-          const file = 'packages/cli/src/ui/utils/MarkdownDisplayCopy.test.tsx';
-          const options = await prettier.resolveConfig(file, { editorconfig: true });
-          const formatted = await prettier.format(readFileSync(file, 'utf8'), {
-            ...options,
-            filepath: file,
-          });
-          console.log('FORMAT_RESULT ' + JSON.stringify({
-            prettierVersion: prettier.version,
-            file,
-            beforeBlob: execFileSync('git', ['hash-object', file], { encoding: 'utf8' }).trim(),
-            formatted,
-          }));
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          import assert from 'node:assert/strict';
+
+          const file = 'src/ui/utils/MarkdownDisplay.tsx';
+          const original = readFileSync(file, 'utf8');
+          const parent = spawnSync('git', ['rev-parse', 'HEAD^'], { encoding: 'utf8' });
+          assert.equal(parent.status, 0);
+          assert.equal(parent.stdout.trim(), process.env.BASELINE_SHA);
+          const baseline = spawnSync('git', [
+            'show',
+            process.env.BASELINE_SHA + ':packages/cli/src/ui/utils/MarkdownDisplay.tsx',
+          ], { encoding: 'utf8', maxBuffer: 1024 * 1024 });
+          assert.equal(baseline.status, 0);
+          assert.notEqual(baseline.stdout, original);
+          try {
+            writeFileSync(file, baseline.stdout);
+            const result = spawnSync('corepack', [
+              'pnpm', 'exec', 'vitest', 'run',
+              'src/ui/utils/MarkdownDisplayCopy.test.tsx',
+              'src/ui/components/MainContent.test.tsx',
+              '-t', 'Markdown source copy hints|ignores fence-like content in continuation copy offsets',
+              '--retry=0',
+            ], {
+              encoding: 'utf8',
+              timeout: 240000,
+              maxBuffer: 32 * 1024 * 1024,
+            });
+            const output = (result.stdout ?? '') + (result.stderr ?? '');
+            process.stdout.write(output);
+            assert.ifError(result.error);
+            assert.equal(result.signal, null, 'Baseline test must finish normally');
+            assert.equal(result.status, 1, 'New tests must reject the preceding renderer');
+            const plain = output.replace(/\u001b\[[0-9;]*m/g, '');
+            assert.match(plain, /Tests\s+12 failed/);
+            assert.match(plain, /2 passed/);
+            assert.match(plain, /AssertionError/);
+            console.log('Confirmed exact-parent regression witness: 12 failed, 2 controls passed');
+          } finally {
+            writeFileSync(file, original);
+          }
+          assert.equal(readFileSync(file, 'utf8'), original);
           NODE
+      - name: Check patch formatting and lint
+        run: |
+          corepack pnpm exec prettier --check packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplayCopy.test.tsx packages/cli/src/ui/components/MainContent.test.tsx
+          corepack pnpm exec eslint packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplayCopy.test.tsx packages/cli/src/ui/components/MainContent.test.tsx
+          git diff --exit-code
+      - name: Normal CLI typecheck
+        working-directory: packages/cli
+        run: npm run typecheck
