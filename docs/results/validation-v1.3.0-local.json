@@ -144,5 +144,14 @@
     "tools/check_release_artifacts.py": "c3f47b934db819c329962b25b1f7afe3f14869be6e1c55edfbde3bb77c426fa9",
     "tools/publish_release.py": "b51e7ffdb4d9ab16db022d536626bb480acad5a33b96598bc6ee48dae8a44499"
   },
-  "scope": "Local uncommitted candidate validation, not publication approval. LLVM metadata tests ran with real Clang/llvm-dis 19.1.7. Platform/tool-dependent skips are not successes; exact-main CI independently requires all 13 jobs and LLVM 18 controls. Local artifact hashes identify the tested snapshots; final clean CI artifacts and release evidence supersede them."
+  "scope": "Local uncommitted candidate validation, not publication approval. LLVM metadata tests ran with real Clang/llvm-dis 19.1.7. Platform/tool-dependent skips are not successes; exact-main CI independently requires all 13 jobs and LLVM 18 controls. Local artifact hashes identify the tested snapshots; final clean CI artifacts and release evidence supersede them.",
+  "architecture_figures": {
+    "svg_regeneration_identical": true,
+    "languages": [
+      "en",
+      "zh-CN"
+    ],
+    "rendered_pngs_visually_checked": true,
+    "generator_sha256": "bd0a00c08a69597db95e33d66a0be615db20cac6a4364bdf29a126d3e91d32d0"
+  }
 }
