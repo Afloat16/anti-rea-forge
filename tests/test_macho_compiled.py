@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import platform
 import shutil
@@ -28,7 +29,7 @@ class RealDarwinMetadataTests(unittest.TestCase):
             if required:
                 raise AssertionError("Mandatory Mach-O controls need xcrun and codesign")
             raise unittest.SkipTest("Apple developer tools are unavailable")
-        for name in ("clang", "strip", "nm", "dsymutil", "lipo"):
+        for name in ("clang", "strip", "nm", "otool", "dsymutil", "lipo"):
             result = subprocess.run(["xcrun", "--find", name], capture_output=True, text=True, timeout=30)
             if result.returncode:
                 if required:
@@ -86,8 +87,19 @@ class RealDarwinMetadataTests(unittest.TestCase):
                 # so arm64 execution checks a valid fixture, not a stale signature.
                 run("codesign", "--force", "--sign", "-", stripped)
                 report = inspect(stripped)
-                self.assertEqual(report["evidence"], {
-                    "debug_metadata_present": False, "private_symbols_present": False})
+                expected = {
+                    "debug_metadata_present": False, "private_symbols_present": False}
+                if report["evidence"] != expected:
+                    # Preserve the failed control and obtain independent evidence
+                    # before changing a metadata detector or stripping policy.
+                    # Only this test's freshly compiled, owned fixture is printed.
+                    self.fail(
+                        f"Stripped {arch} fixture still exposes metadata:\n"
+                        + json.dumps(report, indent=2, sort_keys=True)
+                        + "\nApple clang:\n" + tool("clang", "--version")
+                        + "\nApple nm -ap:\n" + tool("nm", "-ap", stripped)
+                        + "\nApple otool -l:\n" + tool("otool", "-l", stripped)
+                    )
                 self.assertIn("_rg_public_api", public_before)
                 self.assertIn("_printf", imports_before)
                 self.assertEqual(set(tool("nm", "-gUj", stripped).splitlines()), public_before)
