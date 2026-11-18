@@ -1,0 +1,54 @@
+name: Qwen CI reaper fixture validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-ci-helper-pids-20261118'
+
+permissions:
+  contents: read
+
+jobs:
+  helper:
+    name: Native reaper tests and workspace gates
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: 'true'
+      QWEN_SKIP_PREPARE: '1'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+    steps:
+      - name: Checkout exact prepared fix
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: 97b221d5aa7dff8c7eee5c4c82e6dc4851089d5f
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify source identity and unchanged production
+        run: |
+          test "$(git rev-parse HEAD)" = '97b221d5aa7dff8c7eee5c4c82e6dc4851089d5f'
+          test "$(git rev-parse HEAD^)" = '78f8bfb1dc40577ad99ba628dfc35519455bd6e1'
+          test "$(git rev-parse HEAD:.github/scripts/ci/reap-isolated-home.test.mjs)" = '17ddb60376364b2cbc6cecd6d2077b9cf4dcde5e'
+          test "$(git rev-parse HEAD:.github/scripts/ci/reap-isolated-home.sh)" = '891703f882542521b1c074bc4a34392ffd7655eb'
+          test "$(git diff --name-only HEAD^ HEAD)" = '.github/scripts/ci/reap-isolated-home.test.mjs'
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Normal complete helper suite
+        run: node --test .github/scripts/ci/reap-isolated-home.test.mjs
+      - name: Install frozen dependencies
+        run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: Normal build, development bundle and typecheck
+        run: |
+          npm run build
+          DEV=true npm run bundle
+          npm run typecheck
+          git diff --exit-code
+      - name: Changed-file formatting and clean diff
+        run: |
+          corepack pnpm exec prettier --check .github/scripts/ci/reap-isolated-home.test.mjs
+          git diff --exit-code
