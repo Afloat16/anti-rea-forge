@@ -142,6 +142,26 @@ def uncovered_function(linkage=""):
     return marker, definition
 
 
+def noncanonical_definitions():
+    _, definition = uncovered_function("private ")
+    return {
+        "indented": definition.replace("define ", "  define ", 1),
+        "tab": definition.replace("define ", "define\t", 1),
+        "same-line": "declare i64 @unused_declaration() " + definition,
+        "split-header": definition.replace("define ", "define\n", 1),
+    }
+
+
+def with_definition_identifiers(source):
+    # These identifier/label spellings and quoted/comment text are legal data,
+    # not extra function definitions. A custom metadata attachment is inert.
+    source = 'source_filename = "define text"\n' + source
+    source = source.replace("%x", "%define").replace("entry:", "define:")
+    source = source.replace("define i32 @rg_compute(i32 %define) {",
+                            "define i32 @rg_compute(i32 %define) !define !99 {")
+    return source + '\ndeclare i64 @define(i64)\n!99 = !{}\n; define private i64 @comment() {\n'
+
+
 def with_runtime_helpers(source):
     """Keep an ordinary transitive private helper chain in the VM runtime."""
     source = source.replace("  %result = add i64 %mixed, %wide",
@@ -376,11 +396,18 @@ class NativeCodeSealValidation(unittest.TestCase):
             self.seal(source=self.source + "\n" + definition, coverage=coverage)
 
     def test_noncanonical_function_definition_cannot_escape_the_inventory(self):
-        _, definition = uncovered_function()
-        for replacement in ("  define ", "define\t"):
-            with self.subTest(replacement=replacement), self.assertRaisesRegex(
+        for name, definition in noncanonical_definitions().items():
+            with self.subTest(syntax=name), self.assertRaisesRegex(
                     GuardError, "Unsupported VM function definition"):
-                self.seal(source=self.source + "\n" + definition.replace("define ", replacement, 1))
+                self.seal(source=self.source + "\n" + definition)
+
+    def test_definition_keyword_in_names_labels_strings_and_comments_is_not_counted(self):
+        source = with_definition_identifiers(self.source)
+        rewritten, _, _ = self.seal(source=source)
+        self.assertIn("declare i64 @define(i64)", rewritten)
+        self.assertIn("i32 %define", rewritten)
+        self.assertIn("!define !99", rewritten)
+        self.assertIn("\ndefine:\n", rewritten)
 
     def test_runtime_dependency_closure_keeps_transitive_private_helpers_and_declarations(self):
         source = with_runtime_helpers(self.source)
@@ -643,6 +670,39 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
                 self.assertIn(marker, artifact.read_bytes())
                 with self.assertRaisesRegex(GuardError, "Uncovered VM function"):
                     seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_real_llvm_accepts_noncanonical_headers_that_the_direct_sealer_rejects(self):
+        source, coverage = fixture()
+        for name, definition in noncanonical_definitions().items():
+            original = self.work / ("noncanonical-function-" + name + ".ll")
+            verified = self.work / ("noncanonical-function-" + name + "-verified.ll")
+            text = source + "\n" + definition
+            original.write_text(text)
+            with self.subTest(syntax=name):
+                self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                               "-o", verified])
+                # The supported CLI canonicalizes first. This specifically
+                # checks the direct API cannot pass an unparsed definition on.
+                with self.assertRaisesRegex(GuardError, "Unsupported VM function definition"):
+                    seal_virtualized_ir(text, coverage, self.key, **CONTEXT)
+                with self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+                    seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_real_llvm_definition_identifiers_remain_compatible(self):
+        source, coverage = fixture()
+        original = self.work / "definition-identifiers.ll"
+        verified = self.work / "definition-identifiers-verified.ll"
+        original.write_text(with_definition_identifiers(source))
+        self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                       "-o", verified])
+        bundle = seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+        loaded, _ = self.build("definition-identifiers", bundle)
+        self.addCleanup(loaded.rg_clear)
+        self.assertEqual(loaded.rg_compute(123), 0)
+        self.assertTrue(loaded.rg_initialize(self.key))
+        self.assertEqual(loaded.rg_compute(123), ((123 ^ WORDS[0]) + CODE[0]) & 0xffffffff)
+        loaded.rg_clear()
+        self.assertEqual(loaded.rg_compute(123), 0)
 
     def test_private_runtime_helper_chain_preserves_authorized_results_and_clear(self):
         source, coverage = fixture()

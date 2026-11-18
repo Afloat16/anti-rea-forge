@@ -24,6 +24,11 @@ _NAME = r"[A-Za-z$._][A-Za-z0-9$._-]*"
 _LOCAL = r"%(?:" + _NAME + r"|[0-9]+)"
 _GLOBAL = re.compile(r"^@(" + _NAME + r") = ([^\n]*)$", re.MULTILINE)
 _TOKENS = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|@(' + _NAME + r")")
+_DEFINITION_TOKENS = re.compile(
+    r'"(?:[^"\\]|\\.)*"|;[^\n]*'
+    r'|[@%!](?:' + _NAME + r'|[0-9]+|"(?:[^"\\]|\\.)*")'
+    r'|(?:' + _NAME + r'|[0-9]+)[ \t]*:'
+    r'|(' + _NAME + r')')
 _INTEGER = r"i(?:1|8|16|32|64)"
 _POINTER_TABLE = re.compile(r"private constant \[([1-9][0-9]*) x ptr\] zeroinitializer(?:, align [0-9]+)?")
 _RETENTION_GLOBALS = {"llvm.used", "llvm.compiler.used"}
@@ -356,7 +361,11 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
              and layout is not None and layout[1].startswith("e"),
              "Sealed VM requires the little-endian x86-64 Linux module runtime")
     functions = _functions(after_ir_text)
-    _require(len(re.findall(r"^[ \t]*define\b", after_ir_text, re.MULTILINE)) == len(functions),
+    # Reject definitions that a line-oriented canonical reader cannot inventory,
+    # including same-line or split headers. Names such as @define, %define,
+    # !define and define: are identifiers, not this top-level keyword.
+    definition_count = sum(match[1] == "define" for match in _DEFINITION_TOKENS.finditer(after_ir_text))
+    _require(definition_count == len(functions),
              "Unsupported VM function definition; expected canonical LLVM syntax")
     globals_found = list(_GLOBAL.finditer(after_ir_text))
     _require(sum(line.lstrip().startswith("@") for line in after_ir_text.splitlines()) == len(globals_found),
