@@ -1,55 +1,57 @@
-# Anti-REA Forge 1.1
+# Anti-REA Forge 1.2
 
 [![CI](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Afloat16/anti-rea-forge)](https://github.com/Afloat16/anti-rea-forge/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-76d9cb.svg)](LICENSE)
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [Download v1.1.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.1.0) · [Upgrade guide](docs/releases/v1.1.0.md)
+[English](README.md) · [简体中文](README.zh-CN.md) · [Download v1.2.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.2.0) · [Upgrade guide](docs/releases/v1.2.0.md)
 
 **Reduce what reverse-engineering tools can recover from a release. Keep private material outside it.**
 
 Anti-REA Forge combines bounded release inspection, private debug/source-map separation, authenticated native data and trusted service authorization. It gives Python, CMake/C++ and JavaScript builds one set of release decisions, backed by reproducible positive and negative controls.
 
-| REA 6.9.0 / WebAssembly | Recoverable key disclosures | Release gate |
+| Five WebAssembly programs | Four JavaScript builds | Release gate |
 | --- | --- | --- |
-| **3 → 0 → 3 private identifiers recovered** | **5 / 5 detected; v1.0 missed all 5** | **3 operating systems · 13 required CI jobs** |
-| Original → public → restored private original; 9 runtime inputs unchanged | Escaped JSON, byte arrays, JWK and DER; actual decryption/signing positive controls | Fresh wheel, source and SDK installations; zero npm runtime dependencies |
+| **26 → 0 → 26 private identifiers recovered** | **9 → 0 → 9 exact originals recovered** | **3 operating systems · 13 required CI jobs** |
+| 43 numerical checks, 2 runtime traps and 1 host rejection preserved | 5 bundles; 16 functional inputs per side; generated JS unchanged | Published REA 6.9.0 and a separate pinned source build; fresh package installations |
 
-These are measured results for owned fixtures, not a general cracking-resistance rate. REA/WABT still reconstructs readable Wasm instructions in every group. The key control uses standard JSON/cryptography readers and rejects disclosure before publication. [Wasm npm evidence](docs/results/wasm-recovery-v1.1.0-rea-6.9.0.json) · [Pinned-source evidence](docs/results/wasm-recovery-v1.1.0-rea-source.json) · [Key evidence](docs/results/structured-secret-recovery-v1.1.0.json) · [Release gate policy](release-policy.json)
+Results are original → public → private-restored, for owned fixtures. WAT instructions and generated JavaScript remain analyzable. Incomplete analysis never establishes absence; rejected inputs and unavailable original text are reported separately. [Wasm evidence](docs/results/wasm-corpus-v1.2.0-rea-6.9.0.json) · [JavaScript evidence](docs/results/source-map-corpus-v1.2.0-rea-6.9.0.json) · [Full assessment](docs/rea-defense-v1.2.0.zh-CN.md) · [Release gate policy](release-policy.json)
 
 ![Anti-REA Forge architecture: trusted build, public artifacts, authorized use and a separate private issuer](docs/images/architecture-en.svg)
 
-## What is new in 1.1
+## What is new in 1.2
 
-- **Close a demonstrated REA Wasm entry point.** Default inspection now recognizes private `name`, DWARF and debug-URL custom sections, including renamed modules and modules inside inspected ZIP/ASAR archives. `split-wasm-debug` removes supported debug sections, retains every other byte, verifies both outputs, and stores the complete original privately. [Wasm integration](docs/private-wasm-debug.md)
-- **Inspect recoverable keys after decoding.** Bounded JSON checks cover escaped strings, root strings, configured 32-byte arrays and supported private JWK material. Standalone unencrypted DER private keys receive a separate bounded check. Public keys stay usable; unsupported or over-budget recognized inputs fail explicitly.
-- **Run three-sided recovery controls.** Published REA 6.9.0 and a clean build of pinned source `c338e54c…`, using official WABT 1.0.42, examine original, public and private-restored modules; the real source-map control now also restores the private map and recovers the original again. Errors, partial analysis and missing tools never count as protection.
-- **Verify the installed feature, too.** Every wheel/source installation must exercise Wasm separation and structured-key rejection before release. Existing ELF/PE/Mach-O checks, external-key native assets, isolated CMake/JavaScript integration and trusted capability authorization remain in the same required CI gate.
+- **Test more than one program.** Five Wasm programs exercise helpers, imports, memory, globals, indirect calls and loops. Four JavaScript builds cover multiple sources/bundles, Unicode and partly missing original content. Each has original, public and private-restored measurements against both REA distributions. [Reproduction and results](docs/releases/v1.2.0.md)
+- **Close the residual linker-symbol channel.** Actual v1.1 output can lose its `name` section while retaining a recoverable helper in `linking`. The gate and splitter now require final linking for recognized `linking` / `reloc.*` metadata. The unsupported input is rejected before either output is created. [Wasm integration](docs/private-wasm-debug.md)
+- **Catch source disclosure even in incomplete maps.** An escaped `sourcesContent` key is still sensitive when `mappings` is absent or invalid: real REA can recover the original from a partial graph. The release gate now gives the decoded key the same conservative treatment as its literal spelling.
+- **Follow actual key consumers.** Expanded, bounded recognition covers recoverable JWK spellings, integer-valued byte arrays and embedded byte windows, folded/mixed-case known keys, and supported JSON-encoded private DER. Real Node imports and cryptographic decryption/signing prove the disclosures before comparing v1.1 and v1.2. [Key evidence](docs/results/secret-representation-recovery-v1.2.0.json)
+- **Make the new cases mandatory.** The expanded corpora run in required CI. Fresh wheel and source installations must reject encoded-key, incomplete-map and relocatable-Wasm fixtures. Existing native, authorization, SDK and package checks remain mandatory.
 
-[Audit, compatibility and evidence](docs/releases/v1.1.0.md) · [Portable release integration](docs/portable-release.md) · [Security boundaries](SECURITY.md)
+[Upgrade notes](docs/releases/v1.2.0.md) · [Portable release integration](docs/portable-release.md) · [Security boundaries](SECURITY.md)
 
 ## Evidence with controls
 
 | Question | Measured result | Exact scope / record |
 | --- | --- | --- |
-| Can REA recover the Wasm private names after separation? | **3 → 0 → 3**; module size **255 → 134 bytes**, executable sections identical | One owned module, REA 6.9.0 / WABT 1.0.42; [complete evidence](docs/results/wasm-recovery-v1.1.0-rea-6.9.0.json). Equivalent logic remains readable. |
-| Does withholding the source map remove the exact original-source channel? | **1 → 0 → 1** exact original recovered; generated JS unchanged | Original/public/private-restored, real REA and trace-mapping; [evidence](docs/results/source-map-recovery-v1.1.0-rea-6.9.0.json) |
-| Do encoded keys actually work after recovery? | **5 / 5** decrypt or sign successfully; v1.1 blocks all 5, while **2 / 2** nonsecret controls pass | Verified public v1.0.0 wheel comparison; [evidence](docs/results/structured-secret-recovery-v1.1.0.json) |
+| Can REA recover Wasm private names after separation? | **26 → 0 → 26** across 5 programs; 43 numerical checks and 3 failure controls preserved | [npm](docs/results/wasm-corpus-v1.2.0-rea-6.9.0.json) / [pinned source](docs/results/wasm-corpus-v1.2.0-rea-source.json); standard sections identical. Public logic remains readable. |
+| Does withholding source maps remove the exact-original channel? | **9 → 0 → 9** across 4 builds / 5 bundles; generated JS unchanged | [npm](docs/results/source-map-corpus-v1.2.0-rea-6.9.0.json) / [pinned source](docs/results/source-map-corpus-v1.2.0-rea-source.json); one already-unavailable original is excluded |
+| Can missing mappings or removed name sections leave disclosures? | **Yes**: 2 incomplete maps still reveal source; 1 linker-symbol fixture still reveals a helper | Actual v1.1 admits these inputs; v1.2 rejects them. Unsupported outputs are never scored as zero recovery. |
+| Do the new encoded-key cases actually work after recovery? | **19 / 19** recovered keys decrypt or sign; v1.2 blocks all 19, while **2 / 2** nonsecret controls pass | Verified official v1.1 wheel comparison and nonsecret controls; [case-by-case evidence](docs/results/secret-representation-recovery-v1.2.0.json) |
 | Can an analyzer recover an embedded plaintext resource? | **Yes**, with both tools | Positive control in the [paired Ghidra/IDA observation](docs/results/native-asset-controls.json) |
 | Can the same procedure recover the encrypted resource without its external key? | **0 exact payload recoveries**; all 18,024 Ghidra and 18,121 IDA contiguous 32-byte candidates tested | Same owned i386 fixture; initialized analyzer bytes checked against input |
 | Does accidentally shipping the real key defeat that boundary? | **Yes**: key recovered, replayed, exact resource read | Both analyzers; the production release gate also reports the leaked key |
 | Does patching the local gate supply the missing encryption key? | Plaintext control recovers; encrypted control does not recover exact data | Actual gate patch and forced-GCM-success controls, [method](docs/native-assets.md) |
 | What does opening a 1 MiB native asset cost? | **189.860 µs median**, 25 calls after 5 warmups; maximum 1,456.005 µs | Historical v0.10 run on one Linux x86-64 host; includes allocation/cleansing, excludes key delivery/startup. [All samples](docs/results/native-asset-cost.json) |
-| What is validated for the downloadable release? | Exact commit, required CI job results, installed-package checks and archive hashes | `release-evidence.json`, `installation-report.json` and `SHA256SUMS` attached to the [Release](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.1.0) |
+| What is validated for the downloadable release? | Exact commit, required CI job results, installed-package checks and archive hashes | `release-evidence.json`, `installation-report.json` and `SHA256SUMS` attached to the [Release](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.2.0) |
 
 Ghidra, compiler, REA CLI/source-map, official ASAR, GNU binutils, macOS and MSVC controls run in CI. Historical observations stay dated and retain their failures. Ordinary and VM-only native samples were independently reconstructed across **1,081,924 hidden evaluations**; that failure motivated external-key instruction sealing. [Native code research and remaining validation](docs/native-code.md)
 
 ## Start with the release gate
 
-Python 3.10+ is required. Install the wheel from [v1.1.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.1.0) into your chosen virtual environment, or run `python -m pip install .` from this checkout. The public command and import name remain `releaseguard`.
+Python 3.10+ is required. Install the wheel from [v1.2.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.2.0) into your chosen virtual environment, or run `python -m pip install .` from this checkout. The public command and import name remain `releaseguard`.
 
 ```sh
-python -m pip install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.1.0/open_release_guard-1.1.0-py3-none-any.whl
+python -m pip install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.2.0/open_release_guard-1.2.0-py3-none-any.whl
 python -m releaseguard --version
 python -m releaseguard project-init --root dist --product MyApp --out .releaseguard
 python -m releaseguard check --config .releaseguard/project.json
@@ -60,7 +62,7 @@ Build your application into `dist`, review `.releaseguard/policy.json`, and keep
 ### JavaScript / TypeScript
 
 ```sh
-npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.1.0/anti-rea-forge-releaseguard-1.1.0.tgz
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.2.0/anti-rea-forge-releaseguard-1.2.0.tgz
 ```
 
 ```js
@@ -86,7 +88,7 @@ Set `RELEASEGUARD_PYTHON` to the absolute path of the installed virtual-environm
 
 A release scan checks configured rules on inspected bytes. It does not disable Ghidra, IDA, REA, Frida or another independent reader. Authorized process memory can hold keys and plaintext; distributed code and public helpers remain observable; a modified local client cannot be the authority for a server operation. Keep staging directories, interpreters, policies, keys and replay storage trusted. Unknown encodings and unsupported formats are not silently promoted to a resistance guarantee.
 
-The 1.x series keeps existing v1 signed-document formats and the CLI/import names. It is not an independent security audit, and experimental native transformations are explicitly scoped. [Security policy](SECURITY.md) · [Upgrade notes](docs/releases/v1.1.0.md) · [Historical recovery failures](docs/testing-2026-10-15.zh-CN.md)
+The 1.x series keeps existing v1 signed-document formats and the CLI/import names. It is not an independent security audit, and experimental native transformations are explicitly scoped. [Security policy](SECURITY.md) · [Upgrade notes](docs/releases/v1.2.0.md) · [Historical recovery failures](docs/testing-2026-10-15.zh-CN.md)
 
 ## Reproduce and contribute
 

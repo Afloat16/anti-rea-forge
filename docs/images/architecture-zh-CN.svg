@@ -19,8 +19,8 @@
 <text x="72" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >分离 map、ELF 与 Wasm 调试资料</text>
 <text x="72" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >封装选定资产或 VM 指令</text>
 <text x="72" y="476" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">发布门禁</text>
-<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >有界格式与 JSON/DER 密钥检查</text>
-<text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >完整清单、密钥检查、最终复核</text>
+<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >解码密钥与内嵌 source map</text>
+<text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >Wasm 完成链接后，才允许发布</text>
 <path d="M423 387h26" fill="none" stroke="#76d9cb" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="456" y="178" font-size="16" fill="#8db8ff" font-weight="700" letter-spacing="1">02  公开分发</text>
 <rect x="456" y="196" width="368" height="366" rx="18" fill="#142237" stroke="#31435e"/>

@@ -203,15 +203,15 @@ jobs:
         run: |
           git init "$RUNNER_TEMP/rea-source"
           git -C "$RUNNER_TEMP/rea-source" remote add origin https://github.com/morluto/rea.git
-          git -C "$RUNNER_TEMP/rea-source" fetch --depth 1 origin c338e54c33213ca8dd157d30fbc922b65a04c49b
+          git -C "$RUNNER_TEMP/rea-source" fetch --depth 1 origin 675287517c98c702ee88ad036c5e3b8dd4bcc7a7
           git -C "$RUNNER_TEMP/rea-source" checkout --detach FETCH_HEAD
-          test "$(git -C "$RUNNER_TEMP/rea-source" rev-parse HEAD)" = c338e54c33213ca8dd157d30fbc922b65a04c49b
+          test "$(git -C "$RUNNER_TEMP/rea-source" rev-parse HEAD)" = 675287517c98c702ee88ad036c5e3b8dd4bcc7a7
           npm ci --prefix "$RUNNER_TEMP/rea-source" --ignore-scripts --no-audit --no-fund
           npm --prefix "$RUNNER_TEMP/rea-source" --ignore-scripts run compile
       - name: Repeat both recovery controls against the pinned current source build
         run: |
-          node benchmarks/wasm_recovery.mjs --wabt-bin "$RUNNER_TEMP/wabt-1.0.42/bin" --python "$(command -v python)" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit c338e54c33213ca8dd157d30fbc922b65a04c49b --out "$RUNNER_TEMP/wasm-recovery-source.json"
-          node benchmarks/source_map_recovery.mjs --python "$(command -v python)" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit c338e54c33213ca8dd157d30fbc922b65a04c49b --out "$RUNNER_TEMP/source-map-recovery-source.json"
+          node benchmarks/wasm_recovery.mjs --wabt-bin "$RUNNER_TEMP/wabt-1.0.42/bin" --python "$(command -v python)" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit 675287517c98c702ee88ad036c5e3b8dd4bcc7a7 --out "$RUNNER_TEMP/wasm-recovery-source.json"
+          node benchmarks/source_map_recovery.mjs --python "$(command -v python)" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit 675287517c98c702ee88ad036c5e3b8dd4bcc7a7 --out "$RUNNER_TEMP/source-map-recovery-source.json"
       - name: Compare recoverable key disclosures with the verified public v1.0.0 wheel
         run: |
           curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/open_release_guard-1.0.0-py3-none-any.whl" https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/open_release_guard-1.0.0-py3-none-any.whl
@@ -219,6 +219,22 @@ jobs:
           python -m venv "$RUNNER_TEMP/baseline-1.0"
           "$RUNNER_TEMP/baseline-1.0/bin/python" -m pip install "$RUNNER_TEMP/open_release_guard-1.0.0-py3-none-any.whl"
           python benchmarks/structured_secret_recovery.py --baseline-python "$RUNNER_TEMP/baseline-1.0/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.0.0-py3-none-any.whl" --out "$RUNNER_TEMP/structured-secret-recovery.json"
+      - name: Install the verified public v1.1.0 baseline for expanded regression controls
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" https://github.com/Afloat16/anti-rea-forge/releases/download/v1.1.0/open_release_guard-1.1.0-py3-none-any.whl
+          echo '5040a0f33c6b5a640302af4983556abdcab1918e845f4bac4010ec2fa2233086' "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" | sha256sum --check --status
+          python -m venv "$RUNNER_TEMP/baseline-1.1"
+          "$RUNNER_TEMP/baseline-1.1/bin/python" -m pip install "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl"
+      - name: Require five Wasm programs and the real v1.1 linker disclosure control
+        run: |
+          node benchmarks/wasm_corpus_recovery.mjs --wabt-bin "$RUNNER_TEMP/wabt-1.0.42/bin" --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" --out "$RUNNER_TEMP/wasm-corpus-recovery.json"
+          node benchmarks/wasm_corpus_recovery.mjs --wabt-bin "$RUNNER_TEMP/wabt-1.0.42/bin" --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit 675287517c98c702ee88ad036c5e3b8dd4bcc7a7 --out "$RUNNER_TEMP/wasm-corpus-recovery-source.json"
+      - name: Require four JavaScript builds and malformed and indexed map controls
+        run: |
+          node benchmarks/source_map_corpus_recovery.mjs --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --out "$RUNNER_TEMP/source-map-corpus-recovery.json"
+          node benchmarks/source_map_corpus_recovery.mjs --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit 675287517c98c702ee88ad036c5e3b8dd4bcc7a7 --out "$RUNNER_TEMP/source-map-corpus-recovery-source.json"
+      - name: Require real recovery and positive rejection of nineteen consumer-compatible key forms
+        run: python benchmarks/secret_representation_recovery.py --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" --out "$RUNNER_TEMP/secret-representation-recovery.json"
       - name: Run the verified Craft Anything CLI on the same fixture
         run: |
           curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/craft.tar.gz" https://github.com/storytold/craft-anything/releases/download/v0.5.0/craft-anything-0.5.0-linux-x86_64.tar.gz
@@ -228,7 +244,7 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          for name in ("source-map-recovery", "craft-source-map", "wasm-recovery", "structured-secret-recovery", "wasm-recovery-source", "source-map-recovery-source"):
+          for name in ("source-map-recovery", "craft-source-map", "wasm-recovery", "structured-secret-recovery", "wasm-recovery-source", "source-map-recovery-source", "wasm-corpus-recovery", "wasm-corpus-recovery-source", "source-map-corpus-recovery", "source-map-corpus-recovery-source", "secret-representation-recovery"):
               data = json.loads((Path(os.environ["RUNNER_TEMP"]) / (name + ".json")).read_bytes())
               print("RECOVERY_EVIDENCE " + name + " " + json.dumps(data, separators=(",", ":")))
           PY
@@ -243,6 +259,11 @@ jobs:
             ${{ runner.temp }}/structured-secret-recovery.json
             ${{ runner.temp }}/wasm-recovery-source.json
             ${{ runner.temp }}/source-map-recovery-source.json
+            ${{ runner.temp }}/wasm-corpus-recovery.json
+            ${{ runner.temp }}/wasm-corpus-recovery-source.json
+            ${{ runner.temp }}/source-map-corpus-recovery.json
+            ${{ runner.temp }}/source-map-corpus-recovery-source.json
+            ${{ runner.temp }}/secret-representation-recovery.json
           retention-days: 14
           if-no-files-found: error
 
@@ -337,7 +358,7 @@ jobs:
       - name: Exercise portable checks without a native toolchain
         run: |
           python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_project_asset_keys tests.test_asar tests.test_asar_unpacked tests.test_container_boundaries tests.test_ar_boundaries tests.test_standalone_metadata tests.test_elf_type_metadata tests.test_source_map_encodings tests.test_opaque_compression tests.test_pe_section_metadata tests.test_release_disclosures tests.test_release_snapshot_consistency tests.test_macho tests.test_analysis tests.test_analysis_cli tests.test_bounded_document_inputs tests.test_capability_completion tests.test_split_maps tests.test_split_maps_cli -v
-          python -m unittest tests.test_wasm tests.test_split_wasm tests.test_wasm_distribution tests.test_structured_secrets tests.test_structured_secret_roots -v
+          python -m unittest tests.test_wasm tests.test_split_wasm tests.test_wasm_distribution tests.test_structured_secrets tests.test_structured_secret_roots tests.test_secret_representations tests.test_source_map_disclosures -v
 
       - name: Require real Mach-O metadata controls on macOS
         if: runner.os == 'macOS'

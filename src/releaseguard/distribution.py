@@ -362,7 +362,9 @@ class _Scanner:
         if index is not None:
             self.add("forbidden_file_digest", path, members, rule_index=index)
         if self.policy["check_source_maps"] or self.policy["check_private_keys"] or self.asset_keys:
-            self.structured_json(stream, size, path, members)
+            self.structured_json(stream, size, path, members,
+                                 source_content_marker_seen=any(code == "source_map_marker" and index == 1
+                                                                for code, index, _ in seen))
         if self.policy["check_private_keys"]:
             try:
                 key_findings = scan_der_private_key(stream, size)
@@ -386,7 +388,7 @@ class _Scanner:
         return {"size": total, "sha256": hexdigest}
 
     def structured_json(self, stream: BinaryIO, size: int, path: str,
-                        members: tuple[str, ...] = ()) -> None:
+                        members: tuple[str, ...] = (), *, source_content_marker_seen: bool = False) -> None:
         """Decode bounded JSON once for source-map and structured-key checks."""
         inspect_maps = self.policy["check_source_maps"]
         inspect_keys = self.policy["check_private_keys"] or bool(self.asset_keys)
@@ -430,6 +432,7 @@ class _Scanner:
         pending = [(document, 0)]
         visited = 0
         kinds = set()
+        embedded_source_key = False
         while pending:
             value, depth = pending.pop()
             visited += 1
@@ -441,6 +444,11 @@ class _Scanner:
                 if visited > _MAX_JSON_NODES:
                     unverifiable("json_structure_limit")
                     return
+                # Source text can still be recovered from sourcesContent when
+                # mapping data/version is missing or invalid. Escaping this key
+                # must not turn readable original text into an allowed release.
+                if inspect_maps and "sourcesContent" in value:
+                    embedded_source_key = True
                 # JSON has one number type. Decimal/exponent spellings such as
                 # 3.0 and 3e0 are the same version to ordinary map consumers.
                 version = value.get("version")
@@ -460,6 +468,8 @@ class _Scanner:
                 pending.extend((item, depth + 1) for item in value if isinstance(item, (dict, list)))
         for kind in sorted(kinds):
             self.add("source_map_structure", path, members, kind=kind)
+        if embedded_source_key and not kinds and not source_content_marker_seen:
+            self.add("source_map_marker", path, members, rule_index=1, representation="json-decoded-key")
         if inspect_keys:
             try:
                 key_findings = scan_json_secrets(document, asset_keys=self.asset_keys,
@@ -518,6 +528,11 @@ class _Scanner:
             return
         self.native_files_checked += 1
         evidence = report["evidence"]
+        if format_name == "wasm" and evidence.get("linker_metadata_present", False):
+            # Relocatable/link-time symbols can expose private helpers after a
+            # name-section split. Do not silently remove runtime-relevant data
+            # or label an unparsed symbol/relocation table as inspected absence.
+            unverifiable("linker_metadata_requires_final_link")
         if format_name == "elf":
             debug = evidence["debug_sections_present"]
             symbols = evidence["symbol_table_present"]

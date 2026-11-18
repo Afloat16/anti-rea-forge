@@ -11,7 +11,7 @@ import unittest
 
 from releaseguard.distribution import scan_release
 from tests.test_asar import asar, zip_archive
-from tests.test_wasm import HEADER, PRIVATE_FUNCTION, owned_core, owned_module
+from tests.test_wasm import HEADER, PRIVATE_FUNCTION, custom, owned_core, owned_module
 
 
 class WasmDistributionTests(unittest.TestCase):
@@ -68,6 +68,23 @@ class WasmDistributionTests(unittest.TestCase):
         report = scan_release(self.root, self.policy)
         self.assertTrue(report["ok"])
         self.assertFalse(report["checks"]["native_metadata_checked"])
+
+    def test_linker_metadata_blocks_renamed_and_nested_releases_as_uninspected(self):
+        payload = owned_core() + custom("linking", b"owned-private-linker-symbol")
+        for content, members in ((payload, None),
+                                 (zip_archive("module.bin", payload), ["module.bin"]),
+                                 (asar([("module.bin", payload)]), ["module.bin"])):
+            with self.subTest(members=members):
+                self.target.write_bytes(content)
+                report = scan_release(self.root, self.policy)
+                self.assertFalse(report["ok"])
+                self.assertFalse(report["checks"]["native_metadata_scan_completed"])
+                expected = {"code": "native_metadata_unverifiable", "path": self.target.name,
+                            "format": "wasm", "reason": "linker_metadata_requires_final_link"}
+                if members is not None:
+                    expected["archive_members"] = members
+                self.assertEqual(report["findings"], [expected])
+                self.assertNotIn("owned-private-linker-symbol", json.dumps(report))
 
     def test_real_cli_split_public_gate_and_private_restore_gate(self):
         self.target.write_bytes(owned_module())

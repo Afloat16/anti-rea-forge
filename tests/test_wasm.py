@@ -73,7 +73,8 @@ class WasmMetadataTests(unittest.TestCase):
 
     def test_owned_module_reports_fixed_categories_without_private_text(self):
         report = self.audit(owned_module())
-        self.assertEqual(report["evidence"], {"debug_metadata_present": True, "private_symbols_present": True})
+        self.assertEqual(report["evidence"], {"debug_metadata_present": True, "private_symbols_present": True,
+                                             "linker_metadata_present": False})
         self.assertEqual(report["private_sections"], {
             "dwarf": 2, "external-debug-info": 1, "name": 1, "source-map-url": 1})
         self.assertEqual(report["sections_checked"], 10)
@@ -83,14 +84,32 @@ class WasmMetadataTests(unittest.TestCase):
             self.assertNotIn(value, json.dumps(report))
 
     def test_code_exports_and_unknown_customs_are_not_claimed_private(self):
-        # Runtime/link metadata is retained, not removed on a debug-name guess.
+        # Unknown runtime metadata is retained, not removed on a name guess.
         data = owned_core() + b"".join(custom(name, b"public") for name in (
-            "producers", "target_features", "build_id", "linking", "reloc.CODE",
+            "producers", "target_features", "build_id",
             "dylink.0", "copyright", "namex", "Name", ".debug", "other_private_annotation"))
         report = self.audit(data)
         self.assertFalse(any(report["evidence"].values()))
         self.assertEqual(report["private_sections"], {})
-        self.assertEqual(report["custom_sections_checked"], 11)
+        self.assertEqual(report["custom_sections_checked"], 9)
+
+    def test_linker_metadata_is_recognized_without_claiming_its_symbols_parsed(self):
+        for name, category in (("linking", "linking"), ("reloc.Code", "relocations"),
+                               ("reloc.CODE", "relocations"), ("reloc.DATA", "relocations")):
+            with self.subTest(name=name):
+                report = self.audit(owned_core() + custom(name, b"owned-private-linker-symbol"))
+                self.assertEqual(report["linker_sections"], {category: 1})
+                self.assertEqual(report["evidence"], {"debug_metadata_present": False,
+                    "private_symbols_present": False, "linker_metadata_present": True})
+                self.assertNotIn("owned-private-linker-symbol", json.dumps(report))
+        combined = self.audit(owned_core() + custom("linking") + custom("reloc.Code") + custom("reloc.DATA"))
+        self.assertEqual(combined["linker_sections"], {"linking": 1, "relocations": 2})
+
+    def test_unrelated_similar_custom_names_do_not_claim_linker_metadata(self):
+        report = self.audit(owned_core() + b"".join(custom(name) for name in (
+            "Linking", "linking.extra", "relocation", "dylink.0", "public.reloc.Code")))
+        self.assertEqual(report["linker_sections"], {})
+        self.assertFalse(report["evidence"]["linker_metadata_present"])
 
     def test_empty_core_module_and_customs_between_standard_sections(self):
         self.assertEqual(self.audit(HEADER)["sections_checked"], 0)
@@ -157,6 +176,26 @@ class WasmMetadataTests(unittest.TestCase):
                 return super().read(size)
 
         self.assertEqual(wasm.audit_wasm_stream(BoundedReads(data), len(data))["custom_sections_checked"], 1)
+
+    def test_linker_recognition_seeks_past_large_payload_without_reading_it(self):
+        # The newly recognized linker envelopes must not accidentally turn this
+        # bounded scanner into a symbol-table decoder or payload-sized reader.
+        for name in ("linking", "reloc.Code"):
+            payload = b"owned-private-symbol\0" * 100000
+            data = owned_core() + custom(name, payload)
+            payload_start = len(data) - len(payload)
+
+            class NoLinkerPayloadReads(io.BytesIO):
+                def read(self, size=-1):
+                    if size < 0 or self.tell() + size > payload_start:
+                        raise AssertionError("Linker payload must not be read")
+                    return super().read(size)
+
+            with self.subTest(name=name):
+                report = wasm.audit_wasm_stream(NoLinkerPayloadReads(data), len(data))
+                self.assertTrue(report["evidence"]["linker_metadata_present"])
+                self.assertFalse(report["evidence"]["private_symbols_present"])
+                self.assertNotIn("owned-private-symbol", json.dumps(report))
 
     def test_reported_size_and_short_reader_cannot_hide_truncation(self):
         for size in (-1, True, 4.0, "8"):

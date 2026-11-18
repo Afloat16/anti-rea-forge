@@ -70,6 +70,7 @@ def _inspect_wasm_stream(stream: BinaryIO, file_size: int) -> tuple[dict, tuple[
         raise ValueError("Expected a WebAssembly core-v1 module; components and other versions are unsupported")
     sections = []
     private_counts: Counter[str] = Counter()
+    linker_counts: Counter[str] = Counter()
     custom_count = total_names = last_order = 0
     seen_standard: set[int] = set()
     seen_private_names: set[str] = set()
@@ -112,6 +113,14 @@ def _inspect_wasm_stream(stream: BinaryIO, file_size: int) -> tuple[dict, tuple[
             if "\0" in name:
                 raise ValueError("NUL in a WebAssembly custom-section name is unsupported")
             private_kind = _PRIVATE_NAMES.get(name)
+            # Relocatable/linkable modules retain symbol names independently
+            # of the optional name section. Recognize this unfinished-build
+            # surface without pretending to parse its symbol/relocation tables.
+            # These sections are not safe to delete for every linking consumer.
+            if name == "linking":
+                linker_counts["linking"] += 1
+            elif name.startswith("reloc."):
+                linker_counts["relocations"] += 1
             if name.startswith((".debug_", ".zdebug_")):
                 private_kind = "dwarf"
             if private_kind is not None:
@@ -126,14 +135,17 @@ def _inspect_wasm_stream(stream: BinaryIO, file_size: int) -> tuple[dict, tuple[
         "sections_checked": len(sections),
         "custom_sections_checked": custom_count,
         "private_sections": dict(sorted(private_counts.items())),
+        "linker_sections": dict(sorted(linker_counts.items())),
         "evidence": {
             "debug_metadata_present": bool(private_counts),
             "private_symbols_present": bool(private_counts.get("name")),
+            "linker_metadata_present": bool(linker_counts),
         },
         "checks": {"section_envelope_validated": True, "full_module_validation_performed": False},
         "notes": [
             "Only the core-v1 section envelope, section order and custom names are inspected; instructions, types and custom payload semantics are not validated.",
             "Recognized private sections are name, .debug_*/.zdebug_*, sourceMappingURL and external_debug_info. Other custom sections are retained without a confidentiality claim.",
+            "linking and reloc.* sections are recognized but their tables are not inspected; finish final linking before release or debug separation. Removing name alone can leave recoverable linker symbols.",
             "Public imports/exports, function bodies and runtime data remain observable. Removing metadata does not prevent equivalent logic reconstruction.",
         ],
     }

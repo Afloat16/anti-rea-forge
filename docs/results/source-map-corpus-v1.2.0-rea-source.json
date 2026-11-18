@@ -1,0 +1,1862 @@
+{
+  "schema": "releaseguard/source-map-corpus-recovery/v1",
+  "ok": true,
+  "recorded_at": "2026-11-18T06:08:47.927Z",
+  "node": "v24.22.1",
+  "host": "linux/x64",
+  "candidate_releaseguard_version": "1.2.0",
+  "mode": "rea-source-cli-and-trace-mapping",
+  "tools": {
+    "terser": {
+      "version": "5.44.1",
+      "npm_integrity": "sha512-t/R3R/n0MSwnnazuPpPNVO60LX0SKL45pyl9YlvxIdkH0Of7D5qM2EVe+yASRIlY5pZ73nclYJfNANGWPwFDZw=="
+    },
+    "@jridgewell/trace-mapping": {
+      "version": "0.3.31",
+      "npm_integrity": "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="
+    },
+    "rea-agents": {
+      "distribution": "source-build",
+      "version_field": "6.9.0",
+      "source_repository": "https://github.com/morluto/rea",
+      "source_commit": "675287517c98c702ee88ad036c5e3b8dd4bcc7a7",
+      "source_tree": "a1e4211a76f9fd712b92a553d609531c5d9c773d",
+      "tracked_source_clean": true,
+      "source_package_lock_sha256": "9007a84043338a39ef2d766cb1323846813d43ce040e2cf09ddcaa4f5939a0bf",
+      "installed_lock_sha256": "0cbddc686839c688658455dad6fab84a6040007c59f9c51b1d510cb4ee82da8f",
+      "build_script": "node scripts/clean-build-output.mjs && node scripts/run-typescript.mjs -p tsconfig.build.json && node scripts/record-catalog-digests.mjs && node scripts/record-mcp-catalog.mjs && node scripts/record-cli-commands.mjs && node scripts/bundle-runtime.mjs",
+      "installed_build_tools": {
+        "tsrs": {
+          "version": "0.18.0-ts7.1.0-dev.20260929",
+          "npm_integrity": "sha512-9T0b4Uam/yMFIK16GUx0fUrJqYZnJ/gvSmV9JB8NTyDePvwCI45WFWxyEV/UMV3KfdNRJG/PBsm3fSIB9WmWsA=="
+        },
+        "typescript": {
+          "version": "7.0.2",
+          "npm_integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="
+        },
+        "rolldown": {
+          "version": "1.2.12",
+          "npm_integrity": "sha512-8wafseiaG80xmXSfqidUNqZcylTlhmPZZt+za2m+js2sFZ8dTNlhIOV2WcbIPx2hgwPBJpEUGFAMZ9bgBBLTSQ=="
+        }
+      },
+      "launcher_sha256": "e73f40ef2f63092ed5c6f2c480c89d79f8d85c2e3fd73c1bb8781ccb29ec4e5b",
+      "compiled_runtime": {
+        "files": 3454,
+        "bytes": 62317909,
+        "inventory_sha256": "9a7c608f982c648b2dd032c3c14397c5f1154f8d9fdd9c1ff88bef963f458414"
+      }
+    }
+  },
+  "dependency_lock_sha256": "caa0d17241b447eb4036edb4e9852265e67c5733d89247c5f79559779e071422",
+  "summary": {
+    "supported_builds": 4,
+    "bundles": 5,
+    "baseline_original_declarations": 10,
+    "baseline_unavailable_originals": 1,
+    "exact_embedded_originals": {
+      "baseline": 9,
+      "public": 0,
+      "private_restored": 9
+    },
+    "functional_samples_per_side": 16,
+    "functional_samples_total": 48,
+    "rea_invocations": 15,
+    "unsupported_indexed_rejected": 1,
+    "invalid_mapping_disclosures_blocked": 2,
+    "prior_v1_1_0_disclosures_allowed": 2
+  },
+  "builds": [
+    {
+      "id": "multiple-sources",
+      "features": [
+        "three original modules",
+        "one minified ESM bundle"
+      ],
+      "bundle_count": 1,
+      "declared_originals": [
+        {
+          "map": "app.js.map",
+          "source": "units.js",
+          "original_sha256": "cba9bf8ca10010ab45ec5da1ac13db16b217e0cba926c2650aa0ca8f41ffa7b9",
+          "content_shipped_in_baseline_map": true
+        },
+        {
+          "map": "app.js.map",
+          "source": "fees.js",
+          "original_sha256": "b3412014257f3698eebcda2157e23751b5f5d05a36dfcf1513fc155283af9778",
+          "content_shipped_in_baseline_map": true
+        },
+        {
+          "map": "app.js.map",
+          "source": "entry.js",
+          "original_sha256": "371595d1832c7a062db9174d1964086e36588de0d1c9a7c60b7c72c465a21716",
+          "content_shipped_in_baseline_map": true
+        }
+      ],
+      "input_unchanged": true,
+      "public_asset_bytes_unchanged": true,
+      "private_map_bytes_unchanged": true,
+      "private_restoration_recreates_inventory": true,
+      "sides": {
+        "baseline": {
+          "inventory": [
+            {
+              "path": "app.js",
+              "size": 135,
+              "sha256": "c9234743b2b7360796b0f632ca375b2a07bd49b16b2e53b790a078134b90613b"
+            },
+            {
+              "path": "app.js.map",
+              "size": 680,
+              "sha256": "ba2081366aa8595ea11b2d0fab734e41a7e5436ac3aaeaf24757c85dac2e63bb"
+            },
+            {
+              "path": "package.json",
+              "size": 84,
+              "sha256": "6d2a4e41b6eb876f156a70d3ec9d62b0b64e23a89d0fb4a2e541eb7e35d45ef7"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "app.js.map",
+              "source": "units.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "cba9bf8ca10010ab45ec5da1ac13db16b217e0cba926c2650aa0ca8f41ffa7b9",
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "units.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "app.js.map",
+              "source": "fees.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "b3412014257f3698eebcda2157e23751b5f5d05a36dfcf1513fc155283af9778",
+              "generated_position": {
+                "line": 1,
+                "column": 46
+              },
+              "original_position": {
+                "source": "fees.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "app.js.map",
+              "source": "entry.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "371595d1832c7a062db9174d1964086e36588de0d1c9a7c60b7c72c465a21716",
+              "generated_position": {
+                "line": 1,
+                "column": 85
+              },
+              "original_position": {
+                "source": "entry.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            -10,
+            4,
+            11,
+            79
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_6f9f5cbd52d0793de8a72254639f936e1591b065319558d359cbc8fb9732f815",
+            "evidence_stdout_sha256": "5036c9ce999aac09c12a65fe37d875bb0a363b2073e62b65e68724aa224151c1",
+            "evidence_stdout_bytes": 118816,
+            "graph_id": "jag_8dcbeae3ff38f92e4045d560109f8902d6eef5e4cc8259ce210d1d0fe703cbd5",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 13,
+            "inventoried_relevant_files": 3,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "c9234743b2b7360796b0f632ca375b2a07bd49b16b2e53b790a078134b90613b"
+            ],
+            "map_nodes": 1,
+            "original_declarations": 3,
+            "exact_embedded_originals": 3,
+            "originals": [
+              {
+                "map": "app.js.map",
+                "source": "units.js",
+                "content_available": true,
+                "content_sha256": "cba9bf8ca10010ab45ec5da1ac13db16b217e0cba926c2650aa0ca8f41ffa7b9"
+              },
+              {
+                "map": "app.js.map",
+                "source": "fees.js",
+                "content_available": true,
+                "content_sha256": "b3412014257f3698eebcda2157e23751b5f5d05a36dfcf1513fc155283af9778"
+              },
+              {
+                "map": "app.js.map",
+                "source": "entry.js",
+                "content_available": true,
+                "content_sha256": "371595d1832c7a062db9174d1964086e36588de0d1c9a7c60b7c72c465a21716"
+              }
+            ]
+          }
+        },
+        "public": {
+          "inventory": [
+            {
+              "path": "app.js",
+              "size": 135,
+              "sha256": "c9234743b2b7360796b0f632ca375b2a07bd49b16b2e53b790a078134b90613b"
+            },
+            {
+              "path": "package.json",
+              "size": 84,
+              "sha256": "6d2a4e41b6eb876f156a70d3ec9d62b0b64e23a89d0fb4a2e541eb7e35d45ef7"
+            }
+          ],
+          "trace_mapping": [],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            -10,
+            4,
+            11,
+            79
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_cc16b01c7e0cd95ed0fe8d40f3ac85aec150a5afeb64d1e35b6e8dcc7468888b",
+            "evidence_stdout_sha256": "a8f1aa423772c5dfe68266caae6e7212afd77cc5497addce4b39b5b9c22a96d7",
+            "evidence_stdout_bytes": 107939,
+            "graph_id": "jag_dde921f968e662d9d3d5508e9763abdc4d31dd8a3f74642105d1c4bf8d755865",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 9,
+            "inventoried_relevant_files": 2,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "c9234743b2b7360796b0f632ca375b2a07bd49b16b2e53b790a078134b90613b"
+            ],
+            "map_nodes": 0,
+            "original_declarations": 0,
+            "exact_embedded_originals": 0,
+            "originals": []
+          }
+        },
+        "private_restored": {
+          "inventory": [
+            {
+              "path": "app.js",
+              "size": 135,
+              "sha256": "c9234743b2b7360796b0f632ca375b2a07bd49b16b2e53b790a078134b90613b"
+            },
+            {
+              "path": "app.js.map",
+              "size": 680,
+              "sha256": "ba2081366aa8595ea11b2d0fab734e41a7e5436ac3aaeaf24757c85dac2e63bb"
+            },
+            {
+              "path": "package.json",
+              "size": 84,
+              "sha256": "6d2a4e41b6eb876f156a70d3ec9d62b0b64e23a89d0fb4a2e541eb7e35d45ef7"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "app.js.map",
+              "source": "units.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "cba9bf8ca10010ab45ec5da1ac13db16b217e0cba926c2650aa0ca8f41ffa7b9",
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "units.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "app.js.map",
+              "source": "fees.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "b3412014257f3698eebcda2157e23751b5f5d05a36dfcf1513fc155283af9778",
+              "generated_position": {
+                "line": 1,
+                "column": 46
+              },
+              "original_position": {
+                "source": "fees.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "app.js.map",
+              "source": "entry.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "371595d1832c7a062db9174d1964086e36588de0d1c9a7c60b7c72c465a21716",
+              "generated_position": {
+                "line": 1,
+                "column": 85
+              },
+              "original_position": {
+                "source": "entry.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            -10,
+            4,
+            11,
+            79
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_7359fe8df7d1ed17401a51badd822aaa66b9d018021b4a85b5f29be6b75add8a",
+            "evidence_stdout_sha256": "c692771b95a11a0d28bdf3ca170e194934e2141e170fc5f339c88290301ee38f",
+            "evidence_stdout_bytes": 118848,
+            "graph_id": "jag_8dcbeae3ff38f92e4045d560109f8902d6eef5e4cc8259ce210d1d0fe703cbd5",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 13,
+            "inventoried_relevant_files": 3,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "c9234743b2b7360796b0f632ca375b2a07bd49b16b2e53b790a078134b90613b"
+            ],
+            "map_nodes": 1,
+            "original_declarations": 3,
+            "exact_embedded_originals": 3,
+            "originals": [
+              {
+                "map": "app.js.map",
+                "source": "units.js",
+                "content_available": true,
+                "content_sha256": "cba9bf8ca10010ab45ec5da1ac13db16b217e0cba926c2650aa0ca8f41ffa7b9"
+              },
+              {
+                "map": "app.js.map",
+                "source": "fees.js",
+                "content_available": true,
+                "content_sha256": "b3412014257f3698eebcda2157e23751b5f5d05a36dfcf1513fc155283af9778"
+              },
+              {
+                "map": "app.js.map",
+                "source": "entry.js",
+                "content_available": true,
+                "content_sha256": "371595d1832c7a062db9174d1964086e36588de0d1c9a7c60b7c72c465a21716"
+              }
+            ]
+          }
+        }
+      },
+      "private": {
+        "inventory": [
+          {
+            "path": "app.js.map",
+            "size": 680,
+            "sha256": "ba2081366aa8595ea11b2d0fab734e41a7e5436ac3aaeaf24757c85dac2e63bb"
+          }
+        ],
+        "trace_mapping": [
+          {
+            "map": "app.js.map",
+            "source": "units.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "cba9bf8ca10010ab45ec5da1ac13db16b217e0cba926c2650aa0ca8f41ffa7b9",
+            "generated_position": {
+              "line": 1,
+              "column": 7
+            },
+            "original_position": {
+              "source": "units.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          },
+          {
+            "map": "app.js.map",
+            "source": "fees.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "b3412014257f3698eebcda2157e23751b5f5d05a36dfcf1513fc155283af9778",
+            "generated_position": {
+              "line": 1,
+              "column": 46
+            },
+            "original_position": {
+              "source": "fees.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          },
+          {
+            "map": "app.js.map",
+            "source": "entry.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "371595d1832c7a062db9174d1964086e36588de0d1c9a7c60b7c72c465a21716",
+            "generated_position": {
+              "line": 1,
+              "column": 85
+            },
+            "original_position": {
+              "source": "entry.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "multiple-bundles",
+      "features": [
+        "two bundles with local import",
+        "nested output directories",
+        "three original modules"
+      ],
+      "bundle_count": 2,
+      "declared_originals": [
+        {
+          "map": "assets/main.js.map",
+          "source": "src/main.js",
+          "original_sha256": "9922f29af99a70186409d9c8c00cea306d7aea309c03256374abfd7ec8c14df3",
+          "content_shipped_in_baseline_map": true
+        },
+        {
+          "map": "assets/chunk.js.map",
+          "source": "src/base.js",
+          "original_sha256": "3735e612d0d48000dfb80e22b058053cdb020267b31ee8cda60867e9954ecaeb",
+          "content_shipped_in_baseline_map": true
+        },
+        {
+          "map": "assets/chunk.js.map",
+          "source": "src/surcharge.js",
+          "original_sha256": "5802f60d48564b844ad294e5cd67f3a20e83dcae7469c82aab9b4cadf5124877",
+          "content_shipped_in_baseline_map": true
+        }
+      ],
+      "input_unchanged": true,
+      "public_asset_bytes_unchanged": true,
+      "private_map_bytes_unchanged": true,
+      "private_restoration_recreates_inventory": true,
+      "sides": {
+        "baseline": {
+          "inventory": [
+            {
+              "path": "assets/chunk.js",
+              "size": 72,
+              "sha256": "f74071d212345635a8fd961d29c15cd9af57a2c51cebed183a2ad6b183a04b25"
+            },
+            {
+              "path": "assets/chunk.js.map",
+              "size": 444,
+              "sha256": "0acf61c71d68adfcbde7190b5da546d4468cbb0a44acdfbdbe822f81081aa993"
+            },
+            {
+              "path": "assets/main.js",
+              "size": 90,
+              "sha256": "02e4bde7b322386270675d20db33fb117a1a11ee254f6553d79568c32e7750ba"
+            },
+            {
+              "path": "assets/main.js.map",
+              "size": 396,
+              "sha256": "3e72bb0a29281d422d075592786ea98fdc43a5b4c19276d016718543cc3866cf"
+            },
+            {
+              "path": "package.json",
+              "size": 92,
+              "sha256": "b529e96d6b121ff2eca501516e6f3d0f316c701207a66686d3b7ed1a0eb130ef"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "assets/main.js.map",
+              "source": "src/main.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "9922f29af99a70186409d9c8c00cea306d7aea309c03256374abfd7ec8c14df3",
+              "generated_position": {
+                "line": 1,
+                "column": 15
+              },
+              "original_position": {
+                "source": "src/main.js",
+                "line": 2,
+                "column": 9,
+                "name": "base"
+              }
+            },
+            {
+              "map": "assets/chunk.js.map",
+              "source": "src/base.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "3735e612d0d48000dfb80e22b058053cdb020267b31ee8cda60867e9954ecaeb",
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "src/base.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "assets/chunk.js.map",
+              "source": "src/surcharge.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "5802f60d48564b844ad294e5cd67f3a20e83dcae7469c82aab9b4cadf5124877",
+              "generated_position": {
+                "line": 1,
+                "column": 42
+              },
+              "original_position": {
+                "source": "src/surcharge.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            -16,
+            2,
+            11,
+            101
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_1c029d553e3c37e18c6433dc03639f214fac106ef374ded11e5c49e35ac07224",
+            "evidence_stdout_sha256": "cd7fe3201b0a03ffbba93edd0b3f867e50c750d181e984cab70ea62946c5bf7d",
+            "evidence_stdout_bytes": 129885,
+            "graph_id": "jag_33181170a4013e4d85e1b5a6de4008c828915812852dda45dbcfa0db2a1615f5",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 16,
+            "inventoried_relevant_files": 5,
+            "parsed_javascript_files": 2,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "f74071d212345635a8fd961d29c15cd9af57a2c51cebed183a2ad6b183a04b25",
+              "02e4bde7b322386270675d20db33fb117a1a11ee254f6553d79568c32e7750ba"
+            ],
+            "map_nodes": 2,
+            "original_declarations": 3,
+            "exact_embedded_originals": 3,
+            "originals": [
+              {
+                "map": "assets/main.js.map",
+                "source": "src/main.js",
+                "content_available": true,
+                "content_sha256": "9922f29af99a70186409d9c8c00cea306d7aea309c03256374abfd7ec8c14df3"
+              },
+              {
+                "map": "assets/chunk.js.map",
+                "source": "src/base.js",
+                "content_available": true,
+                "content_sha256": "3735e612d0d48000dfb80e22b058053cdb020267b31ee8cda60867e9954ecaeb"
+              },
+              {
+                "map": "assets/chunk.js.map",
+                "source": "src/surcharge.js",
+                "content_available": true,
+                "content_sha256": "5802f60d48564b844ad294e5cd67f3a20e83dcae7469c82aab9b4cadf5124877"
+              }
+            ]
+          }
+        },
+        "public": {
+          "inventory": [
+            {
+              "path": "assets/chunk.js",
+              "size": 72,
+              "sha256": "f74071d212345635a8fd961d29c15cd9af57a2c51cebed183a2ad6b183a04b25"
+            },
+            {
+              "path": "assets/main.js",
+              "size": 90,
+              "sha256": "02e4bde7b322386270675d20db33fb117a1a11ee254f6553d79568c32e7750ba"
+            },
+            {
+              "path": "package.json",
+              "size": 92,
+              "sha256": "b529e96d6b121ff2eca501516e6f3d0f316c701207a66686d3b7ed1a0eb130ef"
+            }
+          ],
+          "trace_mapping": [],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            -16,
+            2,
+            11,
+            101
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_16c8d55d9924728fa3d103c8882b722a179897bcdffa2022140c7769f4c99c36",
+            "evidence_stdout_sha256": "9f7579522a2204c199472210e762ebd0f3b77ad144ee4e4d2f856d7a4e7864f3",
+            "evidence_stdout_bytes": 116047,
+            "graph_id": "jag_5581306d9f3ab43fb1ff275b0702bf7ed7ce12f3f3d6a436ac52183d46c104cd",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 11,
+            "inventoried_relevant_files": 3,
+            "parsed_javascript_files": 2,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "f74071d212345635a8fd961d29c15cd9af57a2c51cebed183a2ad6b183a04b25",
+              "02e4bde7b322386270675d20db33fb117a1a11ee254f6553d79568c32e7750ba"
+            ],
+            "map_nodes": 0,
+            "original_declarations": 0,
+            "exact_embedded_originals": 0,
+            "originals": []
+          }
+        },
+        "private_restored": {
+          "inventory": [
+            {
+              "path": "assets/chunk.js",
+              "size": 72,
+              "sha256": "f74071d212345635a8fd961d29c15cd9af57a2c51cebed183a2ad6b183a04b25"
+            },
+            {
+              "path": "assets/chunk.js.map",
+              "size": 444,
+              "sha256": "0acf61c71d68adfcbde7190b5da546d4468cbb0a44acdfbdbe822f81081aa993"
+            },
+            {
+              "path": "assets/main.js",
+              "size": 90,
+              "sha256": "02e4bde7b322386270675d20db33fb117a1a11ee254f6553d79568c32e7750ba"
+            },
+            {
+              "path": "assets/main.js.map",
+              "size": 396,
+              "sha256": "3e72bb0a29281d422d075592786ea98fdc43a5b4c19276d016718543cc3866cf"
+            },
+            {
+              "path": "package.json",
+              "size": 92,
+              "sha256": "b529e96d6b121ff2eca501516e6f3d0f316c701207a66686d3b7ed1a0eb130ef"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "assets/main.js.map",
+              "source": "src/main.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "9922f29af99a70186409d9c8c00cea306d7aea309c03256374abfd7ec8c14df3",
+              "generated_position": {
+                "line": 1,
+                "column": 15
+              },
+              "original_position": {
+                "source": "src/main.js",
+                "line": 2,
+                "column": 9,
+                "name": "base"
+              }
+            },
+            {
+              "map": "assets/chunk.js.map",
+              "source": "src/base.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "3735e612d0d48000dfb80e22b058053cdb020267b31ee8cda60867e9954ecaeb",
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "src/base.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "assets/chunk.js.map",
+              "source": "src/surcharge.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "5802f60d48564b844ad294e5cd67f3a20e83dcae7469c82aab9b4cadf5124877",
+              "generated_position": {
+                "line": 1,
+                "column": 42
+              },
+              "original_position": {
+                "source": "src/surcharge.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            -16,
+            2,
+            11,
+            101
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_a846ace27dc62d707baf464bbe4913b23bc8f46e9cb0c8ba5fabb264abcd60d2",
+            "evidence_stdout_sha256": "4923545847b5e64ff8019a0de507d978462e26605c8c912b8f6fad469e22010a",
+            "evidence_stdout_bytes": 129917,
+            "graph_id": "jag_33181170a4013e4d85e1b5a6de4008c828915812852dda45dbcfa0db2a1615f5",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 16,
+            "inventoried_relevant_files": 5,
+            "parsed_javascript_files": 2,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "f74071d212345635a8fd961d29c15cd9af57a2c51cebed183a2ad6b183a04b25",
+              "02e4bde7b322386270675d20db33fb117a1a11ee254f6553d79568c32e7750ba"
+            ],
+            "map_nodes": 2,
+            "original_declarations": 3,
+            "exact_embedded_originals": 3,
+            "originals": [
+              {
+                "map": "assets/main.js.map",
+                "source": "src/main.js",
+                "content_available": true,
+                "content_sha256": "9922f29af99a70186409d9c8c00cea306d7aea309c03256374abfd7ec8c14df3"
+              },
+              {
+                "map": "assets/chunk.js.map",
+                "source": "src/base.js",
+                "content_available": true,
+                "content_sha256": "3735e612d0d48000dfb80e22b058053cdb020267b31ee8cda60867e9954ecaeb"
+              },
+              {
+                "map": "assets/chunk.js.map",
+                "source": "src/surcharge.js",
+                "content_available": true,
+                "content_sha256": "5802f60d48564b844ad294e5cd67f3a20e83dcae7469c82aab9b4cadf5124877"
+              }
+            ]
+          }
+        }
+      },
+      "private": {
+        "inventory": [
+          {
+            "path": "assets/chunk.js.map",
+            "size": 444,
+            "sha256": "0acf61c71d68adfcbde7190b5da546d4468cbb0a44acdfbdbe822f81081aa993"
+          },
+          {
+            "path": "assets/main.js.map",
+            "size": 396,
+            "sha256": "3e72bb0a29281d422d075592786ea98fdc43a5b4c19276d016718543cc3866cf"
+          }
+        ],
+        "trace_mapping": [
+          {
+            "map": "assets/main.js.map",
+            "source": "src/main.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "9922f29af99a70186409d9c8c00cea306d7aea309c03256374abfd7ec8c14df3",
+            "generated_position": {
+              "line": 1,
+              "column": 15
+            },
+            "original_position": {
+              "source": "src/main.js",
+              "line": 2,
+              "column": 9,
+              "name": "base"
+            }
+          },
+          {
+            "map": "assets/chunk.js.map",
+            "source": "src/base.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "3735e612d0d48000dfb80e22b058053cdb020267b31ee8cda60867e9954ecaeb",
+            "generated_position": {
+              "line": 1,
+              "column": 7
+            },
+            "original_position": {
+              "source": "src/base.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          },
+          {
+            "map": "assets/chunk.js.map",
+            "source": "src/surcharge.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "5802f60d48564b844ad294e5cd67f3a20e83dcae7469c82aab9b4cadf5124877",
+            "generated_position": {
+              "line": 1,
+              "column": 42
+            },
+            "original_position": {
+              "source": "src/surcharge.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "unicode-escaped",
+      "features": [
+        "Unicode paths, identifiers and source text",
+        "JSON Unicode-escaped keys and strings"
+      ],
+      "bundle_count": 1,
+      "declared_originals": [
+        {
+          "map": "assets/应用.js.map",
+          "source": "源/费率.js",
+          "original_sha256": "e1f4552dec7181ce112c349aea3d7724968fbb9073a5178705a879ba6231e9a6",
+          "content_shipped_in_baseline_map": true
+        },
+        {
+          "map": "assets/应用.js.map",
+          "source": "源/报价-🧮.js",
+          "original_sha256": "9a9418368e6c6d62da72d90a920cf8ee5af02c5e940f139ff1f986c994ec6277",
+          "content_shipped_in_baseline_map": true
+        }
+      ],
+      "input_unchanged": true,
+      "public_asset_bytes_unchanged": true,
+      "private_map_bytes_unchanged": true,
+      "private_restoration_recreates_inventory": true,
+      "sides": {
+        "baseline": {
+          "inventory": [
+            {
+              "path": "assets/应用.js",
+              "size": 191,
+              "sha256": "e43e0379477dfdb67141f10230fa673efe30ecd72b9e3ac02621c4cfb7af16a4"
+            },
+            {
+              "path": "assets/应用.js.map",
+              "size": 688,
+              "sha256": "327144da21cd04e4a7d1777b8d4741fc4ce70f9dc19a6b90039e2b65de1a5362"
+            },
+            {
+              "path": "package.json",
+              "size": 93,
+              "sha256": "db6e23c1f69ba8d946f38ccdbcefdbec7a29e29e3b5480e789bc8ff34f55cbdb"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "assets/应用.js.map",
+              "source": "源/费率.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "e1f4552dec7181ce112c349aea3d7724968fbb9073a5178705a879ba6231e9a6",
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "源/费率.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "assets/应用.js.map",
+              "source": "源/报价-🧮.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "9a9418368e6c6d62da72d90a920cf8ee5af02c5e940f139ff1f986c994ec6277",
+              "generated_position": {
+                "line": 1,
+                "column": 91
+              },
+              "original_position": {
+                "source": "源/报价-🧮.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            "数量 -2，金额 -10 欧元",
+            "数量 0，金额 0 欧元",
+            "数量 1，金额 5 欧元",
+            "数量 11，金额 55 欧元"
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_626eec5ca668ac40f23328a1485bf923bec0bd8ce3676ecbf0bffe1dee1b702a",
+            "evidence_stdout_sha256": "4426523d17878dbf38fc2326501f3b1a80843df3f8898e0192b4b83cc006e164",
+            "evidence_stdout_bytes": 96846,
+            "graph_id": "jag_b3c926217b3b1c232fb94f02c7c099555aadca8ccd6eca02052c639552da8ee2",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 12,
+            "inventoried_relevant_files": 3,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "e43e0379477dfdb67141f10230fa673efe30ecd72b9e3ac02621c4cfb7af16a4"
+            ],
+            "map_nodes": 1,
+            "original_declarations": 2,
+            "exact_embedded_originals": 2,
+            "originals": [
+              {
+                "map": "assets/应用.js.map",
+                "source": "源/费率.js",
+                "content_available": true,
+                "content_sha256": "e1f4552dec7181ce112c349aea3d7724968fbb9073a5178705a879ba6231e9a6"
+              },
+              {
+                "map": "assets/应用.js.map",
+                "source": "源/报价-🧮.js",
+                "content_available": true,
+                "content_sha256": "9a9418368e6c6d62da72d90a920cf8ee5af02c5e940f139ff1f986c994ec6277"
+              }
+            ]
+          }
+        },
+        "public": {
+          "inventory": [
+            {
+              "path": "assets/应用.js",
+              "size": 191,
+              "sha256": "e43e0379477dfdb67141f10230fa673efe30ecd72b9e3ac02621c4cfb7af16a4"
+            },
+            {
+              "path": "package.json",
+              "size": 93,
+              "sha256": "db6e23c1f69ba8d946f38ccdbcefdbec7a29e29e3b5480e789bc8ff34f55cbdb"
+            }
+          ],
+          "trace_mapping": [],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            "数量 -2，金额 -10 欧元",
+            "数量 0，金额 0 欧元",
+            "数量 1，金额 5 欧元",
+            "数量 11，金额 55 欧元"
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_1d061e576d7492648aa94e7dfa804fc9a28e0cd15dc8d2b1086e38d6515cd0cd",
+            "evidence_stdout_sha256": "d7c4b6bdc73dcbbfb17836e7d3ca781f6843b588364005691f420905abe59ca9",
+            "evidence_stdout_bytes": 88485,
+            "graph_id": "jag_5472dd0709ee3442a7e1909fb7ed845ac517775145552919223e516585f28c26",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 9,
+            "inventoried_relevant_files": 2,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "e43e0379477dfdb67141f10230fa673efe30ecd72b9e3ac02621c4cfb7af16a4"
+            ],
+            "map_nodes": 0,
+            "original_declarations": 0,
+            "exact_embedded_originals": 0,
+            "originals": []
+          }
+        },
+        "private_restored": {
+          "inventory": [
+            {
+              "path": "assets/应用.js",
+              "size": 191,
+              "sha256": "e43e0379477dfdb67141f10230fa673efe30ecd72b9e3ac02621c4cfb7af16a4"
+            },
+            {
+              "path": "assets/应用.js.map",
+              "size": 688,
+              "sha256": "327144da21cd04e4a7d1777b8d4741fc4ce70f9dc19a6b90039e2b65de1a5362"
+            },
+            {
+              "path": "package.json",
+              "size": 93,
+              "sha256": "db6e23c1f69ba8d946f38ccdbcefdbec7a29e29e3b5480e789bc8ff34f55cbdb"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "assets/应用.js.map",
+              "source": "源/费率.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "e1f4552dec7181ce112c349aea3d7724968fbb9073a5178705a879ba6231e9a6",
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "源/费率.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "assets/应用.js.map",
+              "source": "源/报价-🧮.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "9a9418368e6c6d62da72d90a920cf8ee5af02c5e940f139ff1f986c994ec6277",
+              "generated_position": {
+                "line": 1,
+                "column": 91
+              },
+              "original_position": {
+                "source": "源/报价-🧮.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            "数量 -2，金额 -10 欧元",
+            "数量 0，金额 0 欧元",
+            "数量 1，金额 5 欧元",
+            "数量 11，金额 55 欧元"
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_06a347445519aa3790f36c3496aabefaee14fe409fa491999c85755f5eaa7f28",
+            "evidence_stdout_sha256": "7b67a25a0871403adaca6da3e1078ea5a37942ecf9643da5c8e214b073e902ea",
+            "evidence_stdout_bytes": 96878,
+            "graph_id": "jag_b3c926217b3b1c232fb94f02c7c099555aadca8ccd6eca02052c639552da8ee2",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 12,
+            "inventoried_relevant_files": 3,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "e43e0379477dfdb67141f10230fa673efe30ecd72b9e3ac02621c4cfb7af16a4"
+            ],
+            "map_nodes": 1,
+            "original_declarations": 2,
+            "exact_embedded_originals": 2,
+            "originals": [
+              {
+                "map": "assets/应用.js.map",
+                "source": "源/费率.js",
+                "content_available": true,
+                "content_sha256": "e1f4552dec7181ce112c349aea3d7724968fbb9073a5178705a879ba6231e9a6"
+              },
+              {
+                "map": "assets/应用.js.map",
+                "source": "源/报价-🧮.js",
+                "content_available": true,
+                "content_sha256": "9a9418368e6c6d62da72d90a920cf8ee5af02c5e940f139ff1f986c994ec6277"
+              }
+            ]
+          }
+        }
+      },
+      "private": {
+        "inventory": [
+          {
+            "path": "assets/应用.js.map",
+            "size": 688,
+            "sha256": "327144da21cd04e4a7d1777b8d4741fc4ce70f9dc19a6b90039e2b65de1a5362"
+          }
+        ],
+        "trace_mapping": [
+          {
+            "map": "assets/应用.js.map",
+            "source": "源/费率.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "e1f4552dec7181ce112c349aea3d7724968fbb9073a5178705a879ba6231e9a6",
+            "generated_position": {
+              "line": 1,
+              "column": 7
+            },
+            "original_position": {
+              "source": "源/费率.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          },
+          {
+            "map": "assets/应用.js.map",
+            "source": "源/报价-🧮.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "9a9418368e6c6d62da72d90a920cf8ee5af02c5e940f139ff1f986c994ec6277",
+            "generated_position": {
+              "line": 1,
+              "column": 91
+            },
+            "original_position": {
+              "source": "源/报价-🧮.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "partial-originals",
+      "features": [
+        "two mapped modules",
+        "one sourcesContent entry deliberately null"
+      ],
+      "bundle_count": 1,
+      "declared_originals": [
+        {
+          "map": "partial.js.map",
+          "source": "helper-original.js",
+          "original_sha256": "d7f042b5ada7a6fe96d9f2563b6207a18c93ed74d68035ec423c3cf0e33ed96a",
+          "content_shipped_in_baseline_map": false
+        },
+        {
+          "map": "partial.js.map",
+          "source": "quote-original.js",
+          "original_sha256": "c42a78e809d4c827bb029b19d3b390dfa3e3696476a6185cb5b268128e31d8c2",
+          "content_shipped_in_baseline_map": true
+        }
+      ],
+      "input_unchanged": true,
+      "public_asset_bytes_unchanged": true,
+      "private_map_bytes_unchanged": true,
+      "private_restoration_recreates_inventory": true,
+      "sides": {
+        "baseline": {
+          "inventory": [
+            {
+              "path": "package.json",
+              "size": 89,
+              "sha256": "bf3496cd7b9a40d75fe4984ab11ee99a09f778534d2a9f5a56846652ec3fe75d"
+            },
+            {
+              "path": "partial.js",
+              "size": 91,
+              "sha256": "bb64d254b856b1f27b138969b1f3f269d84e958abbea724d113565d5791651b1"
+            },
+            {
+              "path": "partial.js.map",
+              "size": 421,
+              "sha256": "dc33fcfc3cebb51433bc6d27599cf913fbb4f3db7c3d33a74ac91dae90561d6f"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "partial.js.map",
+              "source": "helper-original.js",
+              "content_available": false,
+              "exact_text": null,
+              "content_sha256": null,
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "helper-original.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "partial.js.map",
+              "source": "quote-original.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "c42a78e809d4c827bb029b19d3b390dfa3e3696476a6185cb5b268128e31d8c2",
+              "generated_position": {
+                "line": 1,
+                "column": 53
+              },
+              "original_position": {
+                "source": "quote-original.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            6,
+            6,
+            10,
+            50
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_8737010831a01b19bce345078a17d65fc144f549a3ce043ee9831fdaba98079f",
+            "evidence_stdout_sha256": "377d2e0c2db310c489f7feac6173802dcca6cad5a971ca43ef495f8c225feba1",
+            "evidence_stdout_bytes": 93666,
+            "graph_id": "jag_6e73194428002f4cedf3e86806c198acf17841f0ceb41b02d80fe82297846f7f",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 11,
+            "inventoried_relevant_files": 3,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "bb64d254b856b1f27b138969b1f3f269d84e958abbea724d113565d5791651b1"
+            ],
+            "map_nodes": 1,
+            "original_declarations": 2,
+            "exact_embedded_originals": 1,
+            "originals": [
+              {
+                "map": "partial.js.map",
+                "source": "helper-original.js",
+                "content_available": false,
+                "content_sha256": null
+              },
+              {
+                "map": "partial.js.map",
+                "source": "quote-original.js",
+                "content_available": true,
+                "content_sha256": "c42a78e809d4c827bb029b19d3b390dfa3e3696476a6185cb5b268128e31d8c2"
+              }
+            ]
+          }
+        },
+        "public": {
+          "inventory": [
+            {
+              "path": "package.json",
+              "size": 89,
+              "sha256": "bf3496cd7b9a40d75fe4984ab11ee99a09f778534d2a9f5a56846652ec3fe75d"
+            },
+            {
+              "path": "partial.js",
+              "size": 91,
+              "sha256": "bb64d254b856b1f27b138969b1f3f269d84e958abbea724d113565d5791651b1"
+            }
+          ],
+          "trace_mapping": [],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            6,
+            6,
+            10,
+            50
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_bed1786af9f46fbabe54e4eece432bdd933c457579a0246aaeaf6694c2f4f591",
+            "evidence_stdout_sha256": "18bd5f925298993c386578dba7b3c2784d147c6e33d06501f019a8af6378829e",
+            "evidence_stdout_bytes": 85494,
+            "graph_id": "jag_2ac221a8cf2455bc7886c1bfb8c6698cb7cf4cfe812e43d041ca97b3a2407d28",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 8,
+            "inventoried_relevant_files": 2,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "bb64d254b856b1f27b138969b1f3f269d84e958abbea724d113565d5791651b1"
+            ],
+            "map_nodes": 0,
+            "original_declarations": 0,
+            "exact_embedded_originals": 0,
+            "originals": []
+          }
+        },
+        "private_restored": {
+          "inventory": [
+            {
+              "path": "package.json",
+              "size": 89,
+              "sha256": "bf3496cd7b9a40d75fe4984ab11ee99a09f778534d2a9f5a56846652ec3fe75d"
+            },
+            {
+              "path": "partial.js",
+              "size": 91,
+              "sha256": "bb64d254b856b1f27b138969b1f3f269d84e958abbea724d113565d5791651b1"
+            },
+            {
+              "path": "partial.js.map",
+              "size": 421,
+              "sha256": "dc33fcfc3cebb51433bc6d27599cf913fbb4f3db7c3d33a74ac91dae90561d6f"
+            }
+          ],
+          "trace_mapping": [
+            {
+              "map": "partial.js.map",
+              "source": "helper-original.js",
+              "content_available": false,
+              "exact_text": null,
+              "content_sha256": null,
+              "generated_position": {
+                "line": 1,
+                "column": 7
+              },
+              "original_position": {
+                "source": "helper-original.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            },
+            {
+              "map": "partial.js.map",
+              "source": "quote-original.js",
+              "content_available": true,
+              "exact_text": true,
+              "content_sha256": "c42a78e809d4c827bb029b19d3b390dfa3e3696476a6185cb5b268128e31d8c2",
+              "generated_position": {
+                "line": 1,
+                "column": 53
+              },
+              "original_position": {
+                "source": "quote-original.js",
+                "line": 2,
+                "column": 7,
+                "name": null
+              }
+            }
+          ],
+          "fixture_inputs": [
+            -2,
+            0,
+            1,
+            11
+          ],
+          "fixture_outputs": [
+            6,
+            6,
+            10,
+            50
+          ],
+          "rea": {
+            "exit_code": 0,
+            "provider": "rea-javascript-application",
+            "operation": "analyze_javascript_application",
+            "evidence_id": "ev_5657ac3f4079e744c2003465880b1013ad6ab8693c7ddca76fc1a69f322e6164",
+            "evidence_stdout_sha256": "288e3ea6c7af018a9b53f2ea37ef6d2ce0516e0c3c5717a43de58521af713b9f",
+            "evidence_stdout_bytes": 93698,
+            "graph_id": "jag_6e73194428002f4cedf3e86806c198acf17841f0ceb41b02d80fe82297846f7f",
+            "coverage": {
+              "status": "complete",
+              "truncated": false,
+              "omitted_count": 0,
+              "limits": []
+            },
+            "graph_nodes": 11,
+            "inventoried_relevant_files": 3,
+            "parsed_javascript_files": 1,
+            "skipped_javascript_files": 0,
+            "parse_failures": 0,
+            "invalid_utf8_files": 0,
+            "parsed_bundle_sha256": [
+              "bb64d254b856b1f27b138969b1f3f269d84e958abbea724d113565d5791651b1"
+            ],
+            "map_nodes": 1,
+            "original_declarations": 2,
+            "exact_embedded_originals": 1,
+            "originals": [
+              {
+                "map": "partial.js.map",
+                "source": "helper-original.js",
+                "content_available": false,
+                "content_sha256": null
+              },
+              {
+                "map": "partial.js.map",
+                "source": "quote-original.js",
+                "content_available": true,
+                "content_sha256": "c42a78e809d4c827bb029b19d3b390dfa3e3696476a6185cb5b268128e31d8c2"
+              }
+            ]
+          }
+        }
+      },
+      "private": {
+        "inventory": [
+          {
+            "path": "partial.js.map",
+            "size": 421,
+            "sha256": "dc33fcfc3cebb51433bc6d27599cf913fbb4f3db7c3d33a74ac91dae90561d6f"
+          }
+        ],
+        "trace_mapping": [
+          {
+            "map": "partial.js.map",
+            "source": "helper-original.js",
+            "content_available": false,
+            "exact_text": null,
+            "content_sha256": null,
+            "generated_position": {
+              "line": 1,
+              "column": 7
+            },
+            "original_position": {
+              "source": "helper-original.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          },
+          {
+            "map": "partial.js.map",
+            "source": "quote-original.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "c42a78e809d4c827bb029b19d3b390dfa3e3696476a6185cb5b268128e31d8c2",
+            "generated_position": {
+              "line": 1,
+              "column": 53
+            },
+            "original_position": {
+              "source": "quote-original.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "id": "nested-indexed-map",
+      "disposition": "unsupported-rejected",
+      "counted_as_protected_build": false,
+      "baseline": {
+        "inventory": [
+          {
+            "path": "indexed.js",
+            "size": 85,
+            "sha256": "dd209fdc47bfde9123bdd907ec9f33da198391d4bc20fcc91cf1238bf510d16f"
+          },
+          {
+            "path": "indexed.js.map",
+            "size": 810,
+            "sha256": "7b7ec26c8166b39c83f70efa3b20e1b83cb1d7f3fce16ca1b6c06db6b6ca9258"
+          },
+          {
+            "path": "package.json",
+            "size": 61,
+            "sha256": "1fd37105b65a94a29b2acb88ffccac0440e0ac1ce453c7d058b1717a803a53b3"
+          }
+        ],
+        "trace_mapping": [
+          {
+            "map": "indexed.js.map",
+            "source": "indexed-unit.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "2ca820c66effa4e2166c642f49f4b9e1ea6a135b8a69db852bae90e07da239dc",
+            "generated_position": {
+              "line": 1,
+              "column": 7
+            },
+            "original_position": {
+              "source": "indexed-unit.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          },
+          {
+            "map": "indexed.js.map",
+            "source": "indexed-main.js",
+            "content_available": true,
+            "exact_text": true,
+            "content_sha256": "d7cf6d71ded22a1e18195007a53b290e8974a3cdd9bed1f61b125dad9cc51581",
+            "generated_position": {
+              "line": 2,
+              "column": 7
+            },
+            "original_position": {
+              "source": "indexed-main.js",
+              "line": 2,
+              "column": 7,
+              "name": null
+            }
+          }
+        ],
+        "rea": {
+          "exit_code": 0,
+          "provider": "rea-javascript-application",
+          "operation": "analyze_javascript_application",
+          "evidence_id": "ev_fea48182ff5238585c0578c18e4feda7ca8e0c1df45ff5221740bbce0e0b26a1",
+          "evidence_stdout_sha256": "254d3fcc508157b87d5b4e4963568dd4ff88e6e0efa3177ecafa8ffb1a7548fe",
+          "evidence_stdout_bytes": 85131,
+          "graph_id": "jag_9683144571f0fc2285d9c7df080169834343f35ebcd0ba146c20dd93c9225a76",
+          "coverage": {
+            "status": "complete",
+            "truncated": false,
+            "omitted_count": 0,
+            "limits": []
+          },
+          "graph_nodes": 11,
+          "inventoried_relevant_files": 3,
+          "parsed_javascript_files": 1,
+          "skipped_javascript_files": 0,
+          "parse_failures": 0,
+          "invalid_utf8_files": 0,
+          "parsed_bundle_sha256": [
+            "dd209fdc47bfde9123bdd907ec9f33da198391d4bc20fcc91cf1238bf510d16f"
+          ],
+          "map_nodes": 1,
+          "original_declarations": 2,
+          "exact_embedded_originals": 2,
+          "originals": [
+            {
+              "map": "indexed.js.map",
+              "source": "indexed-unit.js",
+              "content_available": true,
+              "content_sha256": "2ca820c66effa4e2166c642f49f4b9e1ea6a135b8a69db852bae90e07da239dc"
+            },
+            {
+              "map": "indexed.js.map",
+              "source": "indexed-main.js",
+              "content_available": true,
+              "content_sha256": "d7cf6d71ded22a1e18195007a53b290e8974a3cdd9bed1f61b125dad9cc51581"
+            }
+          ]
+        }
+      },
+      "split_exit_code": 2,
+      "split_error": "Expected a flat v3 external source map: indexed.js.map",
+      "public_output_absent": true,
+      "private_output_absent": true,
+      "input_unchanged": true
+    },
+    {
+      "id": "missing-mappings",
+      "disposition": "recoverable-disclosure-blocked",
+      "counted_as_protected_build": false,
+      "payload_sha256": "f294d96aeedd787835c5fc6caa70dde5eef2a055737cd2de0c0ac7816aa0a7d3",
+      "payload_bytes": 166,
+      "original_sha256": "d2a2009320a35880ee103d21bd1b7f9af7b436048bcdc968bcef6801b2add34d",
+      "explicit_format_selection": "Byte-identical copy of original-data.json named app.js.map; analyst knows the format.",
+      "ordinary_json_recovers_exact_text": true,
+      "rea": {
+        "exit_code": 0,
+        "provider": "rea-javascript-application",
+        "operation": "analyze_javascript_application",
+        "evidence_id": "ev_814d0bc8af529c4310e9c177686595ab642adf0c4a85dd20a1a3ff38b61cfba7",
+        "evidence_stdout_sha256": "5f4c046c6816145ebde0920ae25b279212195de0e41c0347f73bc8e095b7bfca",
+        "evidence_stdout_bytes": 43968,
+        "graph_id": "jag_5041ca713371a648d16a18b593fd960d58a696cabd8fb4e049f35363df1434b9",
+        "coverage": {
+          "status": "partial",
+          "truncated": false,
+          "omitted_count": null,
+          "limits": []
+        },
+        "graph_nodes": 10,
+        "inventoried_relevant_files": 3,
+        "parsed_javascript_files": 1,
+        "skipped_javascript_files": 0,
+        "parse_failures": 0,
+        "invalid_utf8_files": 0,
+        "parsed_bundle_sha256": [
+          "53e54ef7ac6933709f49ca8e07534eb1b197ef0d54bc3a1daeafbcaf54816baa"
+        ],
+        "map_nodes": 1,
+        "original_declarations": 1,
+        "exact_embedded_originals": 1,
+        "originals": [
+          {
+            "map": "app.js.map",
+            "source": "owned-original.js",
+            "content_available": true,
+            "content_sha256": "d2a2009320a35880ee103d21bd1b7f9af7b436048bcdc968bcef6801b2add34d"
+          }
+        ]
+      },
+      "prior_version_control": {
+        "version": "1.1.0",
+        "exit_code": 0,
+        "allowed_disclosure": true,
+        "findings": []
+      },
+      "current_gate": {
+        "exit_code": 3,
+        "findings": [
+          {
+            "code": "source_map_marker",
+            "path": "original-data.json",
+            "rule_index": 1,
+            "representation": "json-decoded-key"
+          }
+        ],
+        "source_map_scan_completed": true
+      },
+      "input_unchanged": true
+    },
+    {
+      "id": "numeric-mappings",
+      "disposition": "recoverable-disclosure-blocked",
+      "counted_as_protected_build": false,
+      "payload_sha256": "52d97e45a45ada5fc9a46445f22eb88fc42ff3bd32bec918b5d965294dc4dd15",
+      "payload_bytes": 180,
+      "original_sha256": "d2a2009320a35880ee103d21bd1b7f9af7b436048bcdc968bcef6801b2add34d",
+      "explicit_format_selection": "Byte-identical copy of original-data.json named app.js.map; analyst knows the format.",
+      "ordinary_json_recovers_exact_text": true,
+      "rea": {
+        "exit_code": 0,
+        "provider": "rea-javascript-application",
+        "operation": "analyze_javascript_application",
+        "evidence_id": "ev_8fc803e97e72c9cae50ceff15d37284913e1e8d67e1e9fd9312b72b85da98b32",
+        "evidence_stdout_sha256": "36aaf43f15097090b13119b09e6664bd6b50755afc4f23f9b9859979c74c1925",
+        "evidence_stdout_bytes": 43968,
+        "graph_id": "jag_84340fd1ae0062971f1da25a7ee0ac40705953a0c2b127c5cae5a082adc540ac",
+        "coverage": {
+          "status": "partial",
+          "truncated": false,
+          "omitted_count": null,
+          "limits": []
+        },
+        "graph_nodes": 10,
+        "inventoried_relevant_files": 3,
+        "parsed_javascript_files": 1,
+        "skipped_javascript_files": 0,
+        "parse_failures": 0,
+        "invalid_utf8_files": 0,
+        "parsed_bundle_sha256": [
+          "53e54ef7ac6933709f49ca8e07534eb1b197ef0d54bc3a1daeafbcaf54816baa"
+        ],
+        "map_nodes": 1,
+        "original_declarations": 1,
+        "exact_embedded_originals": 1,
+        "originals": [
+          {
+            "map": "app.js.map",
+            "source": "owned-original.js",
+            "content_available": true,
+            "content_sha256": "d2a2009320a35880ee103d21bd1b7f9af7b436048bcdc968bcef6801b2add34d"
+          }
+        ]
+      },
+      "prior_version_control": {
+        "version": "1.1.0",
+        "exit_code": 0,
+        "allowed_disclosure": true,
+        "findings": []
+      },
+      "current_gate": {
+        "exit_code": 3,
+        "findings": [
+          {
+            "code": "source_map_marker",
+            "path": "original-data.json",
+            "rule_index": 1,
+            "representation": "json-decoded-key"
+          }
+        ],
+        "source_map_scan_completed": true
+      },
+      "input_unchanged": true
+    }
+  ],
+  "scope": "Exact source text exposed by local hidden external maps in four owned Terser builds; independent format and disclosure rejection controls.",
+  "limitations": [
+    "REA reports original-content digests; trace-mapping returns exact text. All known originals are authored here, so this is not a blind recovery test.",
+    "Supported three-sided comparisons require complete, nontruncated REA graphs and unchanged JavaScript bytes. The invalid-mappings controls establish positive recovery only, even though their graphs are partial.",
+    "The null source-content entry was unavailable before protection and is excluded from recovered-content totals. Indexed maps are rejected, not claimed as successfully transformed.",
+    "The same Terser version builds every corpus member. This is not cross-bundler coverage, equivalent-logic resistance, remote/CDN verification, or an AI-session experiment.",
+    "The optional v1.1.0 baseline control checks installed distribution version only. In CI, the preceding Wasm corpus verifies the official wheel bytes and the installed package files of the same interpreter; this script does not independently repeat that byte-identity verification."
+  ]
+}

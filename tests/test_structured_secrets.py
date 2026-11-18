@@ -154,16 +154,22 @@ class StructuredSecrets(unittest.TestCase):
     def test_jwk_lookalikes_and_invalid_shapes_are_not_key_claims(self):
         valid = {"kty": "OKP", "crv": "Ed25519", "d": b64url(self.ed.private_bytes_raw()),
                  "x": b64url(self.ed.public_key().public_bytes_raw())}
-        cases = [{"kty": "oct", "k": ""}, {"kty": "oct", "k": "a"},
-                 {"kty": "oct", "k": "AA="}, {"kty": "oct", "k": "AB"},
+        for document in ({"kty": "oct", "k": ""}, {**valid, "kty": []}):
+            self.assertEqual(scan_json_secrets(document), [])
+        cases = [{"kty": "oct", "k": "a"},
                  {"kty": "RSA", "d": "AQAB"}, {"kty": "EC", "d": "AQAB"},
                  {**valid, "d": "AQAB"}, {**valid, "crv": "unknown"},
-                 {**valid, "crv": []}, {**valid, "kty": []},
+                 {**valid, "crv": []},
                  {"kty": "EC", "crv": "P-256", "d": b64url(bytes(32)),
                   "x": b64url(bytes(32)), "y": b64url(bytes(32))}]
         for document in cases:
             with self.subTest(document_kind=str(document.get("kty"))):
-                self.assertEqual(scan_json_secrets(document), [])
+                with self.assertRaises(GuardError):
+                    scan_json_secrets(document)
+                report = self.scan(json.dumps(document).encode())
+                self.assertFalse(report["ok"])
+                self.assertFalse(report["checks"]["structured_secret_scan_completed"])
+                self.assertFalse(any(row["code"] == "private_key_structure" for row in report["findings"]))
 
     def test_padded_base64url_private_material_remains_recoverable(self):
         seed = self.ed.private_bytes_raw()
@@ -222,11 +228,12 @@ class StructuredSecrets(unittest.TestCase):
             partial = {"kty": "RSA", "p": jwk["p"], "q": jwk["q"], **public}
             self.assertEqual(scan_json_secrets(partial)[0]["kind"], "RSA")
 
-    def test_rsa_factor_pair_limits_and_nonkey_lookalikes(self):
+    def test_rsa_factor_pair_limits_and_incomplete_private_claims(self):
         numbers = self.rsa.private_numbers()
         p, q = uint(numbers.p), uint(numbers.q)
         for values in (("AQ", "Aw"), (p, p), (uint(numbers.p - 1), q), (None, q), ([], q)):
-            self.assertEqual(scan_json_secrets({"kty": "RSA", "p": values[0], "q": values[1]}), [])
+            with self.assertRaises(GuardError):
+                scan_json_secrets({"kty": "RSA", "p": values[0], "q": values[1]})
         for field in ("p", "q", "d"):
             data = {"kty": "RSA", "p": p, "q": q, field: "a" * 3000}
             with self.assertRaises(GuardError):
@@ -242,9 +249,9 @@ class StructuredSecrets(unittest.TestCase):
         self.assertEqual(len(findings), 2)
         self.assertEqual({row["rule_index"] for row in findings}, {0, 1})
 
-    def test_array_comparisons_require_32_plain_bytes_and_do_not_strip_raw_equals(self):
-        lookalikes = [list(self.asset_key[:-1]), list(self.asset_key) + [0],
-                      [False, *self.asset_key[1:]], [0.0, *self.asset_key[1:]],
+    def test_array_comparisons_require_contiguous_numeric_bytes_and_do_not_strip_raw_equals(self):
+        lookalikes = [list(self.asset_key[:-1]),
+                      [False, *self.asset_key[1:]],
                       [256, *self.asset_key[1:]], [str(item) for item in self.asset_key]]
         for value in lookalikes:
             self.assertEqual(scan_json_secrets({"value": value}, asset_keys=(self.asset_key,)), [])

@@ -60,7 +60,8 @@ def validate_artifacts(directory: Path, report: dict, version: str, sha: str) ->
         require(item.get("version") == version and
                 all(item.get(name) is True for name in (
                     "isolated_import", "clean_release_accepted", "renamed_source_map_blocked",
-                    "leaked_key_blocked", "structured_key_blocked", "wasm_split_verified"))
+                    "leaked_key_blocked", "structured_key_blocked", "wasm_split_verified",
+                    "consumer_key_encodings_blocked", "incomplete_source_map_blocked", "relocatable_wasm_blocked"))
                 and item.get("native_resources_present") == 5 and
                 item.get("asset_roundtrip_bytes") == 4096,
                 "Installed Python controls are incomplete")
