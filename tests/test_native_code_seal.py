@@ -113,6 +113,75 @@ entry:
     return source, observations
 
 
+def pcsection_fixtures(source):
+    marker = b"OWNED-PLAINTEXT!"
+    metadata = ('\n!90 = !{!"rg_owned_aux", !91}\n!91 = !{'
+                + ", ".join("i64 " + str(word) for word in struct.unpack("<2Q", marker)) + '}\n')
+    replacements = {
+        "wrapper": ("define i32 @rg_compute(i32 %x) {",
+                    "define i32 @rg_compute(i32 %x) !pcsections !90 {"),
+        "runtime": ("define private i64 @vm_runtime(i64 %token, ptr %returns, ptr %arguments) {",
+                    "define private i64 @vm_runtime(i64 %token, ptr %returns, ptr %arguments) !pcsections !90 {"),
+        "instruction": ("  %argument = load i64, ptr %arguments, align 8",
+                        "  %argument = load i64, ptr %arguments, align 8, !pcsections !90"),
+    }
+    variants = {}
+    for name, (original, replacement) in replacements.items():
+        if source.count(original) != 1:
+            raise AssertionError("PC section fixture requires its exact original instruction/header")
+        variants[name] = source.replace(original, replacement) + metadata
+    return marker, variants
+
+
+def uncovered_function(linkage=""):
+    # The full-width immediate survives code generation as inspectable bytes.
+    marker = b"OWNED-FN"
+    value = int.from_bytes(marker, "little")
+    definition = (f"define {linkage}i64 @uncovered_plaintext_function(i64 %value) {{\n"
+                  f"entry:\n  %result = xor i64 %value, {value}\n  ret i64 %result\n}}\n")
+    return marker, definition
+
+
+def noncanonical_definitions():
+    _, definition = uncovered_function("private ")
+    return {
+        "indented": definition.replace("define ", "  define ", 1),
+        "tab": definition.replace("define ", "define\t", 1),
+        "same-line": "declare i64 @unused_declaration() " + definition,
+        "split-header": definition.replace("define ", "define\n", 1),
+    }
+
+
+def with_definition_identifiers(source):
+    # These identifier/label spellings and quoted/comment text are legal data,
+    # not extra function definitions. A custom metadata attachment is inert.
+    source = 'source_filename = "define text"\n' + source
+    # LLVM arguments and blocks share a local symbol table. Keep define: in
+    # the runtime and %define in the separate wrapper to avoid a name collision.
+    source = source.replace("%x", "%define").replace("entry:", "define:", 1)
+    source = source.replace("define i32 @rg_compute(i32 %define) {",
+                            "define i32 @rg_compute(i32 %define) !define !99 {")
+    return source + '\ndeclare i64 @define(i64)\n!99 = !{}\n; define private i64 @comment() {\n'
+
+
+def with_runtime_helpers(source):
+    """Keep an ordinary transitive private helper chain in the VM runtime."""
+    source = source.replace("  %result = add i64 %mixed, %wide",
+                            "  %helper.result = call i64 @runtime_helper(i64 %mixed)\n"
+                            "  %result = add i64 %helper.result, %wide")
+    return source + '''
+define private i64 @runtime_helper(i64 %value) {
+entry:
+  %result = call i64 @runtime_leaf(i64 %value)
+  ret i64 %result
+}
+define private i64 @runtime_leaf(i64 %value) {
+entry:
+  ret i64 %value
+}
+'''
+
+
 def embedded_array(header, name):
     block = header.split(("embedded_asset_" + name + " = {").encode())[1].split(b"};")[0]
     return bytes(int(value, 16) for value in re.findall(rb"0x([0-9a-f]{2})", block))
@@ -313,6 +382,47 @@ class NativeCodeSealValidation(unittest.TestCase):
             with self.subTest(definition=definition), self.assertRaisesRegex(GuardError, "Unsealed VM storage"):
                 self.seal(source=self.source + "\n@uncovered = " + definition + "\n")
 
+    def test_uncovered_function_definitions_fail_closed_for_all_linkages(self):
+        # A cloned/outlined original body must not survive beside the encrypted
+        # wrappers simply because it was absent from the original coverage list.
+        for linkage in ("", "internal ", "private ", "available_externally ", "linkonce_odr ", "weak "):
+            _, definition = uncovered_function(linkage)
+            with self.subTest(linkage=linkage), self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+                self.seal(source=self.source + "\n" + definition)
+
+    def test_removed_original_cannot_leave_an_uncovered_definition(self):
+        coverage = copy.deepcopy(self.coverage)
+        coverage.append({"name": "original_removed", "requested": False, "removed": True})
+        _, definition = uncovered_function("internal ")
+        with self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+            self.seal(source=self.source + "\n" + definition, coverage=coverage)
+
+    def test_noncanonical_function_definition_cannot_escape_the_inventory(self):
+        for name, definition in noncanonical_definitions().items():
+            with self.subTest(syntax=name), self.assertRaisesRegex(
+                    GuardError, "Unsupported VM function definition"):
+                self.seal(source=self.source + "\n" + definition)
+
+    def test_definition_keyword_in_names_labels_strings_and_comments_is_not_counted(self):
+        source = with_definition_identifiers(self.source)
+        rewritten, _, _ = self.seal(source=source)
+        self.assertIn("declare i64 @define(i64)", rewritten)
+        self.assertIn("i32 %define", rewritten)
+        self.assertIn("!define !99", rewritten)
+        self.assertIn("\ndefine:\n", rewritten)
+
+    def test_runtime_dependency_closure_keeps_transitive_private_helpers_and_declarations(self):
+        source = with_runtime_helpers(self.source)
+        # A declaration has no body to disclose and need not be a VM wrapper.
+        source += "\ndeclare i32 @unused_external_declaration(i32)\n"
+        rewritten, _, details = self.seal(source=source)
+        self.assertIn("define private i64 @runtime_helper", rewritten)
+        self.assertIn("define private i64 @runtime_leaf", rewritten)
+        self.assertIn("declare i32 @unused_external_declaration(i32)", rewritten)
+        self.assertEqual([item["name"] for item in details["guarded_wrappers"]], ["rg_compute"])
+        with self.assertRaisesRegex(GuardError, "runtime helpers must remain private"):
+            self.seal(source=source.replace("define private i64 @runtime_leaf", "define i64 @runtime_leaf"))
+
     def test_unrecognized_global_syntax_is_rejected_instead_of_ignored(self):
         for declaration in (
             '@"quoted" = private constant i64 1234',
@@ -366,6 +476,17 @@ class NativeCodeSealValidation(unittest.TestCase):
             self.seal(source=self.source + '\n!90 = !DIFile(filename: "private.c", directory: "/private")\n')
         # Debug-like strings in a compiler identity are data, not an IR node.
         source = self.source + '\n!llvm.ident = !{!90}\n!90 = !{!"compiler !DIFile(foo)"}\n'
+        self.assertNotIn("!llvm.ident", self.seal(source=source)[0])
+
+    def test_object_emitting_attached_metadata_fails_closed(self):
+        _, variants = pcsection_fixtures(self.source)
+        for location, source in variants.items():
+            with self.subTest(location=location), self.assertRaisesRegex(
+                    GuardError, "object-emitting attached metadata"):
+                self.seal(source=source)
+        # Text inside comments/strings is not an attachment.
+        source = (self.source + '\n; !pcsections !90\n!llvm.ident = !{!90}\n'
+                  '!90 = !{!"compiler !pcsections !91"}\n')
         self.assertNotIn("!llvm.ident", self.seal(source=source)[0])
 
     def test_unverified_multiblock_or_pointer_abi_wrappers_are_rejected(self):
@@ -514,6 +635,101 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
                 expected_error = "named metadata" if name == "commandline" else "Unsealed VM storage"
                 with self.assertRaisesRegex(GuardError, expected_error):
                     seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_pcsections_emit_plaintext_but_are_rejected_before_sealing(self):
+        # LLVM 18's AsmPrinter emits the auxiliary metadata constants directly
+        # into rg_owned_aux. Numbered nodes alone must not evade the inventory.
+        source, coverage = fixture()
+        marker, variants = pcsection_fixtures(source)
+        for location, ir in variants.items():
+            with self.subTest(location=location):
+                original = self.work / ("pcsections-" + location + ".ll")
+                original.write_text(ir)
+                verified = self.work / ("pcsections-" + location + "-verified.ll")
+                artifact = self.work / ("pcsections-" + location + ".o")
+                self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                               "-o", verified])
+                self.run_tool([self.llvm / "llc", "-O=2", "-relocation-model=pic", "-filetype=obj",
+                               verified, "-o", artifact])
+                self.assertIn(marker, artifact.read_bytes())
+                with self.assertRaisesRegex(GuardError, "object-emitting attached metadata"):
+                    seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_uncovered_function_has_real_object_bytes_and_sealing_rejects_it(self):
+        source, coverage = fixture()
+        for linkage in ("", "internal ", "private "):
+            name = linkage.strip() or "external"
+            marker, definition = uncovered_function(linkage)
+            original = self.work / ("uncovered-function-" + name + ".ll")
+            original.write_text(source + "\n" + definition)
+            verified = self.work / ("uncovered-function-" + name + "-verified.ll")
+            artifact = self.work / ("uncovered-function-" + name + ".o")
+            with self.subTest(linkage=name):
+                self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                               "-o", verified])
+                self.run_tool([self.llvm / "llc", "-O=2", "-relocation-model=pic", "-filetype=obj",
+                               verified, "-o", artifact])
+                self.assertIn(marker, artifact.read_bytes())
+                with self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+                    seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_real_llvm_accepts_noncanonical_headers_that_the_direct_sealer_rejects(self):
+        source, coverage = fixture()
+        for name, definition in noncanonical_definitions().items():
+            original = self.work / ("noncanonical-function-" + name + ".ll")
+            verified = self.work / ("noncanonical-function-" + name + "-verified.ll")
+            text = source + "\n" + definition
+            original.write_text(text)
+            with self.subTest(syntax=name):
+                self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                               "-o", verified])
+                # The supported CLI canonicalizes first. This specifically
+                # checks the direct API cannot pass an unparsed definition on.
+                with self.assertRaisesRegex(GuardError, "Unsupported VM function definition"):
+                    seal_virtualized_ir(text, coverage, self.key, **CONTEXT)
+                with self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+                    seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_real_llvm_definition_identifiers_remain_compatible(self):
+        source, coverage = fixture()
+        original = self.work / "definition-identifiers.ll"
+        verified = self.work / "definition-identifiers-verified.ll"
+        original.write_text(with_definition_identifiers(source))
+        self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                       "-o", verified])
+        canonical = verified.read_text()
+        descriptor = re.search(r"^@descriptors = ([^\n]*)$", canonical, re.MULTILINE)
+        self.assertIsNotNone(descriptor)
+        # opt prints large i64 constants as signed decimals. Production records
+        # coverage after opt; prove unchanged bytes before rebinding this fixture's
+        # textual observation to that same canonical representation.
+        words = [int(value) for value in re.findall(r"\bi64 (-?[0-9]+)\b", descriptor[1])]
+        self.assertEqual(len(words), len(WORDS))
+        self.assertEqual(b"".join(struct.pack("<Q", value & ((1 << 64) - 1))
+                                  for value in words), DESCRIPTORS)
+        coverage[0]["vm_coverage"]["descriptor_globals"][0]["ir_sha256"] = hashlib.sha256(
+            descriptor[1].encode("utf-8")).hexdigest()
+        bundle = seal_virtualized_ir(canonical, coverage, self.key, **CONTEXT)
+        loaded, _ = self.build("definition-identifiers", bundle)
+        self.addCleanup(loaded.rg_clear)
+        self.assertEqual(loaded.rg_compute(123), 0)
+        self.assertTrue(loaded.rg_initialize(self.key))
+        self.assertEqual(loaded.rg_compute(123), ((123 ^ WORDS[0]) + CODE[0]) & 0xffffffff)
+        loaded.rg_clear()
+        self.assertEqual(loaded.rg_compute(123), 0)
+
+    def test_private_runtime_helper_chain_preserves_authorized_results_and_clear(self):
+        source, coverage = fixture()
+        bundle = seal_virtualized_ir(with_runtime_helpers(source), coverage, self.key, **CONTEXT)
+        loaded, _ = self.build("runtime-helper-chain", bundle)
+        self.addCleanup(loaded.rg_clear)
+        self.assertEqual(loaded.rg_compute(123), 0)
+        self.assertTrue(loaded.rg_initialize(self.key))
+        for value in (0, 1, 123, 0x80000000, 0xffffffff):
+            self.assertEqual(loaded.rg_compute(value), ((value ^ WORDS[0]) + CODE[0]) & 0xffffffff)
+        loaded.rg_clear()
+        self.assertEqual(loaded.rg_compute(123), 0)
+        self.assert_cleared(loaded, bundle[2])
 
     def test_cleared_storage_rejects_even_with_ready_forced(self):
         loaded = self.normal

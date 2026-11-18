@@ -12,6 +12,15 @@ build even when the runtime does not reference them. Unsupported named metadata
 flags remain and compiler identification is removed. This closes known residual
 plaintext paths and must still be combined with scanning the final linked release.
 
+Function definitions must also form a complete inventory: every definition must be an
+observed wrapper or a private runtime helper transitively referenced by its verified VM
+runtime. Unused declarations have no body and remain allowed; unrelated definitions,
+including retained clones with private/internal linkage, are rejected. The direct sealing
+API rejects definition syntax that its canonical parser cannot account for. The normal
+CLI first uses LLVM to canonicalize the module. This guards against omitted function
+bodies, not against arbitrary computations or constants in the allowed interpreter/helper
+code, which remains public and unencrypted.
+
 | Profile | Plugin and pipeline | Supported platform |
 | --- | --- | --- |
 | `flatten` | eshard, `function(flattening),verify` | Linux x86 and x86-64 |

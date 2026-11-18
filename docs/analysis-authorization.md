@@ -54,7 +54,7 @@ files and oversized input are rejected. JSON configuration cannot run commands
 or load plugins. Product/release identifiers use the same rules as grants.
 
 Review the initial policy for your release. It permits ordinary source files,
-checks configured debug extensions, source-map structures/private-key markers and ELF/PE metadata, and
+checks configured debug extensions, source-map structures/private-key markers and ELF/PE/Mach-O metadata, and
 inspects supported ZIP/ASAR members under explicit budgets. It is heuristic, not a
 complete secret detector. Unsupported recognized containers do not pass.
 See [portable scanning](portable-release.md). Keep private literal rules in the
@@ -108,6 +108,15 @@ binary is not rewritten; this does not verify an Authenticode trust chain.
 Keep the release, configuration, policy and ancestor directories under trusted
 build control. The comparison is not an atomic snapshot. Publish and analyze the
 same immutable files. A new release needs a fresh output directory and manifest.
+
+Manifest creation and verification retain per-file identities, bound reads by the
+observed file size and repeat inventory/identity checks after the complete read.
+Creation checks again after signing. The cooperating analysis gateway therefore
+rejects an earlier file changing while a later file is being inspected. `prepare`
+also re-verifies the signed release and external-key snapshots after writing its
+new output bundle; any such failure rolls back that bundle. Keep the published
+bytes and key inputs immutable afterward: these checks do not make publication
+or the gateway's later tool invocation atomic.
 
 ## 3. Issue a bounded analysis grant
 

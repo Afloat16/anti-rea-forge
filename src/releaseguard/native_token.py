@@ -47,11 +47,12 @@ def _public_header(digest: bytes) -> bytes:
 #include "releaseguard/token_verify.hpp"
 
 namespace releaseguard {
-inline constexpr native_token_digest issued_token_digest = {
+// Keep each generated verifier bound to this translation unit's digest.
+static constexpr native_token_digest issued_token_digest = {
     %s
 };
 
-inline bool verify_issued_token(std::string_view candidate) noexcept {
+static inline bool verify_issued_token(std::string_view candidate) noexcept {
     return verify_native_token(candidate, issued_token_digest);
 }
 }  // namespace releaseguard

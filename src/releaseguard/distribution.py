@@ -21,7 +21,7 @@ import zlib
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from .asar import looks_like_asar, read_asar_entries, read_asar_member
+from .asar import AsarEntry, looks_like_asar, read_asar_entries, read_asar_member, validate_asar_integrity
 from .core import (
     MAX_DOCUMENT_BYTES, MAX_FILES, GuardError, _inventory, _is_link, _no_number,
     _pairs, _root, read_document, safe_relative_path,
@@ -30,7 +30,8 @@ from .elf import audit_elf_stream
 from .native import _assert_scanned_identity, _component_findings
 from .native_token import NATIVE_TOKEN_HEX_DIGITS, NATIVE_TOKEN_PREFIX
 from .pe import audit_pe_stream
-from .sealed import load_asset_key
+from .macho import MACHO_MAGICS, audit_macho_stream
+from .sealed import assert_asset_keys_unchanged, snapshot_asset_keys
 
 _CHUNK_BYTES = 1024 * 1024
 _MAX_BYTES = 512 * 1024 * 1024
@@ -46,9 +47,21 @@ _FIELDS = {
     "max_archive_depth", "max_archive_entries", "max_files",
 }
 _ZIP_EXTENSIONS = {".zip", ".jar", ".war", ".ear", ".whl", ".nupkg", ".vsix", ".apk", ".aab"}
-_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst"}
+_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst",
+                           ".a", ".lib", ".deb"}
 _UNSUPPORTED_MAGICS = (b"\x1f\x8b", b"BZh", b"\xfd7zXZ\x00", b"7z\xbc\xaf\x27\x1c",
-                       b"Rar!\x1a\x07", b"\x28\xb5\x2f\xfd")
+                       b"Rar!\x1a\x07", b"\x28\xb5\x2f\xfd", b"CrAU", b"!<arch>\n", b"!<thin>\n")
+# Microsoft checks 30 MSF7 signature bytes, excluding two alignment bytes in
+# its superblock; requiring LLVM's canonical 32 bytes would miss that variant.
+# MSF2's declared 44-byte signature includes two final zero bytes. These are
+# recognition boundaries only: no MSF blocks or CLI metadata tables are read.
+# https://github.com/microsoft/microsoft-pdb/blob/master/PDB/msf/msf.cpp
+# https://github.com/dotnet/runtime/blob/main/docs/design/specs/PortablePdb-Metadata.md
+_STANDALONE_METADATA_MAGICS = (
+    ("msf7", b"Microsoft C/C++ MSF 7.00\r\n\x1aDS\0"),
+    ("msf2", b"Microsoft C/C++ program database 2.00\r\n\x1aJG\0\0"),
+    ("cli-metadata", b"BSJB"),
+)
 _KEY_MARKERS = ("-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----",
                 "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN EC PRIVATE KEY-----",
                 "-----BEGIN DSA PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----")
@@ -194,6 +207,10 @@ class _Scanner:
         self.source_map_scan_completed = True
         self.native_files_checked = 0
         self.native_metadata_scan_completed = True
+        self.payload_locations: set[tuple[str, ...]] = set()
+        self.asar_sidecars: dict[tuple[str, ...], AsarEntry] = {}
+        self.asar_sidecar_roots: set[tuple[tuple[str, ...], str]] = set()
+        self.checked_asar_sidecars: set[tuple[str, ...]] = set()
         self.findings: list[dict[str, Any]] = []
         self.patterns: list[tuple[str, int, str, bytes]] = []
         groups = [("forbidden_literal", policy["forbid_literals"])]
@@ -241,6 +258,12 @@ class _Scanner:
         return self.policy["max_total_bytes"] - self.total_bytes
 
     def payload(self, stream: BinaryIO, size: int, path: str, members: tuple[str, ...] = ()) -> dict[str, Any]:
+        location = (path, *members)
+        if location in self.payload_locations:
+            raise GuardError("Portable scan encountered a duplicate payload location")
+        sidecar = self.asar_sidecars.get(location)
+        if sidecar is not None and sidecar.size != size:
+            raise GuardError("ASAR unpacked sidecar size differs from its index")
         if size > self.policy["max_file_bytes"] or size > self.remaining():
             raise GuardError("Payload exceeds portable max_file_bytes or remaining max_total_bytes")
         digest = hashlib.sha256()
@@ -280,6 +303,10 @@ class _Scanner:
             self.source_maps(stream, size, path, members)
         if self.policy["check_native_metadata"]:
             self.native_metadata(stream, size, path, members)
+        if sidecar is not None:
+            validate_asar_integrity(stream, size, sidecar.integrity)
+            self.checked_asar_sidecars.add(location)
+        self.payload_locations.add(location)
         return {"size": total, "sha256": hexdigest}
 
     def source_maps(self, stream: BinaryIO, size: int, path: str,
@@ -354,16 +381,27 @@ class _Scanner:
 
     def native_metadata(self, stream: BinaryIO, size: int, path: str,
                         members: tuple[str, ...] = ()) -> None:
-        """Check every recognized ELF/PE payload without changing public exports."""
+        """Check native images and reject recognized unsupported debug containers."""
         stream.seek(0)
-        prefix = stream.read(min(size, 4))
+        prefix = stream.read(min(size, 44))
+        for format_name, magic in _STANDALONE_METADATA_MAGICS:
+            if prefix.startswith(magic):
+                # BSJB is also used by ordinary CLI metadata. Do not claim to
+                # have parsed a Portable PDB or private symbols from a signature.
+                self.native_files_checked += 1
+                self.native_metadata_scan_completed = False
+                self.add("native_metadata_unverifiable", path, members, format=format_name,
+                         reason="unsupported_standalone_metadata")
+                return
+        prefix = prefix[:4]
         if prefix == b"\x7fELF":
             format_name, reader = "elf", audit_elf_stream
         elif prefix.startswith(b"MZ"):
             format_name, reader = "pe", audit_pe_stream
+        elif prefix in MACHO_MAGICS:
+            format_name, reader = "macho", audit_macho_stream
         else:
             return
-        self.native_files_checked += 1
 
         def unverifiable(reason: str) -> None:
             self.native_metadata_scan_completed = False
@@ -372,11 +410,24 @@ class _Scanner:
         try:
             report = reader(stream, size)
         except ValueError:
+            self.native_files_checked += 1
             unverifiable("invalid_or_unsupported_metadata")
             return
+        if report is None:
+            # CAFEBABE also begins Java classes. Only a complete structural
+            # Java proof after disproving the fat layout reaches this branch.
+            return
+        self.native_files_checked += 1
         evidence = report["evidence"]
-        debug = evidence["debug_sections_present"] if format_name == "elf" else evidence["debug_metadata_present"]
-        symbols = evidence["symbol_table_present"] if format_name == "elf" else evidence["coff_symbols_present"]
+        if format_name == "elf":
+            debug = evidence["debug_sections_present"]
+            symbols = evidence["symbol_table_present"]
+        elif format_name == "pe":
+            debug = evidence["debug_metadata_present"]
+            symbols = evidence["coff_symbols_present"]
+        else:
+            debug = evidence["debug_metadata_present"]
+            symbols = evidence["private_symbols_present"]
         if debug:
             self.add("native_debug_metadata", path, members, format=format_name)
         if symbols:
@@ -431,8 +482,10 @@ class _Scanner:
                 self.archive_entries += len(infos)
                 if self.archive_entries > self.policy["max_archive_entries"]:
                     raise GuardError("ZIP entry count exceeds max_archive_entries")
-                for info in infos:
-                    entry = self._entry_name(info, aliases, explicit)
+                named = [(self._entry_name(info, aliases, explicit), info) for info in infos]
+                # Sidecar references must be registered before the sibling bytes
+                # are inspected, independently of ZIP insertion order.
+                for entry, info in sorted(named, key=lambda item: item[0]):
                     entry_members = members + (entry,)
                     self.names(entry, path, entry_members, directory=info.is_dir())
                     if info.flag_bits & (1 | 0x40):
@@ -465,14 +518,22 @@ class _Scanner:
             raise GuardError("ASAR nesting exceeds max_archive_depth")
         entries = read_asar_entries(
             stream, size, max_entries=self.policy["max_archive_entries"] - self.archive_entries,
-            max_member_bytes=self.policy["max_file_bytes"],
+            max_member_bytes=self.policy["max_file_bytes"], allow_unpacked=True,
         )
         self.archive_entries += len(entries)
         self.archives += 1
-        for entry in entries:
+        location = (path, *members)
+        # Even a wholly packed archive may have a stale external tree left by
+        # an earlier build. Every file under that exact sibling root must be
+        # indexed as unpacked by this archive.
+        self.asar_sidecar_roots.add((location[:-1], location[-1] + ".unpacked/"))
+        for entry in sorted(entries, key=lambda item: item.name):
             entry_members = members + (entry.name,)
             self.names(entry.name, path, entry_members, directory=entry.directory)
             if entry.directory:
+                continue
+            if entry.unpacked:
+                self.asar_sidecar(path, members, entry)
                 continue
             # Deduplicated ranges are still separate named members. Check each
             # path and charge each read before allocating, including nested work.
@@ -482,6 +543,37 @@ class _Scanner:
             content = io.BytesIO(data)
             self.payload(content, entry.size, path, entry_members)
             self.container(content, entry.size, entry.name, path, entry_members)
+
+    def asar_sidecar(self, path: str, members: tuple[str, ...], entry: AsarEntry) -> None:
+        """Bind an external member to the exact sibling in the same namespace.
+
+        Locations describe already inventoried disk files or decoded members of
+        a supported container. No archive path is ever opened on the filesystem.
+        """
+        location = (path, *members)
+        namespace, archive_name = location[:-1], location[-1]
+        prefix = archive_name + ".unpacked/"
+        target = safe_relative_path(prefix + entry.name)
+        sibling = (*namespace, target)
+        if sibling in self.asar_sidecars or sibling in self.payload_locations:
+            raise GuardError("ASAR unpacked sidecar has an ambiguous or late binding")
+        self.asar_sidecars[sibling] = entry
+        self.asar_sidecar_roots.add((namespace, prefix))
+
+    def finish_asar_sidecars(self) -> None:
+        """Close every external reference after the complete release inventory."""
+        if set(self.asar_sidecars) != self.checked_asar_sidecars:
+            raise GuardError("ASAR unpacked sidecar is missing from its sibling namespace")
+        # Inspect component prefixes rather than comparing every file against
+        # every archive. Extra physical or virtual files must not hide in a
+        # sidecar tree that claims to be completely indexed.
+        for location in self.payload_locations:
+            namespace, name = location[:-1], location[-1]
+            parts = name.split("/")
+            for index in range(1, len(parts)):
+                prefix = "/".join(parts[:index]) + "/"
+                if (namespace, prefix) in self.asar_sidecar_roots and location not in self.asar_sidecars:
+                    raise GuardError("ASAR unpacked sidecar tree contains unindexed files")
 
     @staticmethod
     def _member_bytes(stream: BinaryIO, info: zipfile.ZipInfo, boundary: int) -> bytes:
@@ -633,7 +725,8 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
     """
     if not isinstance(asset_key_files, (list, tuple)) or len(asset_key_files) > 16:
         raise GuardError("Expected up to 16 external asset-key files")
-    asset_keys = tuple(load_asset_key(path) for path in asset_key_files)
+    key_snapshots = snapshot_asset_keys(asset_key_files)
+    asset_keys = tuple(item.key for item in key_snapshots)
     policy = load_distribution_policy(policy_path)
     release_root = _root(root)
     candidates = _inventory(release_root)
@@ -668,6 +761,7 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
         raise GuardError("Release inventory changed during portable scanning")
     for path, identity in identities:
         _assert_scanned_identity(path, identity, "Release file")
+    scanner.finish_asar_sidecars()
     for finding in _component_findings(release_root, policy["forbid_path_components"]):
         code = finding.pop("code")
         path = finding.pop("path")
@@ -678,6 +772,7 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             scanner.add("unexpected_release_file", relative)
         for relative in sorted(expected - set(final)):
             scanner.add("missing_release_file", relative)
+    assert_asset_keys_unchanged(key_snapshots)
     return {
         "ok": not scanner.findings, "root": str(release_root), "files": files,
         "findings": scanner.findings,
@@ -687,7 +782,8 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "archives_scanned": scanner.archives, "archive_entries": scanner.archive_entries,
             "archive_scan_completed": scanner.archive_scan_completed,
             "archive_formats": (["zip-stored", "zip-deflate"] if policy["scan_zip_archives"] else [])
-                               + (["asar-packed"] if policy["scan_asar_archives"] else []),
+                               + (["asar-packed", "asar-unpacked-siblings"] if policy["scan_asar_archives"] else []),
+            "asar_unpacked_members_checked": len(scanner.checked_asar_sidecars),
             "literal_rules": len(policy["forbid_literals"]), "encodings": list(_ENCODINGS),
             "private_key_markers_checked": policy["check_private_keys"],
             "source_map_markers_checked": policy["check_source_maps"],
@@ -704,11 +800,11 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "Static exposure checks only; passing does not measure REA or cracking resistance.",
             "PEM and source-map markers are heuristics. Bounded JSON inspection also recognizes v3 source maps; arbitrary JS and encoded data can remain undetected.",
             "JSON-like payloads exceeding 8 MiB or structural limits fail source-map inspection when enabled.",
-            "ELF/PE checks report debug metadata and static symbols, including inside inspected archives. Public imports/exports remain observable; other native formats are not inspected.",
+            "ELF/PE/Mach-O checks report debug metadata and private/static symbols, including inside inspected archives. Standalone MSF7/MSF2 and raw CLI metadata are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports and runtime metadata remain observable; other native formats are not inspected.",
             "Native-token findings identify the public token format, not proof of validity. Reports retain file paths and archive member names.",
-            "Stored/deflated ZIP and canonical packed ASAR containers are inspected; detected other archives fail policy. ZIP64, ZIP path aliases, prefixed/concatenated archives, ASAR links/unpacked sidecars and unindexed bytes are unsupported.",
+            "Stored/deflated ZIP and canonical ASAR containers are inspected; unpacked ASAR files must match exact siblings in the same disk/ZIP/ASAR namespace. Missing, mismatched or unindexed sidecars fail inspection. Recognized ar/thin-ar static libraries are unsupported; external thin members are never opened. ZIP64, links, path aliases, prefixed/concatenated archives and unindexed packed bytes remain unsupported.",
             "scan_completed means the scan plan finished; archive_scan_completed is false for detected unexpanded archives.",
-            "The byte budget counts disk bytes and all inspected ZIP/ASAR members, including deduplicated ASAR aliases. No members are extracted or executed.",
+            "The byte budget counts disk bytes and all inspected ZIP/ASAR payloads, including deduplicated packed aliases; an unpacked sidecar is counted at its actual sibling location. No members are extracted or executed.",
             "Release roots and ancestors must stay under trusted build control. Verify later-used bytes with a signed manifest.",
         ],
     }

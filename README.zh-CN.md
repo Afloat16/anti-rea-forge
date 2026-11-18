@@ -4,11 +4,15 @@
 
 ## 开发中的全发布包加固
 
-发布检查现将 **Electron packed ASAR、ZIP 包内成员与普通文件纳入同一套规则**：按 JSON 语义识别转义字段名的 v3 source map，检查所有已识别 ELF/PE 的私有调试资料和静态符号。修改包、源码映射或原生模块的后缀不会跳过这些检查；布局有歧义或检查超出预算时会阻止发布。
+发布检查覆盖 **ZIP、packed ASAR 及经过绑定验证的 ASAR unpacked 成员**，按 JSON 语义识别转义字段名的 v3 source map，并检查 ELF、PE 和 Mach-O 的私有调试资料与符号。修改后缀不会跳过已支持格式的检查；缺失的 sidecar、歧义布局与预算超限会阻止发布。
 
-外置资产/代码密钥可一次配置到 `project.json`，由 `check`、`prepare` 和 JavaScript SDK 统一检查。`prepare` 在发现泄漏时不会签发发布清单；原生函数加密封装也会拒绝未核验的全局存储和可能把明文写入对象文件的元数据。
+PE 检查补上不经过调试目录的 DWARF/STABS 节及 GNU 长节名。改名后的独立 MSF/PDB、原始 CLI 元数据和 ar/thin-ar 静态库会明确按未支持格式阻止发布，不再静默算作已检查。Apple strip 的固定公开兼容标记与私有 STABS 分开判断，并由真实 macOS 工具链对照验证。
 
-新一轮实际运行 GNU `strings`、`nm`、`readelf`、`objdump`，验证私有元数据分离、机器指令保持一致、外置密钥正常解密，以及故意泄漏密钥被门禁拦截。上述结果是发布暴露检查；合法运行进程中的明文和已分发的机器指令仍可被观察。[接入指南](docs/portable-release.md) · [当前 REA 工具覆盖与实测](docs/rea-coverage-2026-11-17.zh-CN.md) · [机器可读对照](docs/results/release-exposure-controls.json)
+外置资产/代码密钥可一次配置到 `project.json`，由 `check`、`prepare` 和 JavaScript SDK 统一检查；完成前复核原密钥文件身份和内容。清单创建、验证会重新核对全目录与已读文件；`prepare` 写完新的辅助文件后，再验证发布物与密钥，失败会撤销该新输出目录。
+
+生成的原生令牌校验器按编译单元隔离，避免不同发行实例串绑；原生函数封装同时拒绝未核对的全局数据、遗漏的函数定义及会向对象文件输出常量的 `!pcsections` 元数据。允许的解释器辅助函数仍是公开代码，不能据此宣称其任意计算也已加密。运行时明文、公开 API 和已经分发的机器指令仍可被观察。
+
+[接入指南](docs/portable-release.md) · [2026-11-18 覆盖与验证](docs/rea-coverage-2026-11-18.zh-CN.md) · [此前发布检查实测](docs/results/release-exposure-controls.json)
 
 ## 开发中的原生函数保护
 

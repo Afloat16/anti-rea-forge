@@ -31,6 +31,8 @@ bool allowed = releaseguard::verify_issued_token(candidate); // candidate: std::
 
 For CMake, add the generated directory to the target's private include paths and link `OpenSSL::Crypto` after `find_package(OpenSSL REQUIRED COMPONENTS Crypto)`. If libcrypto is dynamically linked, ensure the correct library is installed or packaged for your deployment. Do not compile the token string into a wrapper, logging path, diagnostic function or fallback.
 
+The generated digest and `verify_issued_token` have internal linkage: each C++ translation unit uses the verifier header it includes. Independently issued verifiers can therefore be included in separate translation units and linked into one program without accepting one another's tokens. Include only one generated `releaseguard_token.hpp` per translation unit; expose distinctly named application functions when a caller needs to select between verifiers. The shared `verify_native_token(candidate, expected_digest)` helper also supports explicitly supplied public digests.
+
 ## What is public
 
 The issuer samples 32 random bytes using Python's `secrets` module. The textual bearer is `rg1_` followed by 64 lowercase hex characters. Its verifier is SHA-256 over the ASCII string `OpenReleaseGuard/native-token/v1`, one NUL byte, and the **entire 68-byte ASCII bearer** (without the file's newline). The algorithm, format, code and digest are public. Passing the digest itself as a candidate hashes a different input.

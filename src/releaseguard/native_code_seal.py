@@ -24,6 +24,11 @@ _NAME = r"[A-Za-z$._][A-Za-z0-9$._-]*"
 _LOCAL = r"%(?:" + _NAME + r"|[0-9]+)"
 _GLOBAL = re.compile(r"^@(" + _NAME + r") = ([^\n]*)$", re.MULTILINE)
 _TOKENS = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|@(' + _NAME + r")")
+_DEFINITION_TOKENS = re.compile(
+    r'"(?:[^"\\]|\\.)*"|;[^\n]*'
+    r'|[@%!](?:' + _NAME + r'|[0-9]+|"(?:[^"\\]|\\.)*")'
+    r'|(?:' + _NAME + r'|[0-9]+)[ \t]*:'
+    r'|(' + _NAME + r')')
 _INTEGER = r"i(?:1|8|16|32|64)"
 _POINTER_TABLE = re.compile(r"private constant \[([1-9][0-9]*) x ptr\] zeroinitializer(?:, align [0-9]+)?")
 _RETENTION_GLOBALS = {"llvm.used", "llvm.compiler.used"}
@@ -71,6 +76,10 @@ def _validate_metadata(text):
     syntax = re.sub(r'"(?:[^"\\]|\\.)*"|;[^\n]*', "", text)
     _require(re.search(r"!DI[A-Za-z]+\(", syntax) is None,
              "Sealed VM does not support debug metadata")
+    # Unlike named metadata roots, pcsections is attached to a function or
+    # instruction. LLVM emits its numbered-node constants as raw object data.
+    _require(re.search(r"!pcsections(?![A-Za-z0-9$._-])", syntax) is None,
+             "Sealed VM does not support object-emitting attached metadata: pcsections")
 
 
 def _validate_retention(name, definition, allowed):
@@ -352,6 +361,12 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
              and layout is not None and layout[1].startswith("e"),
              "Sealed VM requires the little-endian x86-64 Linux module runtime")
     functions = _functions(after_ir_text)
+    # Reject definitions that a line-oriented canonical reader cannot inventory,
+    # including same-line or split headers. Names such as @define, %define,
+    # !define and define: are identifiers, not this top-level keyword.
+    definition_count = sum(match[1] == "define" for match in _DEFINITION_TOKENS.finditer(after_ir_text))
+    _require(definition_count == len(functions),
+             "Unsupported VM function definition; expected canonical LLVM syntax")
     globals_found = list(_GLOBAL.finditer(after_ir_text))
     _require(sum(line.lstrip().startswith("@") for line in after_ir_text.splitlines()) == len(globals_found),
              "Unsupported VM global definition; expected an exact canonical unquoted name")
@@ -404,6 +419,12 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
             else:
                 _require(reference.startswith("llvm."), "VM runtime has an external native dependency")
     _require(set(expected) <= associated, "Covered VM storage is disconnected from the runtime")
+    # Coverage describes original wrappers, while the compiler can introduce
+    # additional definitions. A leftover clone/outlined body must not be emitted
+    # in plaintext beside the sealed storage. Only the exact wrapper set and
+    # its private runtime dependency closure have been accounted for above.
+    _require(set(functions) == set(wrappers) | visited,
+             "Uncovered VM function definitions remain outside the verified wrappers and runtime")
     pointer_tables, retention = [], {}
     for name, definition in globals_by_name.items():
         if name in expected:

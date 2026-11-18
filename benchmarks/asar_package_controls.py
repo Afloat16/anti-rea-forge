@@ -1,8 +1,10 @@
 """Check real caller-supplied @electron/asar packages against releaseguard.
 
 Every input is a temporary, project-owned fixture. The official CLI packs,
-lists and extracts its files; releaseguard independently inspects the package.
-The report retains identities and observations, never generated key contents.
+lists and extracts each valid package before releaseguard independently scans it.
+Copies with deliberate sidecar mutations are tested separately; upstream success
+is never claimed for a mutated input. The report retains hashes and observations,
+never raw generated key contents or captured fixture/tool output.
 No Electron application, REA process, model or arbitrary target is executed.
 """
 
@@ -20,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 from releaseguard import __version__
 from releaseguard.core import GuardError, write_new
@@ -96,7 +99,7 @@ def verify_with_upstream(cli: Path, archive: Path, files: dict[str, bytes], dest
     """Require the real upstream inventory and every extracted file to match."""
     expected = set(files)
     for name in files:
-        expected.update(str(parent) for parent in Path(name).parents if str(parent) != ".")
+        expected.update(parent.as_posix() for parent in Path(name).parents if parent.as_posix() != ".")
     listed = command([cli, "list", archive]).decode("utf-8").splitlines()
     names = [name.replace("\\", "/").lstrip("/") for name in listed]
     if len(names) != len(set(names)) or set(names) != expected:
@@ -111,23 +114,45 @@ def verify_with_upstream(cli: Path, archive: Path, files: dict[str, bytes], dest
             "extracted_files": len(files), "all_extracted_bytes_match": True}
 
 
+def release_bytes(folder: Path) -> dict[str, bytes]:
+    """Inventory only our generated package files, including external sidecars."""
+    return {path.relative_to(folder).as_posix(): path.read_bytes()
+            for path in sorted(folder.rglob("*")) if path.is_file()}
+
+
+def verify_sidecars(archive: Path, files: dict[str, bytes], unpacked: tuple[str, ...]) -> dict:
+    expected = {name: files[name] for name in unpacked}
+    sidecar_root = Path(str(archive) + ".unpacked")
+    observed = release_bytes(sidecar_root) if sidecar_root.is_dir() else {}
+    if observed != expected:
+        raise RuntimeError("The upstream sidecar tree does not match the declared owned fixture")
+    return {"unpacked_files": len(observed), "unpacked_inventory_matches": True,
+            "all_unpacked_bytes_match": True}
+
+
 def scanner_observation(folder: Path, policy: Path, key_file: Path) -> dict:
     try:
         report = scan_release(folder, policy, asset_key_files=[key_file])
     except GuardError as exc:
+        # GuardError is the scanner's rejection outcome. Missing tools, tool
+        # failures and unrelated I/O exceptions must still abort the experiment.
         return {"status": "rejected_input", "ok": False, "reason": str(exc)}
     return {"status": "completed", "ok": report["ok"],
             "finding_codes": sorted({item["code"] for item in report["findings"]}),
-            "member_findings": [{"code": item["code"], "archive_members": item["archive_members"]}
-                                for item in report["findings"] if item.get("archive_members")],
+            "findings": [{"code": item["code"], "path": item["path"],
+                          "archive_members": item.get("archive_members", [])}
+                         for item in report["findings"]],
+            "files_scanned": report["checks"]["files_scanned"],
+            "bytes_scanned": report["checks"]["bytes_scanned"],
             "archives_scanned": report["checks"]["archives_scanned"],
             "archive_scan_completed": report["checks"]["archive_scan_completed"],
+            "asar_unpacked_members_checked": report["checks"]["asar_unpacked_members_checked"],
             "asset_keys_checked": report["checks"]["asset_keys_checked"]}
 
 
 def run_controls(cli: Path) -> dict:
     tool = tool_identity(cli)
-    checks, cases = {}, {}
+    checks, cases, mutations = {}, {}, {}
     with tempfile.TemporaryDirectory(prefix="rg-official-asar-") as temporary:
         work = Path(temporary).resolve()
         private = work / "issuer"
@@ -138,14 +163,111 @@ def run_controls(cli: Path) -> dict:
         policy = private / "policy.json"
         policy.write_text('{"version":1}', encoding="ascii")
         definitions = {
-            "clean": (dict(CLEAN_FILES), ()),
-            "escaped_source_map": ({**CLEAN_FILES, "assets/resource.dat": ESCAPED_MAP}, ()),
-            "hidden_env": ({**CLEAN_FILES, ".env": b"OWNED_FIXTURE_SETTING=public-test-value\n"}, ()),
-            "bundled_key": ({**CLEAN_FILES, "assets/key.bin": key}, ()),
-            "unpacked_sidecar": ({**CLEAN_FILES, "addons/owned.node": b"owned non-executable sidecar\n"}, ("--unpack", "*.node")),
+            "clean": {
+                "files": dict(CLEAN_FILES), "options": (), "unpacked": (),
+            },
+            "escaped_source_map": {
+                "files": {**CLEAN_FILES, "assets/resource.dat": ESCAPED_MAP},
+                "options": (), "unpacked": (),
+                "finding": ("source_map_structure", "assets/resource.dat"),
+            },
+            "hidden_env": {
+                "files": {**CLEAN_FILES, ".env": b"OWNED_FIXTURE_SETTING=public-test-value\n"},
+                "options": (), "unpacked": (),
+                "finding": ("forbidden_path_component", ".env"),
+            },
+            "bundled_key": {
+                "files": {**CLEAN_FILES, "assets/key.bin": key},
+                "options": (), "unpacked": (),
+                "finding": ("asset_key_exposure", "assets/key.bin"),
+            },
+            "unpacked_sidecar": {
+                "files": {**CLEAN_FILES, "addons/owned.node": b"owned non-executable sidecar\n"},
+                "options": ("--unpack", "*.node"), "unpacked": ("addons/owned.node",),
+            },
+            "unpacked_escaped_source_map": {
+                "files": {**CLEAN_FILES, "assets/resource.dat": ESCAPED_MAP},
+                "options": ("--unpack", "*.dat"), "unpacked": ("assets/resource.dat",),
+                "finding": ("source_map_structure", "assets/resource.dat"),
+            },
+            "unpacked_bundled_key": {
+                "files": {**CLEAN_FILES, "assets/key.bin": key},
+                "options": ("--unpack", "*key.bin"), "unpacked": ("assets/key.bin",),
+                "finding": ("asset_key_exposure", "assets/key.bin"),
+            },
+            "unpacked_directory": {
+                "files": {**CLEAN_FILES,
+                          "addons/owned.node": b"owned non-executable directory sidecar\n",
+                          "addons/empty.bin": b"",
+                          "addons/nested/note.txt": b"Owned nested unpacked resource.\n"},
+                "options": ("--unpack-dir", "addons"),
+                "unpacked": ("addons/owned.node", "addons/empty.bin", "addons/nested/note.txt"),
+            },
         }
         archives = {}
-        for name, (files, options) in definitions.items():
+
+        def record_valid_case(name, release, archive, definition, upstream, *,
+                              copied_from=None, wrapper=None):
+            files = definition["files"]
+            unpacked = definition["unpacked"]
+            physical = release_bytes(release)
+            observed = scanner_observation(release, policy, key_file)
+            archive_name = archive.name
+            expected_archives = 2 if wrapper is not None else 1
+            # Physical package bytes plus packed member expansion. Unpacked
+            # bytes have already been counted as actual sibling payloads.
+            expected_bytes = archive.stat().st_size + sum(map(len, files.values()))
+            if wrapper is not None:
+                expected_bytes += wrapper.stat().st_size
+            expected_finding = None
+            if "finding" in definition:
+                code, member = definition["finding"]
+                if wrapper is not None:
+                    actual = ("payload/" + archive_name + ".unpacked/" + member
+                              if member in unpacked else "payload/" + archive_name)
+                    members = [actual] if member in unpacked else [actual, member]
+                    expected_finding = {"code": code, "path": wrapper.name,
+                                        "archive_members": members}
+                elif member in unpacked:
+                    expected_finding = {"code": code, "path": archive_name + ".unpacked/" + member,
+                                        "archive_members": []}
+                else:
+                    expected_finding = {"code": code, "path": archive_name,
+                                        "archive_members": [member]}
+            case = {"archive_sha256": sha(archive.read_bytes()),
+                    "archive_bytes": archive.stat().st_size,
+                    "fixture_files": inventory(files), "release_files": inventory(physical),
+                    "pack_options": list(definition["options"]),
+                    "upstream": upstream, "scan": observed,
+                    "expected_scan": {"files_scanned": len(physical),
+                                      "bytes_scanned": expected_bytes,
+                                      "archives_scanned": expected_archives,
+                                      "asar_unpacked_members_checked": len(unpacked),
+                                      "finding": expected_finding}}
+            if copied_from is not None:
+                case["copied_from"] = copied_from
+            if wrapper is not None:
+                case["wrapper"] = {"format": "zip-deflate",
+                                   "sha256": sha(wrapper.read_bytes()),
+                                   "bytes": wrapper.stat().st_size}
+            cases[name] = case
+            checks[name + "_scanner_accounting_matches"] = (
+                observed["status"] == "completed"
+                and observed["files_scanned"] == len(physical)
+                and observed["bytes_scanned"] == expected_bytes
+                and observed["archives_scanned"] == expected_archives
+                and observed["archive_scan_completed"]
+                and observed["asar_unpacked_members_checked"] == len(unpacked)
+                and observed["asset_keys_checked"] == 1
+            )
+            checks[name + "_release_gate_matches"] = (
+                observed["status"] == "completed"
+                and ((observed["ok"] and not observed["findings"]) if expected_finding is None
+                     else (not observed["ok"] and expected_finding in observed["findings"]))
+            )
+
+        for name, definition in definitions.items():
+            files, options = definition["files"], definition["options"]
             source, release = work / (name + "-source"), work / (name + "-release")
             source.mkdir()
             release.mkdir()
@@ -156,60 +278,168 @@ def run_controls(cli: Path) -> dict:
             archive = release / "application.asar"
             command([cli, "pack", source, archive, *options])
             upstream = verify_with_upstream(cli, archive, files, work / (name + "-extracted"))
+            upstream.update(verify_sidecars(archive, files, definition["unpacked"]))
             archives[name] = archive
-            cases[name] = {"archive_sha256": sha(archive.read_bytes()), "archive_bytes": archive.stat().st_size,
-                           "fixture_files": inventory(files), "pack_options": list(options),
-                           "upstream": upstream, "scan": scanner_observation(release, policy, key_file)}
-            if name == "unpacked_sidecar":
-                sidecar = release / "application.asar.unpacked/addons/owned.node"
-                cases[name]["upstream_created_sidecar"] = sidecar.is_file() and sidecar.read_bytes() == files["addons/owned.node"]
+            record_valid_case(name, release, archive, definition, upstream)
 
-        # Renaming preserves the exact upstream-produced bytes. Both the tool and
-        # scanner must still interpret the archive without an .asar extension.
-        for original_name, renamed_name in (("clean", "renamed_clean"), ("bundled_key", "renamed_bundled_key")):
+        # Rename a valid archive together with its exact matching sidecar tree.
+        # The upstream reader uses <current archive path>.unpacked for its files.
+        for original_name, renamed_name in (
+            ("clean", "renamed_clean"),
+            ("bundled_key", "renamed_bundled_key"),
+            ("unpacked_sidecar", "renamed_unpacked_sidecar"),
+        ):
             release = work / (renamed_name + "-release")
             release.mkdir()
             archive = release / "resource.bin"
-            shutil.copyfile(archives[original_name], archive)
-            files = definitions[original_name][0]
-            cases[renamed_name] = {"archive_sha256": sha(archive.read_bytes()), "archive_bytes": archive.stat().st_size,
-                                   "fixture_files": inventory(files), "copied_from": original_name,
-                                   "upstream": verify_with_upstream(cli, archive, files, work / (renamed_name + "-extracted")),
-                                   "scan": scanner_observation(release, policy, key_file)}
-            checks[renamed_name + "_bytes_unchanged"] = cases[renamed_name]["archive_sha256"] == cases[original_name]["archive_sha256"]
+            original = archives[original_name]
+            shutil.copyfile(original, archive)
+            definition = definitions[original_name]
+            if definition["unpacked"]:
+                shutil.copytree(Path(str(original) + ".unpacked"), Path(str(archive) + ".unpacked"))
+            upstream = verify_with_upstream(
+                cli, archive, definition["files"], work / (renamed_name + "-extracted"),
+            )
+            upstream.update(verify_sidecars(archive, definition["files"], definition["unpacked"]))
+            record_valid_case(renamed_name, release, archive, definition, upstream,
+                              copied_from=original_name)
+            checks[renamed_name + "_archive_bytes_unchanged"] = (
+                cases[renamed_name]["archive_sha256"] == cases[original_name]["archive_sha256"]
+            )
+            if definition["unpacked"]:
+                checks[renamed_name + "_sidecar_bytes_unchanged"] = (
+                    release_bytes(Path(str(original) + ".unpacked"))
+                    == release_bytes(Path(str(archive) + ".unpacked"))
+                )
 
-        for name in ("clean", "renamed_clean"):
-            observed = cases[name]["scan"]
-            checks[name + "_accepted_and_expanded"] = (observed["status"] == "completed" and observed["ok"]
-                and observed["archives_scanned"] == 1 and observed["archive_scan_completed"] and observed["asset_keys_checked"] == 1)
-        for name, code, member in (("escaped_source_map", "source_map_structure", "assets/resource.dat"),
-                                   ("hidden_env", "forbidden_path_component", ".env"),
-                                   ("bundled_key", "asset_key_exposure", "assets/key.bin"),
-                                   ("renamed_bundled_key", "asset_key_exposure", "assets/key.bin")):
-            observed = cases[name]["scan"]
-            checks[name + "_blocked_at_actual_member"] = (observed["status"] == "completed" and not observed["ok"]
-                and {"code": code, "archive_members": [member]} in observed["member_findings"])
-        sidecar = cases["unpacked_sidecar"]
-        checks["upstream_unpacked_sidecar_exists_and_extracts"] = sidecar["upstream_created_sidecar"] and sidecar["upstream"]["all_extracted_bytes_match"]
-        checks["unsupported_unpacked_layout_rejected"] = (sidecar["scan"]["status"] == "rejected_input"
-            and "ASAR unpacked sidecars" in sidecar["scan"]["reason"])
-        checks["all_upstream_lists_and_extractions_match"] = all(case["upstream"]["listed_inventory_matches"]
-            and case["upstream"]["all_extracted_bytes_match"] for case in cases.values())
+        # Deliberately write ZIP members in reverse name order. Each external
+        # sidecar is stored before the ASAR that refers to it. Extraction below
+        # uses only our fixed member names and compares every wrapper payload.
+        for original_name, zipped_name in (
+            ("unpacked_sidecar", "zip_unpacked_clean"),
+            ("unpacked_escaped_source_map", "zip_unpacked_escaped_source_map"),
+            ("unpacked_bundled_key", "zip_unpacked_bundled_key"),
+        ):
+            definition = definitions[original_name]
+            original = archives[original_name]
+            payloads = {"payload/" + name: data
+                        for name, data in release_bytes(original.parent).items()}
+            member_order = sorted(payloads, reverse=True)
+            release = work / (zipped_name + "-release")
+            release.mkdir()
+            wrapper = release / "bundle.zip"
+            with zipfile.ZipFile(wrapper, "x") as container:
+                for name in member_order:
+                    info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    info.external_attr = 0o100644 << 16
+                    container.writestr(info, payloads[name])
+            unwrapped = work / (zipped_name + "-unwrapped")
+            unwrapped.mkdir()
+            with zipfile.ZipFile(wrapper) as container:
+                if container.namelist() != member_order:
+                    raise RuntimeError("The ZIP wrapper did not preserve the requested member order")
+                for name, expected in payloads.items():
+                    data = container.read(name)
+                    if data != expected:
+                        raise RuntimeError("The ZIP wrapper changed an upstream package payload")
+                    target = unwrapped / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+            archive = unwrapped / "payload" / original.name
+            upstream = verify_with_upstream(
+                cli, archive, definition["files"], work / (zipped_name + "-extracted"),
+            )
+            upstream.update(verify_sidecars(archive, definition["files"], definition["unpacked"]))
+            upstream["zip_payloads_compared_with_valid_source"] = True
+            record_valid_case(zipped_name, release, archive, definition, upstream,
+                              copied_from=original_name, wrapper=wrapper)
+            cases[zipped_name]["wrapper"]["member_order"] = member_order
+            archive_member = "payload/" + original.name
+            sidecar_members = [archive_member + ".unpacked/" + name for name in definition["unpacked"]]
+            checks[zipped_name + "_sidecars_precede_archive_without_changing_payloads"] = (
+                all(member_order.index(name) < member_order.index(archive_member)
+                    for name in sidecar_members)
+                and cases[zipped_name]["archive_sha256"] == cases[original_name]["archive_sha256"]
+                and upstream["zip_payloads_compared_with_valid_source"]
+            )
+
+        # Upstream extraction was verified on the clean source above. These
+        # independent copies are modified afterwards, with no claim that the
+        # upstream reader rejects or correctly verifies the corrupted content.
+        negative_definitions = {
+            "missing_sidecar": "ASAR unpacked sidecar is missing from its sibling namespace",
+            "sidecar_size_changed": "ASAR unpacked sidecar size differs from its index",
+            "sidecar_same_size_tampered": "ASAR member digest mismatch",
+            "unindexed_sidecar_file": "ASAR unpacked sidecar tree contains unindexed files",
+        }
+        original = archives["unpacked_sidecar"]
+        target_name = "application.asar.unpacked/addons/owned.node"
+        for name, expected_error in negative_definitions.items():
+            release = work / (name + "-release")
+            shutil.copytree(original.parent, release)
+            target = release / target_name
+            mutation_path = target_name
+            if name == "missing_sidecar":
+                target.unlink()
+            elif name == "sidecar_size_changed":
+                target.write_bytes(target.read_bytes() + b"!")
+            elif name == "sidecar_same_size_tampered":
+                data = target.read_bytes()
+                if not data:
+                    raise RuntimeError("The same-size mutation fixture must be nonempty")
+                target.write_bytes(bytes([data[0] ^ 1]) + data[1:])
+            elif name == "unindexed_sidecar_file":
+                mutation_path = "application.asar.unpacked/addons/unindexed.bin"
+                (release / mutation_path).write_bytes(b"unindexed owned resource\n")
+            else:
+                raise RuntimeError("Unknown sidecar mutation control")
+            observed = scanner_observation(release, policy, key_file)
+            unchanged_archive = (release / original.name).read_bytes() == original.read_bytes()
+            mutations[name] = {
+                "copied_from_valid_case": "unpacked_sidecar",
+                "mutation_path": mutation_path,
+                "upstream_executed_on_mutated_input": False,
+                "original_archive_bytes_unchanged": unchanged_archive,
+                "release_files": inventory(release_bytes(release)),
+                "expected_guard_error": expected_error,
+                "scan": observed,
+            }
+            checks[name + "_rejected_with_exact_guard_error"] = (
+                unchanged_archive and observed["status"] == "rejected_input"
+                and not observed["ok"] and observed["reason"] == expected_error
+            )
+
+        checks["all_valid_upstream_lists_extractions_and_sidecars_match"] = all(
+            case["upstream"]["listed_inventory_matches"]
+            and case["upstream"]["all_extracted_bytes_match"]
+            and case["upstream"]["unpacked_inventory_matches"]
+            and case["upstream"]["all_unpacked_bytes_match"]
+            for case in cases.values()
+        )
 
     sources = [Path(__file__), ROOT / "src/releaseguard/asar.py", ROOT / "src/releaseguard/distribution.py",
-               ROOT / "src/releaseguard/core.py"]
-    return {"schema": "releaseguard-official-asar-controls/v1", "ok": all(checks.values()),
+               ROOT / "src/releaseguard/core.py", ROOT / "src/releaseguard/sealed.py"]
+    return {"schema": "releaseguard-official-asar-controls/v2", "ok": all(checks.values()),
             "recorded_at_utc": datetime.now(timezone.utc).isoformat(), "core_version": __version__, "tool": tool,
             "environment": {"platform": platform.platform(), "python": platform.python_version()},
             "source_sha256": {str(path.relative_to(ROOT)): sha(path.read_bytes()) for path in sources},
-            "cases": cases, "checks": checks,
+            "cases": cases, "mutation_cases": mutations, "checks": checks,
+            "case_counts": {"upstream_verified": len(cases), "mutated": len(mutations),
+                            "total": len(cases) + len(mutations)},
             "scope": {"owned_fixtures_only": True, "real_asar_cli_executed": True,
                       "real_pack_list_extract_file_executed": True, "target_application_executed": False,
+                      "upstream_verified_mutated_inputs": False,
                       "rea_executed": False, "decompilation_resistance": "not_evaluated",
-                      "notes": ["The caller supplies the CLI. Observed version, package metadata and hashes identify it, not authenticate its provenance.",
-                                "An unpacked layout is valid to the upstream tool but intentionally rejected by this bounded scanner.",
-                                "All extracted bytes are compared with the original owned fixture; no original key or content bytes are retained in the report.",
-                                "These controls establish compatibility and configured disclosure checks for the recorded package layouts, not complete Electron or REA resistance."]}}
+                      "notes": [
+                          "The caller supplies the CLI. Version, package metadata and hashes identify the installation; they do not authenticate its provenance.",
+                          "Valid packed and unpacked packages are listed and every file is extracted by the upstream CLI. Renamed archives retain their matching sidecar trees.",
+                          "ZIP wrappers store sidecars before the referring ASAR. Wrapper bytes are compared with the valid source before upstream extraction; scanner findings use actual sibling paths.",
+                          "The missing, resized, same-size-tampered and extra-file controls are independent mutations of a verified clean package. No upstream success or rejection is asserted for those mutated inputs.",
+                          "Unpacked bytes are checked through their actual physical or ZIP sibling payload once, with index size and upstream-generated integrity checks. These fixtures do not test archives without integrity metadata.",
+                          "No raw key, captured tool output or extracted file contents are retained in the report. Hashes describe synthetic test artifacts and the executed source.",
+                          "These controls measure the recorded package layouts and configured disclosure gates. They do not establish complete Electron coverage, decompilation resistance or resistance to REA.",
+                      ]}}
 
 
 def main(argv=None) -> int:

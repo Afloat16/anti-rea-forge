@@ -1,6 +1,6 @@
 # 安全政策
 
-Anti-REA Forge（底层工具名 Open Release Guard）当前仍是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF 发布检查、签名清单、离线授权、单向口令校验、外部密钥资产封装、原生敏感缓冲区和服务端请求能力凭证，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
+Anti-REA Forge（底层工具名 Open Release Guard）当前仍是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF/Mach-O 发布检查、签名清单、离线授权、单向口令校验、外部密钥资产封装、原生敏感缓冲区和服务端请求能力凭证，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
 
 ## 构建保护的范围
 
@@ -69,15 +69,17 @@ See [runtime integration and sources](docs/runtime-protection.md) and [v0.4 vali
 
 ## v0.5 portable scanning and JavaScript boundaries
 
-`scan-release` adds bounded checks for arbitrary release directories, recognized stored/deflated ZIP members and canonical packed ASAR members. Private-key/source-map byte markers remain heuristics; bounded JSON source-map structure checks additionally handle escaped keys and indexed maps. These are not a JavaScript parser, a complete secret detector or a proof that a shipped algorithm is confidential. Reports omit matched file contents but retain names, paths and hashes. Unsupported or disabled recognized archive inspection blocks release; unknown or disguised container formats may still contain uninspected encoded data. HTTP source-map headers, remote downloads and CDN state require separate deployment checks.
+`scan-release` adds bounded checks for arbitrary release directories, recognized stored/deflated ZIP members and canonical ASAR members with verified unpacked siblings. Private-key/source-map byte markers remain heuristics; bounded JSON source-map structure checks additionally handle escaped keys and indexed maps. These are not a JavaScript parser, a complete secret detector or a proof that a shipped algorithm is confidential. Reports omit matched file contents but retain names, paths and hashes. Unsupported or disabled recognized archive inspection blocks release; unknown or disguised container formats may still contain uninspected encoded data. HTTP source-map headers, remote downloads and CDN state require separate deployment checks.
 
 ZIP inspection validates actual bounded expansion and metadata rather than trusting a declared size. It rejects encrypted, multi-disk, ZIP64, prefixed/concatenated, alias-bearing and otherwise unsupported layouts; it does not execute content or extract member paths to disk. Release roots, policies and ancestor directories must remain under trusted build control. These checks are not atomic filesystem snapshots and do not protect against malicious parent-directory races or replacement after inspection.
 
-ASAR inspection rejects links, unpacked sidecars, ambiguous names, partial overlaps, unindexed bytes and unknown layouts. Exact deduplicated file ranges are supported, with every alias checked and counted. Header/block digests are consistency checks supplied by the archive, not trusted publisher authentication. ZIP/ASAR nesting shares global entry and byte budgets. Oversized or ambiguous JSON candidates and unverifiable recognized ELF/PE metadata produce findings rather than silent success. Native metadata checks do not audit Mach-O/DEX/CIL or remove observable public APIs and instructions.
+ASAR inspection binds unpacked entries to exact siblings in the same inventoried disk/ZIP/ASAR namespace. It rejects missing or mismatched sidecars, unindexed sibling bytes, multiple declarations claiming one external payload, links, ambiguous names, partial packed overlaps and unknown layouts. Exact packed deduplication remains supported, with each alias checked and counted. Header/block digests are consistency checks, not trusted publisher authentication. ZIP/ASAR nesting shares budgets; unpacked bytes count at their actual sibling location. Oversized/ambiguous JSON and unverifiable recognized ELF/PE/Mach-O metadata produce findings. Mach-O inspection uses bounded thin/universal profiles and structural Java disambiguation; it is not a full loader, code-signature or JVM validator. DEX/CIL, runtime-language metadata and public APIs/instructions remain outside these protections. Recognized Android OTA CrAU is explicitly unsupported.
 
 Known external raw 32-byte keys can be supplied to `scan-release`, `check`, `prepare` and their supported SDK calls. Optional build-only `asset_key_files` configuration makes those checks repeatable; explicit per-call keys add to that list. `prepare` creates no signed sidecars when scanning reports a violation. Missing keys fail the check. This detects configured raw/hex/Base64 representations, not unknown credentials, arbitrary encodings, split keys or every runtime-derived value. Prepared reports record the checks performed, not the key material.
 
-Sealed native-code builds reject unknown globals, invalid retention lists, named metadata outside the supported module-flags/ident profile and debug metadata. This prevents known extra initialized storage and command-line metadata from escaping the verified sealed-storage set. It is not a proof that every accepted compiler transformation preserves confidentiality. Real LLVM compiler regressions and final-release scanning remain required; authorized native execution still places plaintext VM instructions in process memory.
+PE metadata checks also cover DWARF/STABS section names independently of the debug directory, resolving bounded GNU long names. Truncated ambiguous names are conservative indicators, not decoded private contents. Recognized standalone MSF7/MSF2/raw CLI metadata and regular/thin-ar containers are explicitly unsupported, including after renaming and in supported archives; thin-ar external references are never followed. Recognition does not mean their contents have been parsed. Apple strip's exact fixed compatibility record is distinguished from private STABS only with strict field and table-context checks.
+
+Sealed native-code builds reject unknown globals, invalid retention lists, named metadata outside the supported module-flags/ident profile and debug metadata. Every function definition must be accounted for by the verified wrapper set or its private runtime dependency closure. Noncanonical definitions that the direct sealing API cannot account for are rejected; the CLI normally canonicalizes with LLVM first. This prevents known extra initialized storage, leftover function bodies and command-line metadata from escaping the verified build inventory. It is not a proof that every accepted compiler transformation preserves confidentiality, or that arbitrary computations/constants inside the allowed public interpreter/helper code are encrypted. Real LLVM compiler regressions and final-release scanning remain required; authorized native execution still places plaintext VM instructions in process memory.
 
 The JavaScript bridge invokes an installed Python interpreter with separate arguments, no shell and isolated module loading (`-I`). The interpreter, installed packages, configuration and inherited environment must be trusted. Output budgets, timeouts, protocol validation and cancellation bound the bridge; they do not turn a modified local verifier into a trusted authorization service. Existing signature and capability trust boundaries remain unchanged. See [portable integration](docs/portable-release.md) and [v0.5 validation](docs/testing-v0.5-2026-11-04.md).
 
@@ -94,3 +96,27 @@ The verifier checks the whole release with no cached allow and resamples trusted
 Target paths and their ancestors must remain trusted and immutable until the operation finishes. Direct REA calls, alternative file readers, an operator who removes the verifier and concurrent target replacement remain outside this control. Target notices are data, not system prompts, and cannot force an unrelated model to refuse. No model refusal rate or complete REA/provider/host resistance evaluation is claimed.
 
 See [integration](docs/analysis-authorization.md), [pinned source review](docs/rea-agent-authorization-2026-11-05.zh-CN.md) and [validation](docs/testing-v0.6-2026-11-05.md).
+
+
+## Additional input-consistency and native-boundary checks
+
+Manifest creation and verification re-inventory the release and recheck the identities
+of all read files; creation repeats this after signing. Reads reject non-regular and
+growing files without waiting on a replaced FIFO. External-key snapshots retain both
+file identity and bytes in process, safely reopen the original inputs and reject
+replacement or rotation. Snapshot reprs and errors do not disclose key contents,
+digests or paths. They must never be serialized into public reports.
+
+Release preparation rechecks the signed release and key snapshots after creating a
+fresh sidecar bundle. A failed final check removes that newly created bundle. The extra
+read has a build-time I/O cost. These checks detect ordinary concurrent build changes;
+they are not an atomic filesystem snapshot and cannot protect against malicious
+directory owners. Keep the release, keys, policy and ancestors trusted and immutable
+through publication and use.
+
+Generated native-token helpers have internal linkage, so each translation unit uses
+the verifier it included. A translation unit includes only one generated verifier
+header. This isolates issuance instances; it does not make a distributed bearer or
+client-side verifier unpatchable. Sealed LLVM input also rejects pcsections attachments
+because they can emit auxiliary constants into the object. This specific rejection
+does not claim complete analysis of every future LLVM emission mechanism.

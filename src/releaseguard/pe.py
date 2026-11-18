@@ -26,6 +26,8 @@ _MAX_SECTIONS = 96
 _UINT32_LIMIT = 1 << 32
 _DEBUG_ENTRY_SIZE = 28
 _MAX_DEBUG_ENTRIES = 4096
+_MAX_STRING_TABLE_BYTES = 1024 * 1024
+_MAX_SECTION_NAME_BYTES = 4096
 # Currently documented PE extended DLL flags: CET_COMPAT and FORWARD_CFI_COMPAT.
 _KNOWN_EXTENDED_DLL_CHARACTERISTICS = 0x0001 | 0x0040
 
@@ -47,6 +49,62 @@ def _u16(data: bytes, offset: int) -> int:
 
 def _u32(data: bytes, offset: int) -> int:
     return struct.unpack_from("<I", data, offset)[0]
+
+
+def _section_names(stream: BinaryIO, file_size: int, raw_sections: bytes,
+                   symbols_offset: int, symbol_count: int, size_of_headers: int,
+                   sections: list[tuple[int, int, int, int]]) -> list[bytes]:
+    """Resolve inline names and bounded GNU PE/COFF long-name references.
+
+    GNU ld/objcopy can retain a COFF string table in a PE image, including
+    when all symbol records were removed. Never treat an unresolved /offset
+    as an ordinary section name: GNU tools can still expose its DWARF data.
+    """
+    names = []
+    for offset in range(0, len(raw_sections), 40):
+        field = raw_sections[offset:offset + 8]
+        name, separator, padding = field.partition(b"\0")
+        if separator and any(padding):
+            raise ValueError("PE section 名称不是规范 NUL 填充")
+        names.append(name)
+
+    long_names = any(name.startswith(b"/") for name in names)
+    if not long_names and not (symbols_offset and not symbol_count):
+        return names
+    if not symbols_offset:
+        raise ValueError("PE 长 section 名称缺少 COFF 字符串表")
+    table_offset = symbols_offset + symbol_count * 18
+    if table_offset < size_of_headers:
+        raise ValueError("COFF 字符串表与 PE 头部重叠")
+    table_size = _u32(_read_at(stream, table_offset, 4, file_size), 0)
+    if not 4 <= table_size <= _MAX_STRING_TABLE_BYTES:
+        raise ValueError("COFF 字符串表长度无效或超过审计上限")
+    if table_offset > file_size or table_size > file_size - table_offset:
+        raise ValueError("COFF 字符串表超出文件范围")
+    if any(raw_size and symbols_offset < raw_offset + raw_size
+           and table_offset + table_size > raw_offset
+           for _, _, raw_offset, raw_size in sections):
+        raise ValueError("COFF 符号或字符串表与 PE section 数据重叠")
+    if not long_names:
+        return names
+    table = _read_at(stream, table_offset, table_size, file_size)
+    resolved = []
+    for name in names:
+        if not name.startswith(b"/"):
+            resolved.append(name)
+            continue
+        digits = name[1:]
+        # Larger //base64 offsets and nondecimal aliases are unsupported.
+        if not digits or any(digit < 48 or digit > 57 for digit in digits):
+            raise ValueError("不支持的 PE 长 section 名称索引")
+        index = int(digits)
+        if not 4 <= index < table_size:
+            raise ValueError("PE 长 section 名称索引超出 COFF 字符串表")
+        end = table.find(b"\0", index, index + _MAX_SECTION_NAME_BYTES + 1)
+        if end < 0:
+            raise ValueError("PE 长 section 名称未终止或超过审计上限")
+        resolved.append(table[index:end])
+    return resolved
 
 
 def audit_pe(path: Path | str) -> dict:
@@ -170,15 +228,22 @@ def audit_pe_stream(stream: BinaryIO, file_size: int) -> dict:
         file_offset_for_rva(address, size)
         return True
 
-    if bool(symbols_offset) != bool(symbol_count):
+    if symbol_count and not symbols_offset:
         raise ValueError("COFF 符号表地址与数量不完整")
-    if symbol_count and (
+    if symbols_offset and (
         symbols_offset < size_of_headers
         or symbols_offset > file_size
         or symbol_count * 18 > file_size - symbols_offset
     ):
         raise ValueError("COFF 符号表超出文件范围或与头部重叠")
 
+    names = _section_names(stream, file_size, raw_sections, symbols_offset,
+                           symbol_count, size_of_headers, sections)
+    # GNU tools use these sections independently of IMAGE_DIRECTORY_ENTRY_DEBUG.
+    # Prefixes also cover names truncated to PE's eight inline bytes.
+    debug_sections = [name for name in names if
+                      name.startswith((b".debug", b".zdebug", b".stab"))
+                      or name in (b".gnu_debugdata", b".gnu_deb")]
     evidence = {
         "relocations_present": checked_directory(5),
         "load_config_present": checked_directory(10),
@@ -233,7 +298,7 @@ def audit_pe_stream(stream: BinaryIO, file_size: int) -> dict:
                 # Includes CodeView, COFF, embedded PDBs, nonempty REPRO,
                 # and unknown/reserved types, including type zero.
                 debug_metadata_present = True
-    evidence["debug_metadata_present"] = debug_metadata_present
+    evidence["debug_metadata_present"] = bool(debug_sections) or debug_metadata_present
     managed = checked_directory(14)
     flags = {
         "dynamic_base": bool(dll_characteristics & 0x0040),
@@ -264,6 +329,8 @@ def audit_pe_stream(stream: BinaryIO, file_size: int) -> dict:
             warnings.append("设置了 GUARD_CF，但未设置 CFG 所需的 DYNAMIC_BASE 标记。")
     else:
         warnings.append("未设置 GUARD_CF 标记。")
+    if debug_sections:
+        warnings.append("检测到 PE section 中的 DWARF、STABS 或其它调试资料；发布前分离私有调试信息。")
     if debug_metadata_present:
         warnings.append("检测到调试目录中的调试信息或未验证条目；发布前检查 PDB 路径及调试信息。")
     if extended_characteristics_count:
@@ -287,6 +354,7 @@ def audit_pe_stream(stream: BinaryIO, file_size: int) -> dict:
         "flags": flags,
         "evidence": evidence,
         "debug_directory_types": debug_types,
+        "debug_sections": [name.decode("utf-8", errors="replace") for name in debug_sections],
         "warnings": warnings,
         "notes": notes,
     }
