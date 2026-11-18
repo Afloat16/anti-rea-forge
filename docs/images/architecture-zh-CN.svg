@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="790" viewBox="0 0 1280 790" role="img" aria-labelledby="title desc">
+<title id="title">把发布边界，变成保护边界。</title>
+<desc id="desc">私有资料独立保存 · 发布字节完整核对 · 敏感操作由可信端授权 信任边界：公开客户端、目标文件中的声明、被修改的本地校验，都不能授予服务端权限。</desc>
+<defs><linearGradient id="background" x2="1" y2="1"><stop stop-color="#101d32"/><stop offset="1" stop-color="#080f1d"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="none" stroke="#76d9cb" stroke-width="1.7"/></marker></defs>
+<rect width="1280" height="790" rx="24" fill="url(#background)"/>
+<g font-family="Inter, Noto Sans CJK SC, Noto Sans, Arial, sans-serif">
+<text x="48" y="43" font-size="15" fill="#76d9cb" font-weight="700" letter-spacing="2">ANTI-REA FORGE  /  ARCHITECTURE</text>
+<text x="48" y="94" font-size="37" fill="#f5f8ff" font-weight="700" >把发布边界，变成保护边界。</text>
+<text x="48" y="130" font-size="19" fill="#aebfd6" font-weight="400" >私有资料独立保存 · 发布字节完整核对 · 敏感操作由可信端授权</text>
+<text x="48" y="178" font-size="16" fill="#76d9cb" font-weight="700" letter-spacing="1">01  可信构建</text>
+<rect x="48" y="196" width="368" height="366" rx="18" fill="#142237" stroke="#31435e"/>
+<rect x="72" y="220" width="36" height="4" rx="2" fill="#76d9cb"/>
+<text x="72" y="259" font-size="23" fill="#f2f6ff" font-weight="700" >分离敏感内容，检查产物</text>
+<text x="72" y="300" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">私有输入</text>
+<text x="72" y="327" font-size="16" fill="#c7d4e7" font-weight="400" >源代码、符号与选定的数据</text>
+<text x="72" y="351" font-size="16" fill="#c7d4e7" font-weight="400" >外部密钥保持在发布目录之外</text>
+<text x="72" y="388" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">构建处理</text>
+<text x="72" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >分离 source map 与私有调试信息</text>
+<text x="72" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >封装选定资产或 VM 指令</text>
+<text x="72" y="476" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">发布门禁</text>
+<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >有界格式检查与泄露检查</text>
+<text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >完整清单、密钥检查、最终复核</text>
+<path d="M423 387h26" fill="none" stroke="#76d9cb" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="456" y="178" font-size="16" fill="#8db8ff" font-weight="700" letter-spacing="1">02  公开分发</text>
+<rect x="456" y="196" width="368" height="366" rx="18" fill="#142237" stroke="#31435e"/>
+<rect x="480" y="220" width="36" height="4" rx="2" fill="#8db8ff"/>
+<text x="480" y="259" font-size="23" fill="#f2f6ff" font-weight="700" >发布经过验证的文件</text>
+<text x="480" y="300" font-size="14" fill="#8db8ff" font-weight="700" letter-spacing="0.8">应用产物</text>
+<text x="480" y="327" font-size="16" fill="#c7d4e7" font-weight="400" >公开代码与经过认证的密文</text>
+<text x="480" y="351" font-size="16" fill="#c7d4e7" font-weight="400" >保留必要 ABI 和运行行为</text>
+<text x="480" y="388" font-size="14" fill="#8db8ff" font-weight="700" letter-spacing="0.8">签名清单</text>
+<text x="480" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >精确绑定路径、大小和文件哈希</text>
+<text x="480" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >签名同时绑定产品与版本</text>
+<text x="480" y="476" font-size="14" fill="#8db8ff" font-weight="700" letter-spacing="0.8">发布规则</text>
+<text x="480" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >已识别的未支持格式、变化或歧义？</text>
+<text x="480" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >阻止发布，并给出明确原因。</text>
+<path d="M831 387h26" fill="none" stroke="#76d9cb" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="864" y="178" font-size="16" fill="#d3adff" font-weight="700" letter-spacing="1">03  授权使用</text>
+<rect x="864" y="196" width="368" height="366" rx="18" fill="#142237" stroke="#31435e"/>
+<rect x="888" y="220" width="36" height="4" rx="2" fill="#d3adff"/>
+<text x="888" y="259" font-size="23" fill="#f2f6ff" font-weight="700" >先认证，再开放数据</text>
+<text x="888" y="300" font-size="14" fill="#d3adff" font-weight="700" letter-spacing="0.8">独立密钥</text>
+<text x="888" y="327" font-size="16" fill="#c7d4e7" font-weight="400" >核对产品、版本与用途上下文</text>
+<text x="888" y="351" font-size="16" fill="#c7d4e7" font-weight="400" >认证成功后才开放明文</text>
+<text x="888" y="388" font-size="14" fill="#d3adff" font-weight="700" letter-spacing="0.8">原生生命周期</text>
+<text x="888" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >受保护缓冲区与显式清理</text>
+<text x="888" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >授权进程中的明文仍可被观察</text>
+<text x="888" y="476" font-size="14" fill="#d3adff" font-weight="700" letter-spacing="0.8">敏感操作</text>
+<text x="888" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >可信服务验证限定范围的能力凭证</text>
+<text x="888" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >进入处理函数前核对过期与重放</text>
+<path d="M1048 614v-37" fill="none" stroke="#76d9cb" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
+<rect x="48" y="614" width="1184" height="103" rx="16" fill="#102b31" stroke="#32615f"/>
+<text x="72" y="646" font-size="15" fill="#76d9cb" font-weight="700" letter-spacing="1">可信签发方 / 私有存储</text>
+<circle cx="76" cy="678" r="4" fill="#76d9cb"/>
+<text x="90" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >私有 source map 与符号</text>
+<circle cx="480" cy="678" r="4" fill="#76d9cb"/>
+<text x="494" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >独立密钥与签名权限</text>
+<circle cx="884" cy="678" r="4" fill="#76d9cb"/>
+<text x="898" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >已认证身份与重放状态</text>
+<text x="48" y="755" font-size="16" fill="#aebfd6" font-weight="400" >信任边界：公开客户端、目标文件中的声明、被修改的本地校验，都不能授予服务端权限。</text>
+</g>
+</svg>

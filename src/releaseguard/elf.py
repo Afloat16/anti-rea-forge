@@ -21,6 +21,13 @@ _MAX_PROGRAM_HEADERS = 4096
 _MAX_NAME_TABLE_BYTES = 1024 * 1024
 _MAX_SECTION_NAME_BYTES = 4096
 _MAX_TOTAL_NAME_BYTES = 1024 * 1024
+# These carry type descriptions, field names, source/line data or debugger
+# indexes even when GNU strip has removed the static symbol table. Keep exact
+# names: .BTF_ids, unwind tables and public dynamic symbols serve runtime uses.
+# https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
+# https://kernel.org/doc/html/latest/bpf/btf.html
+_TYPE_METADATA_NAMES = frozenset({b".ctf", b".SUNW_ctf", b".BTF", b".BTF.ext",
+                                  b".BTF.base", b".gdb_index"})
 _MACHINES = {
     0: "none",
     3: "x86",
@@ -215,6 +222,7 @@ def audit_elf_stream(stream: BinaryIO, file_size: int) -> dict:
         if section[1] != 0 and (
             name.startswith((b".debug_", b".zdebug_", b".stab"))
             or name in (b".debug", b".zdebug", b".gnu_debugdata")
+            or name in _TYPE_METADATA_NAMES
         ):
             debug_present = True
 

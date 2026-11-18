@@ -1,6 +1,6 @@
 # Portable release checks / 跨语言发布检查
 
-Anti-REA Forge 0.5 adds a **Python release scanner usable from any build system** and
+Anti-REA Forge provides a **Python release scanner usable from any build system** and
 a **JavaScript ESM bridge with TypeScript declarations**. The scanner reads a staging
 directory without requiring an EXE, DLL or ELF entry file. The current scanner checks
 debug metadata and static symbols in every recognized ELF/PE/Mach-O payload, including
@@ -320,3 +320,23 @@ for the focused portable regression suite. [Current tool coverage and observatio
 and the [historical validation record](testing-v0.5-2026-11-04.md) retain their distinct
 results and untested scope. Source review and functional tests are distinct from a full
 REA/provider/model evaluation, which this update does not claim to have completed.
+
+## 1.0 additional checks
+
+ELF metadata detection includes exact CTF/BTF type/index sections (`.ctf`, `.SUNW_ctf`,
+`.BTF`, `.BTF.ext`, `.BTF.base`, `.gdb_index`) even after ordinary strip. Public dynamic
+symbols, unwind tables and `.BTF_ids` are not classified by this exact-name rule.
+Eligible private type data can be separated with [split-elf-debug](private-elf-debug.md).
+
+Source-map structural inspection supports UTF-8, UTF-16 and UTF-32, encoded XSSI
+headers and root arrays as well as objects. The XSSI header remains capped at 4 KiB;
+JSON remains capped at 8 MiB with existing depth/node budgets. Large JSON arrays now
+receive the same incomplete-inspection handling as large objects.
+
+Canonical V7 TAR is recognized by bounded header/checksum structure and explicitly
+rejected as unsupported. `.br` suffixes are likewise unsupported, including nested
+ZIP/ASAR members. Arbitrarily renamed Brotli streams have no supported magic and
+may remain undetected. Opting out does not establish that the contents were inspected.
+
+Document/policy inputs must be stable regular files; leaf links and special files
+are rejected. See [1.0 migration and exact release evidence](releases/v1.0.0.md).

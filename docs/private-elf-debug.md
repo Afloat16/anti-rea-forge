@@ -77,3 +77,14 @@ The unstripped, public and deliberately restored ELFs must have identical machin
 ### Recorded run
 
 On the project-owned November 9, 2026 fixture, Ghidra 12.2 ran from its SHA-256-verified official archive using the Java headless entry point. IDA Freeware 5.0.0.879 analyzed identical input hashes on Windows. A fresh scratch database was used for each input. QEMU i386 executed the ELFs during the recorded Linux replay. The [Windows observation log](https://github.com/Afloat16/anti-rea-forge/actions/runs/42617577454/job/129161188137), [pinned one-off observer and exact fixture files](https://github.com/Afloat16/anti-rea-forge/tree/e8c2386dab4b2930ce6430fcc54765480ad174aa/cases), and [paired report with measured names, addresses, hashes and receipt outcomes](results/native-elf-controls.json) identify the evidence behind the README. The checked-in Windows adapter performs the same IDA queries after first-run setup. It analyzes locally using the owner's installation.
+
+## CTF/BTF type metadata in 1.0
+
+Ordinary GNU strip can retain private type names even after the static symbol table
+is gone. The splitter now preserves eligible `.ctf`, `.SUNW_ctf`, `.BTF`, `.BTF.ext`,
+`.BTF.base` and `.gdb_index` sections in the private debug file and explicitly removes
+them publicly. Only unique, non-allocated PROGBITS sections are accepted. Each private
+section must retain its exact size and SHA-256, and the original runtime-segment
+checks still apply. Allocated/duplicate type sections and already externalized
+debug references remain rejected. Start from the original linked ELF with static
+symbols, not an already stripped binary. [Actual GCC/strip/split controls](../tests/test_elf_type_metadata.py)

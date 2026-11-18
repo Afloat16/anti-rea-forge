@@ -7,6 +7,7 @@ Authenticated VM instructions are plaintext in the authorized process.
 
 from __future__ import annotations
 
+from collections import Counter
 import hashlib
 from importlib import resources
 from pathlib import Path
@@ -24,7 +25,7 @@ _NAME = r"[A-Za-z$._][A-Za-z0-9$._-]*"
 _LOCAL = r"%(?:" + _NAME + r"|[0-9]+)"
 _GLOBAL = re.compile(r"^@(" + _NAME + r") = ([^\n]*)$", re.MULTILINE)
 _TOKENS = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|@(' + _NAME + r")")
-_DEFINITION_TOKENS = re.compile(
+_SYNTAX_TOKENS = re.compile(
     r'"(?:[^"\\]|\\.)*"|;[^\n]*'
     r'|[@%!](?:' + _NAME + r'|[0-9]+|"(?:[^"\\]|\\.)*")'
     r'|(?:' + _NAME + r'|[0-9]+)[ \t]*:'
@@ -262,6 +263,7 @@ def _loader(storage, ready, payload_bytes, payload_sha256, cpp_namespace):
                        f"memory.buffer->data() + {item['offset_bytes']});")
     expected = ", ".join(f"0x{value:02x}" for value in bytes.fromhex(payload_sha256))
     header = '''// Initialize before starting workers and clear after joining them.
+// Automatic module teardown permanently retires the loader; later initialization fails.
 #pragma once
 #include "releaseguard_sealed_asset.hpp"
 namespace releaseguard {
@@ -283,9 +285,15 @@ extern "C" {
 
 namespace releaseguard {
 namespace {
+// This trivially destructible flag remains valid after memory_owner teardown.
+// A later global destructor must not access or resurrect its destroyed owner.
+bool module_retired = false;
 struct memory_owner {
     std::unique_ptr<secure_buffer> buffer;
-    ~memory_owner() noexcept { clear_native_code(); }
+    ~memory_owner() noexcept {
+        clear_native_code();
+        module_retired = true;
+    }
 };
 memory_owner& module_memory() noexcept {
     static memory_owner memory;
@@ -295,11 +303,12 @@ memory_owner& module_memory() noexcept {
 
 void clear_native_code() noexcept {
 ''' + "\n".join(clearing) + '''
-    module_memory().buffer.reset();
+    if (!module_retired) module_memory().buffer.reset();
 }
 
 bool initialize_native_code(const native_asset_key& key) noexcept {
     clear_native_code();
+    if (module_retired) return false;
     try {
         auto pending = std::make_unique<secure_buffer>(''' + str(payload_bytes) + ''',
                                                        secure_buffer_options{true, true});
@@ -345,8 +354,16 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
     aad = _context(product, release, "vm-code", module_id)
     _require(type(after_ir_text) is str and type(vm_coverage) is list and vm_coverage,
              "Expected canonical VM IR and its verified observation list")
-    _require(re.search(r"^\s*module\s+asm\b", after_ir_text, re.MULTILINE) is None,
-             "Sealed VM does not support module assembly")
+    # These constructs emit bytes outside the inventoried VM globals. Inspect
+    # syntax tokens across the whole module so same-line module assembly and
+    # data attached to a wrapper/private helper cannot survive the closure.
+    # Comments, quoted strings, identifiers and labels may use these words.
+    syntax_counts = Counter(match[1] for match in _SYNTAX_TOKENS.finditer(after_ir_text)
+                            if match[1] is not None)
+    _require(not syntax_counts["asm"],
+             "Sealed VM does not support module assembly or inline assembly")
+    _require(not (syntax_counts["prefix"] or syntax_counts["prologue"]),
+             "Sealed VM does not support function prefix or prologue data")
     _require(re.search(r"^[ \t]*!llvm\.(?:linker\.options|dependent-libraries)\s*=",
                        after_ir_text, re.MULTILINE) is None,
              "Sealed VM does not support linker metadata")
@@ -364,7 +381,7 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
     # Reject definitions that a line-oriented canonical reader cannot inventory,
     # including same-line or split headers. Names such as @define, %define,
     # !define and define: are identifiers, not this top-level keyword.
-    definition_count = sum(match[1] == "define" for match in _DEFINITION_TOKENS.finditer(after_ir_text))
+    definition_count = syntax_counts["define"]
     _require(definition_count == len(functions),
              "Unsupported VM function definition; expected canonical LLVM syntax")
     globals_found = list(_GLOBAL.finditer(after_ir_text))

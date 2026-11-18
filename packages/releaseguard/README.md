@@ -8,8 +8,13 @@ release checks and verification code used by the Python tools. There is no
 JavaScript build step and no second cryptographic implementation to maintain.
 
 **Node.js 22+ and Python 3.10+ are required.** Install this repository's Python
-package into the interpreter you select. This package is currently a **local,
-private workspace package**; the project does not claim an npm registry release.
+package into the interpreter you select. The 1.0 SDK is available as an installable **GitHub Release archive** and as a local
+workspace package. It remains marked private to prevent accidental npm publication;
+no npm registry release is claimed.
+
+```sh
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/anti-rea-forge-releaseguard-1.0.0.tgz
+```
 
 ## Install and run
 

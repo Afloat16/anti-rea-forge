@@ -125,7 +125,10 @@ function(releaseguard_protect target)
 
     find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
     set(_rg_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/releaseguard-generated/${target}")
-    set(_rg_init_command "${Python3_EXECUTABLE}" -m releaseguard native-init
+    # Resolve the selected interpreter's installed package. A source/build
+    # directory module or inherited PYTHONPATH must not replace initialization
+    # or turn the policy gate into a successful unrelated Python program.
+    set(_rg_init_command "${Python3_EXECUTABLE}" -I -m releaseguard native-init
         --out "${_rg_generated_dir}")
     if(DEFINED RG_SEED)
         list(APPEND _rg_init_command --seed "${RG_SEED}")
@@ -194,7 +197,7 @@ function(releaseguard_protect target)
     # Make/Ninja relink on policy edits. Gate failures are normal build failures.
     set_property(TARGET "${target}" APPEND PROPERTY LINK_DEPENDS "${_rg_policy}")
     add_custom_command(TARGET "${target}" POST_BUILD
-        COMMAND "${Python3_EXECUTABLE}" -m releaseguard gate
+        COMMAND "${Python3_EXECUTABLE}" -I -m releaseguard gate
             "$<TARGET_FILE:${target}>" --policy "${_rg_policy}"
         COMMENT "ReleaseGuard: checking native release policy for ${target}"
         VERBATIM)

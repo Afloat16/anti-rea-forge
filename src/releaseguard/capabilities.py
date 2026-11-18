@@ -2,10 +2,11 @@
 
 The replay database and every ancestor directory must be controlled by the
 server operator. They must not be replaced concurrently, restored from an older
-backup, or reset while outstanding capabilities exist. File identity checks
-detect ordinary replacement; they are not protection against a malicious
-directory owner or rollback of the database/storage itself. Use local storage
-with working SQLite locking and durability guarantees. POSIX creates use 0600;
+backup, or reset while outstanding capabilities exist. Each live store instance
+pins its file identity across calls to detect ordinary replacement; this is not
+protection against a malicious directory owner or rollback of the database or
+storage itself. Use local storage with working SQLite locking and durability
+guarantees. POSIX creates use 0600;
 on Windows the operator must also protect the directory with an appropriate ACL.
 
 ``now`` is the trusted server clock, or a test seam, never client-provided time.
@@ -194,8 +195,16 @@ def consume_capability(document: dict[str, Any], public: Ed25519PublicKey,
         raw_public = public.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
     except Exception as exc:
         raise GuardError("Capability issuer identity unavailable") from exc
-    store._consume_nonce(hashlib.sha256(raw_public).hexdigest(), expected["audience"],
-                         claims["jti"], claims["iat"], claims["exp"], now)
+    consumed_at = store._consume_nonce(hashlib.sha256(raw_public).hexdigest(), expected["audience"],
+                                      claims["jti"], claims["iat"], claims["exp"], now)
+    # Durable commit, connection teardown or scheduling can outlast a short
+    # capability. Never return admission after its window closes or the trusted
+    # clock moves backwards. A final denial leaves the committed nonce spent.
+    completed_at = _now_seconds(now)
+    if not claims["iat"] <= completed_at < claims["exp"]:
+        raise GuardError("Capability is expired or not yet valid after consumption")
+    if completed_at < consumed_at:
+        raise GuardError("Trusted capability server clock rollback detected after consumption")
     return claims
 
 
@@ -258,6 +267,7 @@ class ReplayStore:
     def __init__(self, path: Path | str, max_entries: int = 10000):
         self.path = Path(path).absolute()
         self.max_entries = _capacity(max_entries)
+        self._file_id: tuple[int, int] | None = None
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             self._validate(connection)
@@ -285,6 +295,7 @@ class ReplayStore:
                 os.fchmod(descriptor, 0o600)
             store = object.__new__(cls)
             store.path, store.max_entries = target, maximum
+            store._file_id = (created.st_dev, created.st_ino)
             with store._connection() as connection:
                 connection.execute("BEGIN IMMEDIATE")
                 connection.execute("PRAGMA application_id = 0x52474331")
@@ -327,6 +338,9 @@ class ReplayStore:
         descriptor: int | None = None
         try:
             before = _check_file(self.path)
+            file_id = (before.st_dev, before.st_ino)
+            if self._file_id is not None and file_id != self._file_id:
+                raise GuardError("Replay store file was replaced since this instance was opened")
             descriptor = os.open(self.path, os.O_RDWR | getattr(os, "O_BINARY", 0)
                                  | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
             opened = os.fstat(descriptor)
@@ -334,6 +348,8 @@ class ReplayStore:
                 opened.st_dev, opened.st_ino
             ) != (before.st_dev, before.st_ino):
                 raise GuardError("Replay store file changed before opening")
+            if self._file_id is None:
+                self._file_id = file_id
             # mode=rw is essential: losing the store must not reset replay state.
             connection = sqlite3.connect(self.path.as_uri() + "?mode=rw", uri=True,
                                          timeout=5.0, isolation_level=None)
@@ -412,7 +428,7 @@ class ReplayStore:
         return state[3], count
 
     def _consume_nonce(self, issuer: str, audience: str, jti: str,
-                       issued_at: int, expires_at: int, now: datetime | None) -> None:
+                       issued_at: int, expires_at: int, now: datetime | None) -> int:
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             last_seen, _ = self._validate(connection)
@@ -445,3 +461,4 @@ class ReplayStore:
                 connection.commit()
                 raise GuardError("Capability replay rejected") from exc
             connection.commit()
+        return timestamp
