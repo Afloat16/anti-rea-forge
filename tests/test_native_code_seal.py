@@ -133,6 +133,33 @@ def pcsection_fixtures(source):
     return marker, variants
 
 
+def uncovered_function(linkage=""):
+    # The full-width immediate survives code generation as inspectable bytes.
+    marker = b"OWNED-FN"
+    value = int.from_bytes(marker, "little")
+    definition = (f"define {linkage}i64 @uncovered_plaintext_function(i64 %value) {{\n"
+                  f"entry:\n  %result = xor i64 %value, {value}\n  ret i64 %result\n}}\n")
+    return marker, definition
+
+
+def with_runtime_helpers(source):
+    """Keep an ordinary transitive private helper chain in the VM runtime."""
+    source = source.replace("  %result = add i64 %mixed, %wide",
+                            "  %helper.result = call i64 @runtime_helper(i64 %mixed)\n"
+                            "  %result = add i64 %helper.result, %wide")
+    return source + '''
+define private i64 @runtime_helper(i64 %value) {
+entry:
+  %result = call i64 @runtime_leaf(i64 %value)
+  ret i64 %result
+}
+define private i64 @runtime_leaf(i64 %value) {
+entry:
+  ret i64 %value
+}
+'''
+
+
 def embedded_array(header, name):
     block = header.split(("embedded_asset_" + name + " = {").encode())[1].split(b"};")[0]
     return bytes(int(value, 16) for value in re.findall(rb"0x([0-9a-f]{2})", block))
@@ -332,6 +359,40 @@ class NativeCodeSealValidation(unittest.TestCase):
         for definition in definitions:
             with self.subTest(definition=definition), self.assertRaisesRegex(GuardError, "Unsealed VM storage"):
                 self.seal(source=self.source + "\n@uncovered = " + definition + "\n")
+
+    def test_uncovered_function_definitions_fail_closed_for_all_linkages(self):
+        # A cloned/outlined original body must not survive beside the encrypted
+        # wrappers simply because it was absent from the original coverage list.
+        for linkage in ("", "internal ", "private ", "available_externally ", "linkonce_odr ", "weak "):
+            _, definition = uncovered_function(linkage)
+            with self.subTest(linkage=linkage), self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+                self.seal(source=self.source + "\n" + definition)
+
+    def test_removed_original_cannot_leave_an_uncovered_definition(self):
+        coverage = copy.deepcopy(self.coverage)
+        coverage.append({"name": "original_removed", "requested": False, "removed": True})
+        _, definition = uncovered_function("internal ")
+        with self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+            self.seal(source=self.source + "\n" + definition, coverage=coverage)
+
+    def test_noncanonical_function_definition_cannot_escape_the_inventory(self):
+        _, definition = uncovered_function()
+        for replacement in ("  define ", "define\t"):
+            with self.subTest(replacement=replacement), self.assertRaisesRegex(
+                    GuardError, "Unsupported VM function definition"):
+                self.seal(source=self.source + "\n" + definition.replace("define ", replacement, 1))
+
+    def test_runtime_dependency_closure_keeps_transitive_private_helpers_and_declarations(self):
+        source = with_runtime_helpers(self.source)
+        # A declaration has no body to disclose and need not be a VM wrapper.
+        source += "\ndeclare i32 @unused_external_declaration(i32)\n"
+        rewritten, _, details = self.seal(source=source)
+        self.assertIn("define private i64 @runtime_helper", rewritten)
+        self.assertIn("define private i64 @runtime_leaf", rewritten)
+        self.assertIn("declare i32 @unused_external_declaration(i32)", rewritten)
+        self.assertEqual([item["name"] for item in details["guarded_wrappers"]], ["rg_compute"])
+        with self.assertRaisesRegex(GuardError, "runtime helpers must remain private"):
+            self.seal(source=source.replace("define private i64 @runtime_leaf", "define i64 @runtime_leaf"))
 
     def test_unrecognized_global_syntax_is_rejected_instead_of_ignored(self):
         for declaration in (
@@ -564,6 +625,37 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
                 self.assertIn(marker, artifact.read_bytes())
                 with self.assertRaisesRegex(GuardError, "object-emitting attached metadata"):
                     seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_uncovered_function_has_real_object_bytes_and_sealing_rejects_it(self):
+        source, coverage = fixture()
+        for linkage in ("", "internal ", "private "):
+            name = linkage.strip() or "external"
+            marker, definition = uncovered_function(linkage)
+            original = self.work / ("uncovered-function-" + name + ".ll")
+            original.write_text(source + "\n" + definition)
+            verified = self.work / ("uncovered-function-" + name + "-verified.ll")
+            artifact = self.work / ("uncovered-function-" + name + ".o")
+            with self.subTest(linkage=name):
+                self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
+                               "-o", verified])
+                self.run_tool([self.llvm / "llc", "-O=2", "-relocation-model=pic", "-filetype=obj",
+                               verified, "-o", artifact])
+                self.assertIn(marker, artifact.read_bytes())
+                with self.assertRaisesRegex(GuardError, "Uncovered VM function"):
+                    seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+
+    def test_private_runtime_helper_chain_preserves_authorized_results_and_clear(self):
+        source, coverage = fixture()
+        bundle = seal_virtualized_ir(with_runtime_helpers(source), coverage, self.key, **CONTEXT)
+        loaded, _ = self.build("runtime-helper-chain", bundle)
+        self.addCleanup(loaded.rg_clear)
+        self.assertEqual(loaded.rg_compute(123), 0)
+        self.assertTrue(loaded.rg_initialize(self.key))
+        for value in (0, 1, 123, 0x80000000, 0xffffffff):
+            self.assertEqual(loaded.rg_compute(value), ((value ^ WORDS[0]) + CODE[0]) & 0xffffffff)
+        loaded.rg_clear()
+        self.assertEqual(loaded.rg_compute(123), 0)
+        self.assert_cleared(loaded, bundle[2])
 
     def test_cleared_storage_rejects_even_with_ready_forced(self):
         loaded = self.normal

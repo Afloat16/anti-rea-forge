@@ -47,9 +47,21 @@ _FIELDS = {
     "max_archive_depth", "max_archive_entries", "max_files",
 }
 _ZIP_EXTENSIONS = {".zip", ".jar", ".war", ".ear", ".whl", ".nupkg", ".vsix", ".apk", ".aab"}
-_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst"}
+_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst",
+                           ".a", ".lib", ".deb"}
 _UNSUPPORTED_MAGICS = (b"\x1f\x8b", b"BZh", b"\xfd7zXZ\x00", b"7z\xbc\xaf\x27\x1c",
-                       b"Rar!\x1a\x07", b"\x28\xb5\x2f\xfd", b"CrAU")
+                       b"Rar!\x1a\x07", b"\x28\xb5\x2f\xfd", b"CrAU", b"!<arch>\n", b"!<thin>\n")
+# Microsoft checks 30 MSF7 signature bytes, excluding two alignment bytes in
+# its superblock; requiring LLVM's canonical 32 bytes would miss that variant.
+# MSF2's declared 44-byte signature includes two final zero bytes. These are
+# recognition boundaries only: no MSF blocks or CLI metadata tables are read.
+# https://github.com/microsoft/microsoft-pdb/blob/master/PDB/msf/msf.cpp
+# https://github.com/dotnet/runtime/blob/main/docs/design/specs/PortablePdb-Metadata.md
+_STANDALONE_METADATA_MAGICS = (
+    ("msf7", b"Microsoft C/C++ MSF 7.00\r\n\x1aDS\0"),
+    ("msf2", b"Microsoft C/C++ program database 2.00\r\n\x1aJG\0\0"),
+    ("cli-metadata", b"BSJB"),
+)
 _KEY_MARKERS = ("-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----",
                 "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN EC PRIVATE KEY-----",
                 "-----BEGIN DSA PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----")
@@ -369,9 +381,19 @@ class _Scanner:
 
     def native_metadata(self, stream: BinaryIO, size: int, path: str,
                         members: tuple[str, ...] = ()) -> None:
-        """Check recognized ELF/PE/Mach-O payloads without changing public APIs."""
+        """Check native images and reject recognized unsupported debug containers."""
         stream.seek(0)
-        prefix = stream.read(min(size, 4))
+        prefix = stream.read(min(size, 44))
+        for format_name, magic in _STANDALONE_METADATA_MAGICS:
+            if prefix.startswith(magic):
+                # BSJB is also used by ordinary CLI metadata. Do not claim to
+                # have parsed a Portable PDB or private symbols from a signature.
+                self.native_files_checked += 1
+                self.native_metadata_scan_completed = False
+                self.add("native_metadata_unverifiable", path, members, format=format_name,
+                         reason="unsupported_standalone_metadata")
+                return
+        prefix = prefix[:4]
         if prefix == b"\x7fELF":
             format_name, reader = "elf", audit_elf_stream
         elif prefix.startswith(b"MZ"):
@@ -778,9 +800,9 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "Static exposure checks only; passing does not measure REA or cracking resistance.",
             "PEM and source-map markers are heuristics. Bounded JSON inspection also recognizes v3 source maps; arbitrary JS and encoded data can remain undetected.",
             "JSON-like payloads exceeding 8 MiB or structural limits fail source-map inspection when enabled.",
-            "ELF/PE/Mach-O checks report debug metadata and private/static symbols, including inside inspected archives. Public imports/exports and runtime metadata remain observable; other native formats are not inspected.",
+            "ELF/PE/Mach-O checks report debug metadata and private/static symbols, including inside inspected archives. Standalone MSF7/MSF2 and raw CLI metadata are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports and runtime metadata remain observable; other native formats are not inspected.",
             "Native-token findings identify the public token format, not proof of validity. Reports retain file paths and archive member names.",
-            "Stored/deflated ZIP and canonical ASAR containers are inspected; unpacked ASAR files must match exact siblings in the same disk/ZIP/ASAR namespace. Missing, mismatched or unindexed sidecars fail inspection. ZIP64, links, path aliases, prefixed/concatenated archives and unindexed packed bytes remain unsupported.",
+            "Stored/deflated ZIP and canonical ASAR containers are inspected; unpacked ASAR files must match exact siblings in the same disk/ZIP/ASAR namespace. Missing, mismatched or unindexed sidecars fail inspection. Recognized ar/thin-ar static libraries are unsupported; external thin members are never opened. ZIP64, links, path aliases, prefixed/concatenated archives and unindexed packed bytes remain unsupported.",
             "scan_completed means the scan plan finished; archive_scan_completed is false for detected unexpanded archives.",
             "The byte budget counts disk bytes and all inspected ZIP/ASAR payloads, including deduplicated packed aliases; an unpacked sidecar is counted at its actual sibling location. No members are extracted or executed.",
             "Release roots and ancestors must stay under trusted build control. Verify later-used bytes with a signed manifest.",

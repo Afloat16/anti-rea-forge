@@ -356,6 +356,8 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
              and layout is not None and layout[1].startswith("e"),
              "Sealed VM requires the little-endian x86-64 Linux module runtime")
     functions = _functions(after_ir_text)
+    _require(len(re.findall(r"^[ \t]*define\b", after_ir_text, re.MULTILINE)) == len(functions),
+             "Unsupported VM function definition; expected canonical LLVM syntax")
     globals_found = list(_GLOBAL.finditer(after_ir_text))
     _require(sum(line.lstrip().startswith("@") for line in after_ir_text.splitlines()) == len(globals_found),
              "Unsupported VM global definition; expected an exact canonical unquoted name")
@@ -408,6 +410,12 @@ def seal_virtualized_ir(after_ir_text, vm_coverage, key, product, release, modul
             else:
                 _require(reference.startswith("llvm."), "VM runtime has an external native dependency")
     _require(set(expected) <= associated, "Covered VM storage is disconnected from the runtime")
+    # Coverage describes original wrappers, while the compiler can introduce
+    # additional definitions. A leftover clone/outlined body must not be emitted
+    # in plaintext beside the sealed storage. Only the exact wrapper set and
+    # its private runtime dependency closure have been accounted for above.
+    _require(set(functions) == set(wrappers) | visited,
+             "Uncovered VM function definitions remain outside the verified wrappers and runtime")
     pointer_tables, retention = [], {}
     for name, definition in globals_by_name.items():
         if name in expected:

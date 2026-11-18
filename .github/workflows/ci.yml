@@ -213,7 +213,7 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/asar-controls" --ignore-scripts --no-audit --no-fund @electron/asar@4.3.2
       - name: Require portable parser, key-to-sign and real native controls
         run: |
-          python -m unittest tests.test_asar tests.test_asar_unpacked tests.test_container_boundaries tests.test_release_disclosures tests.test_project_asset_keys tests.test_release_snapshot_consistency tests.test_macho tests.test_release_exposure_controls -v
+          RELEASEGUARD_REQUIRE_AR_TOOLCHAIN=1 RELEASEGUARD_REQUIRE_PE_BINUTILS=1 python -m unittest tests.test_asar tests.test_asar_unpacked tests.test_container_boundaries tests.test_ar_boundaries tests.test_standalone_metadata tests.test_pe_section_metadata tests.test_release_disclosures tests.test_project_asset_keys tests.test_release_snapshot_consistency tests.test_macho tests.test_release_exposure_controls -v
           python benchmarks/release_exposure_controls.py --out "$RUNNER_TEMP/release-exposure.json"
           python benchmarks/asar_package_controls.py --asar-cli "$RUNNER_TEMP/asar-controls/node_modules/.bin/asar" --out "$RUNNER_TEMP/asar-packages.json"
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
@@ -273,7 +273,7 @@ jobs:
         run: npm exec --yes --package=typescript@7.0.2 -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 packages/releaseguard/test/types-smoke.ts
 
       - name: Exercise portable checks without a native toolchain
-        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_project_asset_keys tests.test_asar tests.test_asar_unpacked tests.test_container_boundaries tests.test_release_disclosures tests.test_release_snapshot_consistency tests.test_macho tests.test_analysis tests.test_analysis_cli tests.test_split_maps tests.test_split_maps_cli -v
+        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_project_asset_keys tests.test_asar tests.test_asar_unpacked tests.test_container_boundaries tests.test_ar_boundaries tests.test_standalone_metadata tests.test_pe_section_metadata tests.test_release_disclosures tests.test_release_snapshot_consistency tests.test_macho tests.test_analysis tests.test_analysis_cli tests.test_split_maps tests.test_split_maps_cli -v
 
       - name: Require real Mach-O metadata controls on macOS
         if: runner.os == 'macOS'
@@ -320,7 +320,8 @@ jobs:
           where cl
           if errorlevel 1 exit /b 1
           set CXX=cl
-          python -m unittest tests.test_native_literal tests.test_secure_buffer -v
+          set RELEASEGUARD_REQUIRE_PDB_TOOLCHAIN=1
+          python -m unittest tests.test_native_literal tests.test_secure_buffer tests.test_standalone_metadata_compiled -v
 
       - name: Configure MSVC example
         if: runner.os == 'Windows'
