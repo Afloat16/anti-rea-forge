@@ -9,6 +9,10 @@
 - Inspect bounded thin/universal Mach-O metadata, including dSYM, DWARF, STABS and private symbols, with structural Java class disambiguation for the shared CAFEBABE prefix.
 - Bind ASAR unpacked entries to exact inventoried siblings in the same disk/ZIP/ASAR namespace, verify optional whole/block integrity and reject missing, mismatched or unindexed sidecars.
 - Extend the official ASAR controls, add mandatory macOS compiler/strip/dSYM controls, and report Android OTA CrAU as explicitly unsupported rather than inspected.
+- Distinguish Apple strip's exact fixed compatibility STAB from private debug data with strict record/table context; handle N_OSO's CPU subtype byte without treating it as a section index. Preserve real compiler/strip controls and failure diagnostics.
+- Detect PE DWARF/STABS sections independently of the debug directory, including truncated and bounded GNU long names; add real GNU objcopy/objdump controls and malformed-name regressions.
+- Reject recognized ar/thin-ar libraries and renamed standalone MSF7/MSF2/raw CLI metadata as unsupported, including inside ZIP/ASAR. Never follow external thin-ar references. Add mandatory GNU ar and Windows MSVC-generated PDB controls.
+- Require a complete sealed-function inventory in addition to the global-storage inventory. Reject unaccounted definitions and noncanonical hidden definitions, while retaining verified wrappers, their private runtime helper closure and unused declarations.
 
 ## Unreleased — release hardening, 2026-11-17
 

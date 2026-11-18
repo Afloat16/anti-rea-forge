@@ -6,9 +6,11 @@
 
 Release checks inspect **ZIP, packed ASAR and verified ASAR unpacked siblings**, recognize escaped v3 source-map JSON, and check recognized ELF/PE/Mach-O for private debug metadata and symbols. Renaming a supported package or native module does not skip inspection. Ambiguous layouts, missing sidecars and exhausted budgets block publication.
 
+PE checks now include DWARF/STABS sections and bounded GNU long section names even without a debug directory. Renamed standalone MSF/PDB and raw CLI metadata, plus ar/thin-ar libraries, are recognized and rejected as unsupported instead of silently counted as inspected. Apple strip's exact public compatibility marker is distinguished from private STABS, with real macOS controls.
+
 Known external asset/code keys can be configured once in `project.json` and checked by `check`, `prepare` and the JavaScript SDK. Key identities and bytes are rechecked before completion. Manifest operations recheck the complete inventory, and `prepare` validates the signed release again after creating its sidecars; a failed final check removes the new output bundle.
 
-Generated native-token verifiers are isolated per translation unit. Sealed native-function builds reject unaccounted globals and object-emitting `!pcsections` metadata. These controls address release and validation boundaries; authorized process memory, public APIs and shipped instructions remain observable.
+Generated native-token verifiers are isolated per translation unit. Sealed native-function builds reject unaccounted globals, leftover function definitions and object-emitting `!pcsections` metadata. The permitted runtime helper code remains public; its inclusion is not proof that arbitrary helper computations are encrypted. These controls address release and validation boundaries; authorized process memory, public APIs and shipped instructions remain observable.
 
 [Integration](docs/portable-release.md) · [2026-11-18 scope and validation (中文)](docs/rea-coverage-2026-11-18.zh-CN.md) · [Earlier measured release controls](docs/results/release-exposure-controls.json)
 

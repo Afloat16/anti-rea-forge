@@ -143,14 +143,34 @@ disable the relevant policy explicitly if your release is meant to include them.
 `check_native_metadata` adds `native_debug_metadata`, `native_symbol_table` or
 `native_metadata_unverifiable` findings. ELF section tables/names must be available for
 this metadata check; an absent table is not proof that private metadata was removed.
+PE inspection includes DWARF/STABS section names independently of the debug directory,
+including eight-byte truncated names and GNU `/decimal` references into a bounded COFF
+string table. A string table can remain after all COFF symbol records were removed.
+Malformed/unresolved names are unverifiable. When a string table must be resolved,
+tables above 1 MiB and names above 4096 bytes are unverifiable.
+The ambiguous truncated `.gnu_deb` name is conservatively treated as debug evidence;
+the resolved `.gnu_debuglink` remains allowed, as in ELF. These are metadata indicators,
+not a complete decoder of all debug contents. Both `gate` and `scan-release` use this PE audit.
+
 The audit does not remove or reject ordinary public imports/exports. Mach-O support
 covers thin 32/64-bit files in both byte orders and bounded canonical universal files;
-DWARF, STABS and named local/private-external symbols are reported. Recognized malformed,
+DWARF, STABS and named local/private-external symbols are reported. Apple strip's exact
+fixed `radr://5614542` N_OPT record is counted separately only with the expected record
+fields and validated local/indirect-table context; lookalikes and other STABS stay findings.
+Recognized malformed,
 encrypted or unsupported profiles are unverifiable. Java class files sharing the
 CAFEBABE prefix are distinguished structurally; this is not a JVM verifier. DEX, CIL
 and other executable formats are outside this metadata audit. An explicit policy
 opt-out is available for intentionally shipped native debug metadata. The report
 records whether the check was enabled and how many native payloads were inspected.
+
+Standalone Microsoft MSF7/MSF2 containers and raw `BSJB` CLI metadata roots are recognized
+by signature, including in ZIP/ASAR and after renaming. They produce
+`native_metadata_unverifiable` with reason `unsupported_standalone_metadata` and set
+`native_metadata_scan_completed` to `false`. This is conservative refusal, not an MSF or
+Portable PDB parser. `BSJB` is shared with ordinary CLI metadata and does not alone prove
+that a file contains a Portable PDB or private symbols. The same explicit
+`check_native_metadata` opt-out applies when such metadata is intentionally distributed.
 
 ### Keep external keys in the scan-to-sign workflow
 
@@ -237,8 +257,13 @@ package as fully inspected. Header integrity is consistency data, not a trusted
 publisher signature. No target JavaScript/native code is run and no archive member
 is extracted to the filesystem.
 
-Detected tar, gzip, bzip2, xz, zstd, 7z, RAR and Android OTA `CrAU` containers produce `unsupported_archive`
-findings. `archive_not_scanned` indicates that the corresponding ZIP/ASAR inspection
+Detected tar, gzip, bzip2, xz, zstd, 7z, RAR, Android OTA `CrAU` and regular/thin ar
+containers produce `unsupported_archive` findings. When content is not a supported
+ZIP/ASAR, static-library/Debian suffixes `.a`, `.lib` and `.deb` also declare an unsupported
+container, even if damaged or truncated; renamed ar files are still recognized by their signatures. Thin-ar external
+member paths are never opened. Such libraries must be kept outside the release being
+checked or handled by a separately validated workflow; their members are not parsed.
+`archive_not_scanned` indicates that the corresponding ZIP/ASAR inspection
 was explicitly disabled. Neither finding can yield `ok: true`.
 Archive detection is not a universal file-format classifier: an unrecognized, disguised
 or custom container can still contain uninspected encoded data.

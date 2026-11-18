@@ -6,9 +6,11 @@
 
 发布检查覆盖 **ZIP、packed ASAR 及经过绑定验证的 ASAR unpacked 成员**，按 JSON 语义识别转义字段名的 v3 source map，并检查 ELF、PE 和 Mach-O 的私有调试资料与符号。修改后缀不会跳过已支持格式的检查；缺失的 sidecar、歧义布局与预算超限会阻止发布。
 
+PE 检查补上不经过调试目录的 DWARF/STABS 节及 GNU 长节名。改名后的独立 MSF/PDB、原始 CLI 元数据和 ar/thin-ar 静态库会明确按未支持格式阻止发布，不再静默算作已检查。Apple strip 的固定公开兼容标记与私有 STABS 分开判断，并由真实 macOS 工具链对照验证。
+
 外置资产/代码密钥可一次配置到 `project.json`，由 `check`、`prepare` 和 JavaScript SDK 统一检查；完成前复核原密钥文件身份和内容。清单创建、验证会重新核对全目录与已读文件；`prepare` 写完新的辅助文件后，再验证发布物与密钥，失败会撤销该新输出目录。
 
-生成的原生令牌校验器按编译单元隔离，避免不同发行实例串绑；原生函数封装同时拒绝未纳入库存的全局数据及会向对象文件输出常量的 `!pcsections` 元数据。运行时明文、公开 API 和已经分发的机器指令仍可被观察。
+生成的原生令牌校验器按编译单元隔离，避免不同发行实例串绑；原生函数封装同时拒绝未核对的全局数据、遗漏的函数定义及会向对象文件输出常量的 `!pcsections` 元数据。允许的解释器辅助函数仍是公开代码，不能据此宣称其任意计算也已加密。运行时明文、公开 API 和已经分发的机器指令仍可被观察。
 
 [接入指南](docs/portable-release.md) · [2026-11-18 覆盖与验证](docs/rea-coverage-2026-11-18.zh-CN.md) · [此前发布检查实测](docs/results/release-exposure-controls.json)
 
