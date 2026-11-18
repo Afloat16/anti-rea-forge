@@ -1,77 +1,100 @@
-# Anti-REA Forge v0.10.0
+# Anti-REA Forge 1.0
 
-[简体中文](README.zh-CN.md) · [English](README.md) · [MIT 许可证](LICENSE)
+[![CI](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Afloat16/anti-rea-forge)](https://github.com/Afloat16/anti-rea-forge/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-76d9cb.svg)](LICENSE)
 
-## 开发中的全发布包加固
+[English](README.md) · [简体中文](README.zh-CN.md) · [下载 v1.0.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.0.0) · [升级说明](docs/releases/v1.0.0.md)
 
-发布检查覆盖 **ZIP、packed ASAR 及经过绑定验证的 ASAR unpacked 成员**，按 JSON 语义识别转义字段名的 v3 source map，并检查 ELF、PE 和 Mach-O 的私有调试资料与符号。修改后缀不会跳过已支持格式的检查；缺失的 sidecar、歧义布局与预算超限会阻止发布。
+**减少逆向工具能从发布物中直接恢复的信息，把私有资料留在发布物之外。**
 
-PE 检查补上不经过调试目录的 DWARF/STABS 节及 GNU 长节名。改名后的独立 MSF/PDB、原始 CLI 元数据和 ar/thin-ar 静态库会明确按未支持格式阻止发布，不再静默算作已检查。Apple strip 的固定公开兼容标记与私有 STABS 分开判断，并由真实 macOS 工具链对照验证。
+Anti-REA Forge 将有界发布检查、私有符号/source map 分离、原生数据认证加密与可信服务授权组合起来。Python、CMake/C++ 和 JavaScript 构建复用同一套发布决策，每项保护都配有可复现的正反对照。
 
-外置资产/代码密钥可一次配置到 `project.json`，由 `check`、`prepare` 和 JavaScript SDK 统一检查；完成前复核原密钥文件身份和内容。清单创建、验证会重新核对全目录与已读文件；`prepare` 写完新的辅助文件后，再验证发布物与密钥，失败会撤销该新输出目录。
-
-生成的原生令牌校验器按编译单元隔离，避免不同发行实例串绑；原生函数封装同时拒绝未核对的全局数据、遗漏的函数定义及会向对象文件输出常量的 `!pcsections` 元数据。允许的解释器辅助函数仍是公开代码，不能据此宣称其任意计算也已加密。运行时明文、公开 API 和已经分发的机器指令仍可被观察。
-
-[接入指南](docs/portable-release.md) · [2026-11-18 覆盖与验证](docs/rea-coverage-2026-11-18.zh-CN.md) · [此前发布检查实测](docs/results/release-exposure-controls.json)
-
-## 开发中的原生函数保护
-
-`native-obfuscate --profile sealed-virtualize` 新增实验性的 LLVM 18 接入，支持 Linux x86-64 标量整数函数。执行函数所需的 VM 指令和描述表经过加密，由生成的 C++17/OpenSSL 组件使用独立提供的 32 字节密钥装载。授权后的进程内存中存在明文 VM 存储。
-
-普通、组合控制流变换和单纯 VM 样本都曾被独立重写，三份恢复实现各自通过全部 1,081,924 次隐藏参考计算。随后加入函数指令加密、真实 Ghidra 提取与补丁对照，并针对发现的编译和元数据问题建立回归。现代 IDA 9.x 的实机执行仍待完成。[完整接入与实测说明](docs/native-code.zh-CN.md) · [英文指南](docs/native-code.md)
-
-修复后的独立恢复子任务被执行层自动安全审查阻止，该项复验仍未完成。修复后报告记录了自动化对照和编译回归的实际结果。[验证状态](docs/results/native-code-hardening.json)
-
-## v0.10.0 原生数据保护
-
-**将原生程序的数据加密后发布，在授权使用时独立提供密钥。**
-
-Anti-REA Forge 新增 C++17/OpenSSL 数据读取组件。构建过程接收密文封装和应用固定的上下文，使用时通过独立提供的随机 256 位密钥取回数据。发布检查还能发现误打包的密钥及其常见编码形式。
-
-## Ghidra 和 IDA 能恢复里面的数据吗？
-
-两款工具实际分析了同一组三个完整的 Linux i386 程序。程序、密钥和资源均为本项目生成的模拟样本，每个程序在收到正确密钥后都能返回同一份随机 32 字节资源。实验逐字节核对分析器数据库导出的内容，并要求覆盖 ELF 中所有已分配且有文件内容的节。
-
-| 交给分析器的程序 | Ghidra 12.2 | IDA Freeware 5.0 |
+| 大版本发布门禁 | 原生数据实验 | JavaScript 接入 |
 | --- | --- | --- |
-| 内置原始明文资源 | 恢复原始数据 | 恢复原始数据 |
-| 内置加密资源，密钥独立保管 | 数据和有效密钥恢复数均为 0 | 数据和有效密钥恢复数均为 0 |
-| 内置加密资源，并故意把实际密钥放回程序 | 找到密钥，交回原程序后读出原始数据 | 找到密钥，交回原程序后读出原始数据 |
+| **3 个操作系统 · 13 个必需 CI 作业** | **18,024 / 18,121 个候选中，精确恢复为 0** | **0 个 npm 运行时依赖** |
+| Linux、Windows、macOS；独立安装 wheel、源码包和 SDK | 外部密钥样本；Ghidra 12.2 / IDA Freeware 5.0 历史配对对照 | Node.js 22+，隔离调用已安装的 Python 内核 |
 
-提取流程将导出的初始化字节中每个不同的连续 32 字节候选都用于尝试解密公开封装。Ghidra 实际反编译了授权函数，IDA 实际反汇编了授权函数。IDA 通过其额外文件加载 API 补充默认 ELF 加载器省略的元数据范围，报告逐项记录补充地址，并将最终导出字节与原文件核对。[双工具实测记录](docs/results/native-asset-controls.json) · [复现步骤和加载设置](docs/native-assets.md#reproduce-the-native-controls)
+上述候选数来自一个 32 字节 Linux i386 自有资源及指定提取流程，不是“所有工具破解失败率”。明文对照和故意泄露密钥的对照都能恢复资源。[实验数据](docs/results/native-asset-controls.json) · [发布门禁配置](release-policy.json) · [实时 CI](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml)
 
-## 把程序改成“通过”能取出数据吗？
+![Anti-REA Forge 原理：可信构建、公开分发、授权使用与独立私有签发方](docs/images/architecture-zh-CN.svg)
 
-两款工具分别定位授权入口，实验按各自报告的地址修改程序副本。使用错误密钥时，明文对照在打补丁后输出了原始资源，加密程序没有输出数据。
+## 1.0 的亮点
 
-随后，测试专用组件强制 OpenSSL 的最终认证检查返回成功。加密程序确实以成功状态退出，并输出 32 字节，但输出的 SHA-256 与原始资源不同。同一已修改程序收到正确密钥后，仍能返回原始数据。故意嵌入密钥的发行目录也被生产发布检查以 `asset_key_exposure` 拦下。[原生实验代码](benchmarks/native_asset_controls.py)
+- **发现普通 strip 仍会留下的资料。** ELF 检查覆盖 CTF/BTF 私有类型信息；`split-elf-debug` 将符合条件的非分配元数据完整留在私有侧，从公开产物中移除，并核对运行段与导出 ABI。PE DWARF/STABS、thin/universal Mach-O 检查覆盖其他原生发布路径。
+- **收紧打包和改名后的检查。** ZIP、packed ASAR 与已核对的 unpacked 旁文件共用检查预算；source map 按有界 JSON 内容、支持的编码和嵌套结构识别。已识别但未支持的容器、调试格式会明确阻止检查完成。
+- **确保构建门禁调用真正的校验器。** CMake 与 JavaScript SDK 使用 Python 隔离模式，防止构建目录或 `PYTHONPATH` 同名模块替换校验。完整清单、密钥一致性与生成后的最终复核检测发布过程中的变化。
+- **堵住原生封装的附加输出路径。** 核对完整函数和全局存储集合，拒绝可额外输出数据的 LLVM 元数据、附加常量及汇编。VM 指令封装仍为实验功能，明确限制支持的函数和目标平台。
+- **在真正进入处理函数前核对授权。** 能力凭证在持久化消耗重放状态后再次检查有效期；存活中的重放存储对象拒绝数据库文件替换。共用文档读取器拒绝特殊文件、不安全叶子链接、超限及变化中的输入。
+- **发布实际安装验证过的文件。** 发布流程要求 main 的全部指定 CI 作业成功，在三个系统的全新环境中安装 wheel 和源码包并测试打包 SDK；核对 SHA-256，再验证上传资产，最后公开 Release。
 
-这层防护的对象是独立保管密钥的加密数据。程序指令仍可被分析，合法使用时的进程也会持有密钥和明文。实测结论限于上述工具版本、Linux i386 模拟程序以及记录中的提取和补丁流程。[开源参考与适用范围](docs/research-native-data-2026-11-09.md)
+[核查、兼容性与证据](docs/releases/v1.0.0.md) · [便携发布接入](docs/portable-release.md) · [安全边界](SECURITY.md)
 
-## 接入自己的原生程序
+## 用实测数据说明效果
 
-在仓库根目录操作，Linux 构建机需要 Python 3.10+、C++17 编译器、OpenSSL 开发头文件和 libcrypto。下例假定私有的 `../asset-issuer` 目录已经存在，其中保存着不超过 1 MiB 的 `data.bin`。输出文件和目录使用新路径。
+| 问题 | 实测结果 | 范围与证据 |
+| --- | --- | --- |
+| 直接嵌入的明文资源能被恢复吗？ | **能**，两款工具均成功 | [Ghidra/IDA 配对实验](docs/results/native-asset-controls.json)中的正对照 |
+| 同一流程能恢复外部密钥加密的资源吗？ | **精确恢复 0 次**；逐一测试 Ghidra 的 18,024 个、IDA 的 18,121 个连续 32 字节候选 | 相同自有 i386 样本，分析器已初始化字节与原文件核对 |
+| 不小心把真实密钥发出去会怎样？ | **密钥被提取并重放，原始资源成功恢复** | 两款工具均成功；生产发布检查也报告密钥泄露 |
+| 修改本地 gate 能补上缺失的密钥吗？ | 明文对照可恢复；加密对照未恢复精确数据 | 真实 gate 补丁和强制 GCM 返回成功的对照，[方法](docs/native-assets.md) |
+| 打开 1 MiB 原生资产的耗时？ | **中位数 189.860 微秒**；预热 5 次后测量 25 次；最大值 1,456.005 微秒 | 历史 v0.10、单台 Linux x86-64；含分配/清理，不含密钥交付和进程启动。[全部样本](docs/results/native-asset-cost.json) |
+| 下载的 1.0 安装包验证了什么？ | 精确提交、必需 CI 作业、安装包行为和资产哈希 | [Release](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.0.0) 附带 `release-evidence.json`、`installation-report.json` 和 `SHA256SUMS` |
+
+CI 实际执行 Ghidra、编译器、REA CLI/source map、官方 ASAR、GNU binutils、macOS 与 MSVC 对照。历史结果保留日期与失败记录：普通、混淆及仅 VM 的原生样本曾被独立重建，并匹配 **1,081,924 次隐藏求值**；这个失败推动了外部密钥指令封装。[原生代码研究与待验证边界](docs/native-code.zh-CN.md)
+
+## 从发布门禁开始
+
+需要 Python 3.10+。将 [v1.0.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.0.0) 的 wheel 安装进选定的虚拟环境，也可在仓库内运行 `python -m pip install .`。命令与 Python 导入名继续保持 `releaseguard`。
 
 ```sh
-python -m pip install .
-python -m releaseguard asset-keygen --out ../asset-issuer/key.bin
-python -m releaseguard asset-seal ../asset-issuer/data.bin \
-  --key-file ../asset-issuer/key.bin \
-  --product myapp --release v1 --purpose reference-data --asset-id table \
-  --out asset.json
-python -m releaseguard native-asset-export asset.json \
-  --product myapp --release v1 --purpose reference-data --asset-id table \
-  --out generated-asset
-mkdir release-asset
-c++ -std=c++17 -O2 -s -Igenerated-asset examples/native-asset/read.cpp \
-  -lcrypto -o release-asset/read-asset
-./release-asset/read-asset < ../asset-issuer/key.bin
+python -m pip install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/open_release_guard-1.0.0-py3-none-any.whl
+python -m releaseguard --version
+python -m releaseguard project-init --root dist --product MyApp --out .releaseguard
+python -m releaseguard check --config .releaseguard/project.json
 ```
 
-最后一条命令会输出原始资源。接入应用时包含生成的头文件，调用 `releaseguard::open_embedded_asset(external_key, output)`，通过自己的授权流程独立交付密钥，并保管好签发目录。发布前使用 `scan-release --asset-key-file` 检查最终发行目录。[完整接入和发布检查命令](docs/native-assets.md)
+把应用构建到 `dist`，审阅 `.releaseguard/policy.json`，将私有符号、密钥和签名材料保存在该目录之外。已知外部密钥可配置到项目的 `asset_key_files`。检查失败返回非零退出码；`prepare` 扫描并签名不可变的暂存目录，将证据写到发布目录外。[完整流程](docs/portable-release.md)
 
-在一台 Linux x86-64 主机上，1 MiB 数据预热 5 次后测量 25 次，打开耗时的中位数为 **189.860 微秒**。计时包含 HKDF、AES-GCM、内存分配和上一次输出的清理，密钥获取和进程启动另计。报告保留全部样本，包括最高的 1,456.005 微秒。[性能原始记录](docs/results/native-asset-cost.json)
+### JavaScript / TypeScript
 
-项目已有的接入方式还包括私有 ELF 调试信息、服务端授权、C++ 外部随机令牌和 JavaScript source map 管理。[私有 ELF 符号与服务端操作](docs/private-elf-debug.md) · [原生令牌](docs/native-tokens.md) · [私有 source map](docs/private-source-maps.md)
+```sh
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/anti-rea-forge-releaseguard-1.0.0.tgz
+```
 
-如果这解决了你的发布问题，欢迎给项目一个 **Star**，或贡献一个可复现的自有样本。[贡献说明](CONTRIBUTING.md)
+```js
+import { createReleaseGuard } from "@anti-rea-forge/releaseguard";
+const guard = createReleaseGuard({ python: process.env.RELEASEGUARD_PYTHON });
+const report = await guard.checkProject({ config: ".releaseguard/project.json" });
+process.exitCode = report.exitCode;
+```
+
+`RELEASEGUARD_PYTHON` 应指向已安装内核的虚拟环境解释器绝对路径。SDK 压缩包通过 GitHub Release 分发，不表示已发布到 npm registry。[SDK 指南](packages/releaseguard/README.zh-CN.md)
+
+## 按保护目标选择接入方式
+
+| 目标 | 接入 | 状态 |
+| --- | --- | --- |
+| 检测发布泄露与打包歧义 | [便携发布门禁](docs/portable-release.md) | 跨平台、由明确策略控制 |
+| 没有外部密钥时保护选定的原生数据 | [原生资产](docs/native-assets.md) | C++17/OpenSSL，认证上下文绑定 |
+| 不向客户端交付私有 source map 与调试/类型信息 | [Source map](docs/private-source-maps.md)、[ELF 符号](docs/private-elf-debug.md) | 受控输入的公开/私有分离 |
+| 在可信代码中执行敏感操作 | [服务端能力凭证](docs/runtime-protection.zh-CN.md)、[分析网关](docs/analysis-authorization.md) | 需要已认证身份、固定策略与重放存储 |
+| 加密选定的 VM 指令存储 | [原生代码](docs/native-code.zh-CN.md) | **实验性** LLVM 18 / Linux x86-64 标量整数子集 |
+
+## 信任边界
+
+发布扫描核对被检查字节是否满足配置规则，不会让 Ghidra、IDA、REA、Frida 或独立文件读取器失效。合法运行期间，进程可能持有密钥与明文；分发的代码和公开 helper 仍可观察；被修改的本地客户端不能决定服务端权限。发布目录、解释器、策略、密钥和重放状态必须可信。未知编码、未支持格式也不能被解释成通用防破解保证。
+
+1.x 保持已有 v1 签名文档格式，以及 CLI/导入名。它尚未经过独立安全审计；实验性原生转换有明确范围。[安全政策](SECURITY.md) · [升级说明](docs/releases/v1.0.0.md) · [历史恢复失败记录](docs/testing-2026-10-15.zh-CN.md)
+
+## 复现与贡献
+
+```sh
+python -m pip install -e .
+python -m unittest discover -s tests -v
+npm test --prefix packages/releaseguard
+# 先设置 RELEASEGUARD_PYTHON 为已安装内核的解释器，再运行真实 CLI 集成：
+npm run test:integration --prefix packages/releaseguard
+```
+
+CI 固定外部编译器/分析器输入，并将关键对照设为必需。缺失的本地工具会记为跳过，不算执行成功。欢迎提交附带小型自有样本和复现步骤的改进。[贡献指南](CONTRIBUTING.md) · [MIT 许可证](LICENSE)

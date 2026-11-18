@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-release-guard"
-version = "0.10.0"
-description = "Anti-REA Forge: native encrypted data, private symbols and release checks"
+version = "1.0.0"
+description = "Anti-REA Forge: verified release gates, external-key protection and trusted authorization"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-dependencies = ["cryptography>=46.0.4,<51"]
+dependencies = ["cryptography>=50.0.2,<51"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: POSIX :: Linux",

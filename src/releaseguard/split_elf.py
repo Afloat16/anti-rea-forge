@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import ExitStack
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -13,7 +14,7 @@ import sys
 import tempfile
 
 from .core import GuardError, safe_relative_path, write_new
-from .elf import audit_elf
+from .elf import _TYPE_METADATA_NAMES, audit_elf
 from .native import _ENCODINGS, _assert_scanned_identity
 from .split_maps import _destination, _portable_identity, _read
 
@@ -67,6 +68,40 @@ def _objcopy(tool: str, *args: str | Path) -> bytes:
     return result.stdout
 
 
+def _type_metadata(image: bytes) -> dict[str, tuple[int, str]]:
+    """Fingerprint exact type/index sections from an already audited ELF.
+
+    Only nonallocated PROGBITS data can be moved out of the public program.
+    ELF validation bounds the section table, name table and data before this
+    helper runs. Hash views avoid copying potentially large metadata payloads.
+    """
+    is64 = image[4] == 2
+    endian = "<" if image[5] == 1 else ">"
+    header_size, shoff_at = (64, 40) if is64 else (52, 32)
+    shoff = struct.unpack_from(endian + ("Q" if is64 else "I"), image, shoff_at)[0]
+    entry_size, count, names_index = struct.unpack_from(endian + "HHH", image, header_size - 6)
+    if not count or not names_index:
+        return {}
+    layout = endian + ("IIQQQQIIQQ" if is64 else "IIIIIIIIII")
+    names_section = struct.unpack_from(layout, image, shoff + names_index * entry_size)
+    names = image[names_section[4]:names_section[4] + names_section[5]]
+    result = {}
+    view = memoryview(image)
+    for index in range(1, count):
+        section = struct.unpack_from(layout, image, shoff + index * entry_size)
+        if section[1] == 0:
+            continue
+        name = names[section[0]:names.find(b"\0", section[0])]
+        if name not in _TYPE_METADATA_NAMES:
+            continue
+        label = name.decode("ascii")
+        if label in result or section[1] != 1 or section[2] & 2:  # SHT_PROGBITS / SHF_ALLOC
+            raise GuardError("Duplicate, allocated or unsupported ELF type metadata cannot be split")
+        offset, size = section[4:6]
+        result[label] = (size, hashlib.sha256(view[offset:offset + size]).hexdigest())
+    return result
+
+
 def split_elf_debug(artifact: Path | str, public: Path | str, private: Path | str,
                     private_names: tuple[str, ...] | list[str] = ()) -> dict:
     """Publish one stripped ELF and its separate private symbols, or leave no outputs.
@@ -110,16 +145,20 @@ def split_elf_debug(artifact: Path | str, public: Path | str, private: Path | st
         source_meta = audit_elf(snapshot)
         if not source_meta["evidence"]["symbol_table_present"] or not source_meta["section_names_available"]:
             raise GuardError("Expected a linked ELF with a named section table and static symbols")
-        if set(source_meta["sections"]) & {".gnu_debuglink", ".gnu_debugaltlink", ".gnu_debugdata", ".debug_sup",
-                                         ".BTF", ".BTF.ext", ".ctf", ".SUNW_ctf", ".gdb_index"}:
+        if set(source_meta["sections"]) & {".gnu_debuglink", ".gnu_debugaltlink", ".gnu_debugdata", ".debug_sup"}:
             raise GuardError("Already split or supplementary debug metadata is unsupported")
+        type_metadata = _type_metadata(original)
         _objcopy(tool, "--only-keep-debug", snapshot, sidecar)
-        _objcopy(tool, "--strip-all", f"--add-gnu-debuglink={sidecar}", snapshot, stripped)
+        remove_types = ["--remove-section=" + name for name in sorted(type_metadata)]
+        _objcopy(tool, "--strip-all", *remove_types, f"--add-gnu-debuglink={sidecar}", snapshot, stripped)
         public_meta = audit_elf(stripped)
+        private_meta = audit_elf(sidecar)
         if (any(public_meta["evidence"].values()) or ".gnu_debuglink" not in public_meta["sections"]
-                or not audit_elf(sidecar)["evidence"]["symbol_table_present"]):
+                or not private_meta["evidence"]["symbol_table_present"]):
             raise GuardError("Could not verify separated ELF symbol and debug metadata")
         released, debug = stripped.read_bytes(), sidecar.read_bytes()
+        if _type_metadata(debug) != type_metadata:
+            raise GuardError("Could not preserve exact private ELF type metadata")
         _check_load_image(original, released)
         for marker in dict.fromkeys(private_names):
             needle = marker.encode("ascii")

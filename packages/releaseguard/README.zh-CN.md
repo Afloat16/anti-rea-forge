@@ -251,3 +251,15 @@ const report = await guard.scanRelease({
 取消、上下文变更和缺少 stdio 的 spawn 失败；受保护回调均不得误执行。
 `test/types-smoke.ts` 用于检查类型声明。
 新增功能应继续共用 Python 实现，并保留“检查完成且不通过”与“检查未完成”的区别。
+
+## 1.0 分发与安装
+
+SDK 与 Python 内核版本统一为 1.0.0。GitHub Release 提供可直接安装的 SDK 压缩包；
+package.json 保持 private 以防误发 npm，未声称 npm registry 发布。已有本地目录安装仍然支持。
+
+```sh
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/anti-rea-forge-releaseguard-1.0.0.tgz
+```
+
+配套 Python 解释器必须已安装 1.0 内核，并通过绝对路径配置。Linux、Windows、macOS
+均执行归档安装和真实 CLI 正反对照；具体归档哈希与结果在 Release 附件中。

@@ -1,77 +1,100 @@
-# Anti-REA Forge v0.10.0
+# Anti-REA Forge 1.0
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [MIT license](LICENSE)
+[![CI](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Afloat16/anti-rea-forge)](https://github.com/Afloat16/anti-rea-forge/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-76d9cb.svg)](LICENSE)
 
-## Release hardening in development
+[English](README.md) · [简体中文](README.zh-CN.md) · [Download v1.0.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.0.0) · [Upgrade guide](docs/releases/v1.0.0.md)
 
-Release checks inspect **ZIP, packed ASAR and verified ASAR unpacked siblings**, recognize escaped v3 source-map JSON, and check recognized ELF/PE/Mach-O for private debug metadata and symbols. Renaming a supported package or native module does not skip inspection. Ambiguous layouts, missing sidecars and exhausted budgets block publication.
+**Reduce what reverse-engineering tools can recover from a release. Keep private material outside it.**
 
-PE checks now include DWARF/STABS sections and bounded GNU long section names even without a debug directory. Renamed standalone MSF/PDB and raw CLI metadata, plus ar/thin-ar libraries, are recognized and rejected as unsupported instead of silently counted as inspected. Apple strip's exact public compatibility marker is distinguished from private STABS, with real macOS controls.
+Anti-REA Forge combines bounded release inspection, private debug/source-map separation, authenticated native data and trusted service authorization. It gives Python, CMake/C++ and JavaScript builds one set of release decisions, backed by reproducible positive and negative controls.
 
-Known external asset/code keys can be configured once in `project.json` and checked by `check`, `prepare` and the JavaScript SDK. Key identities and bytes are rechecked before completion. Manifest operations recheck the complete inventory, and `prepare` validates the signed release again after creating its sidecars; a failed final check removes the new output bundle.
-
-Generated native-token verifiers are isolated per translation unit. Sealed native-function builds reject unaccounted globals, leftover function definitions and object-emitting `!pcsections` metadata. The permitted runtime helper code remains public; its inclusion is not proof that arbitrary helper computations are encrypted. These controls address release and validation boundaries; authorized process memory, public APIs and shipped instructions remain observable.
-
-[Integration](docs/portable-release.md) · [2026-11-18 scope and validation (中文)](docs/rea-coverage-2026-11-18.zh-CN.md) · [Earlier measured release controls](docs/results/release-exposure-controls.json)
-
-## Native function protection in development
-
-`native-obfuscate --profile sealed-virtualize` adds experimental LLVM 18 integration for Linux x86-64 scalar-integer functions. It encrypts the VM instructions and descriptors required by the functions, with a generated C++17/OpenSSL loader and an independently supplied 32-byte key. An authorized process holds plaintext VM storage.
-
-Ordinary, split/flatten/substitution and VM-only samples were independently reconstructed and matched every one of 1,081,924 hidden evaluations. Those results led to instruction encryption, real Ghidra extraction and patch controls, and regressions for discovered compiler and metadata failures. IDA 9.x engine execution remains pending. [Integration and results](docs/native-code.md) · [中文说明](docs/native-code.zh-CN.md)
-
-Post-fix independent reconstruction is also incomplete because the execution layer's automatic safety review blocked that subtask. The recorded post-fix results cover the automated controls and compiler regressions. [Verification status](docs/results/native-code-hardening.json)
-
-## Native data protection in v0.10.0
-
-**Ship encrypted native data and supply its key independently to authorized users.**
-
-Anti-REA Forge now opens authenticated data in C++17 with OpenSSL. The build receives a sealed envelope and the application's expected context. A separately supplied random 256-bit key is required to recover the data. Release checks catch accidental inclusion of that key in common representations.
-
-## Can Ghidra and IDA recover the embedded data?
-
-Both tools analyzed the same three complete Linux i386 executables generated for this project. Each executable can return the same fresh 32-byte resource when given the correct key. The observer checks exact output bytes and verifies every allocated, file-backed ELF section exported through the analyzer database.
-
-| Program supplied | Ghidra 12.2 | IDA Freeware 5.0 |
+| Release gate | Native data experiment | JavaScript bridge |
 | --- | --- | --- |
-| Original resource embedded as plaintext | Recovered original data | Recovered original data |
-| Encrypted resource, key kept outside the release | Zero successful data or key recoveries | Zero successful data or key recoveries |
-| Encrypted resource with the actual key deliberately embedded | Recovered key, replayed it against the program and read original data | Recovered key, replayed it against the program and read original data |
+| **3 operating systems · 13 required CI jobs** | **0 exact recoveries from 18,024 / 18,121 candidates** | **0 npm runtime dependencies** |
+| Linux, Windows and macOS; fresh wheel, source and SDK installs | External-key fixture; Ghidra 12.2 / IDA Freeware 5.0, historical paired control | Node.js 22+, isolated calls to the installed Python core |
 
-The extraction procedure tries every distinct contiguous 32-byte candidate in the exported initialized bytes against the public envelope. Ghidra decompiles the gate and IDA disassembles it. IDA's documented additional-file loading API supplements metadata ranges omitted by its default ELF loader. Each added range is recorded, and every resulting byte is checked against the input. [Paired observations](docs/results/native-asset-controls.json) · [Reproduction and loader settings](docs/native-assets.md#reproduce-the-native-controls)
+The candidate counts above describe one 32-byte Linux i386 resource and the recorded extraction procedure, not an all-tools success rate. The plaintext and deliberately leaked-key controls both recover the resource. [Experiment data](docs/results/native-asset-controls.json) · [Release gate policy](release-policy.json) · [Live CI](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml)
 
-## Does patching the program recover the data?
+![Anti-REA Forge architecture: trusted build, public artifacts, authorized use and a separate private issuer](docs/images/architecture-en.svg)
 
-The harness patches the gate address discovered independently by each tool. With the wrong key, the plaintext control returns the original data after patching. The encrypted program returns no data.
+## What is new in 1.0
 
-A second fixture-only override forces OpenSSL's final authentication check to report success. The encrypted program then exits successfully and emits 32 bytes, but their SHA-256 differs from the original resource. Supplying the actual key to that same modified program still returns the exact original. The intentionally embedded-key release also triggers the production `asset_key_exposure` check. [Native experiment](benchmarks/native_asset_controls.py)
+- **Catch disclosures that ordinary stripping leaves behind.** ELF inspection detects CTF/BTF private type metadata. `split-elf-debug` preserves eligible non-allocated metadata privately, removes it from the public binary, and checks runtime segments and exported ABI. PE DWARF/STABS and thin/universal Mach-O checks cover the other native release paths.
+- **Close packaging blind spots.** ZIP, packed ASAR and verified unpacked siblings share inspection budgets. Source-map detection follows bounded JSON content across supported encodings and nested containers. Recognized unsupported containers and debug formats explicitly block completion.
+- **Keep the build gate attached to the real verifier.** CMake and the JavaScript SDK invoke the installed Python core in isolated mode. Whole-file inventory and external-key checks detect changed release inputs; final preparation rechecks the signed result.
+- **Close native sealing output paths.** Complete function/global inventories and rejection of emission-capable LLVM metadata, attached data and assembly prevent known post-transform plaintext leftovers. Native VM instruction sealing remains experimental and has a narrow supported function/target set.
+- **Check authorization at admission.** Capability expiry is rechecked after durable replay-state consumption; a live replay store rejects database-file replacement. Shared document readers reject special files, unsafe leaf links, oversized inputs and changing files.
+- **Publish the bytes that passed installation.** The release pipeline requires every named main-branch CI job, installs wheel and source archives in fresh environments on all three operating systems, exercises the packed SDK, verifies archive SHA-256, and checks uploaded assets before publication.
 
-The protection target is selected data with an independently held key. The executable's instructions remain available for analysis. During legitimate use, the process possesses both the key and plaintext. The recorded results cover the stated tools, Linux i386 fixtures and extraction/patch procedures. [Design references and scope](docs/research-native-data-2026-11-09.md)
+[Audit, compatibility and evidence](docs/releases/v1.0.0.md) · [Portable release integration](docs/portable-release.md) · [Security boundaries](SECURITY.md)
 
-## Use it in a native build
+## Evidence with controls
 
-Run from this repository on a Linux build machine with Python 3.10+, a C++17 compiler and OpenSSL development files. This example assumes your private `../asset-issuer` directory already contains `data.bin`, with a maximum size of 1 MiB. Use fresh output paths.
+| Question | Measured result | Exact scope / record |
+| --- | --- | --- |
+| Can an analyzer recover an embedded plaintext resource? | **Yes**, with both tools | Positive control in the [paired Ghidra/IDA observation](docs/results/native-asset-controls.json) |
+| Can the same procedure recover the encrypted resource without its external key? | **0 exact payload recoveries**; all 18,024 Ghidra and 18,121 IDA contiguous 32-byte candidates tested | Same owned i386 fixture; initialized analyzer bytes checked against input |
+| Does accidentally shipping the real key defeat that boundary? | **Yes**: key recovered, replayed, exact resource read | Both analyzers; the production release gate also reports the leaked key |
+| Does patching the local gate supply the missing encryption key? | Plaintext control recovers; encrypted control does not recover exact data | Actual gate patch and forced-GCM-success controls, [method](docs/native-assets.md) |
+| What does opening a 1 MiB native asset cost? | **189.860 µs median**, 25 calls after 5 warmups; maximum 1,456.005 µs | Historical v0.10 run on one Linux x86-64 host; includes allocation/cleansing, excludes key delivery/startup. [All samples](docs/results/native-asset-cost.json) |
+| What is validated for the downloadable release? | Exact commit, required CI job results, installed-package checks and archive hashes | `release-evidence.json`, `installation-report.json` and `SHA256SUMS` attached to the [Release](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.0.0) |
+
+Ghidra, compiler, REA CLI/source-map, official ASAR, GNU binutils, macOS and MSVC controls run in CI. Historical observations stay dated and retain their failures. Ordinary and VM-only native samples were independently reconstructed across **1,081,924 hidden evaluations**; that failure motivated external-key instruction sealing. [Native code research and remaining validation](docs/native-code.md)
+
+## Start with the release gate
+
+Python 3.10+ is required. Install the wheel from [v1.0.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.0.0) into your chosen virtual environment, or run `python -m pip install .` from this checkout. The public command and import name remain `releaseguard`.
 
 ```sh
-python -m pip install .
-python -m releaseguard asset-keygen --out ../asset-issuer/key.bin
-python -m releaseguard asset-seal ../asset-issuer/data.bin \
-  --key-file ../asset-issuer/key.bin \
-  --product myapp --release v1 --purpose reference-data --asset-id table \
-  --out asset.json
-python -m releaseguard native-asset-export asset.json \
-  --product myapp --release v1 --purpose reference-data --asset-id table \
-  --out generated-asset
-mkdir release-asset
-c++ -std=c++17 -O2 -s -Igenerated-asset examples/native-asset/read.cpp \
-  -lcrypto -o release-asset/read-asset
-./release-asset/read-asset < ../asset-issuer/key.bin
+python -m pip install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/open_release_guard-1.0.0-py3-none-any.whl
+python -m releaseguard --version
+python -m releaseguard project-init --root dist --product MyApp --out .releaseguard
+python -m releaseguard check --config .releaseguard/project.json
 ```
 
-The last command outputs the original resource. In your application, include the generated header and call `releaseguard::open_embedded_asset(external_key, output)`. Deliver the key through your authorization flow and keep the issuer directory private. Run `scan-release --asset-key-file` on the final staging directory before publication. [Complete integration and release-check commands](docs/native-assets.md)
+Build your application into `dist`, review `.releaseguard/policy.json`, and keep private symbols, keys and signing material outside that directory. Add known external keys to `asset_key_files` in the saved project configuration. A failed check returns a nonzero exit code. `prepare` scans and signs an immutable staging directory and writes its evidence outside the release. [Complete workflow](docs/portable-release.md)
 
-The recorded 1 MiB opening-cost test measured a median of **189.860 microseconds** across 25 calls after five warmups on one Linux x86-64 host. It includes HKDF, AES-GCM, allocations and cleansing the previous output. External-key retrieval and process startup are outside the measurement. The full report retains all samples, including the 1,456.005-microsecond maximum. [Timing record](docs/results/native-asset-cost.json)
+### JavaScript / TypeScript
 
-Existing integrations cover private ELF debugging information, service-side authorization, external C++ unlock tokens and JavaScript source maps. [Private ELF symbols and service operations](docs/private-elf-debug.md) · [Native tokens](docs/native-tokens.md) · [Private source maps](docs/private-source-maps.md)
+```sh
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/anti-rea-forge-releaseguard-1.0.0.tgz
+```
 
-If this solves a release problem for your team, **star the project** or contribute a reproducible fixture of your own. [Contributing](CONTRIBUTING.en.md)
+```js
+import { createReleaseGuard } from "@anti-rea-forge/releaseguard";
+const guard = createReleaseGuard({ python: process.env.RELEASEGUARD_PYTHON });
+const report = await guard.checkProject({ config: ".releaseguard/project.json" });
+process.exitCode = report.exitCode;
+```
+
+Set `RELEASEGUARD_PYTHON` to the absolute path of the installed virtual-environment interpreter. The SDK archive is distributed through GitHub Releases; no npm registry publication is implied. [SDK guide](packages/releaseguard/README.md)
+
+## Choose the boundary you need
+
+| Need | Integration | Status |
+| --- | --- | --- |
+| Detect accidental release disclosure and packaging ambiguity | [Portable release gate](docs/portable-release.md) | Cross-platform, policy-driven checks |
+| Keep selected native data confidential without its external key | [Native assets](docs/native-assets.md) | C++17/OpenSSL; authenticated context binding |
+| Keep private source maps and debug/type information off the client | [Source maps](docs/private-source-maps.md), [ELF symbols](docs/private-elf-debug.md) | Public/private split with controlled inputs |
+| Enforce a sensitive operation in trusted code | [Service capabilities](docs/runtime-protection.md), [analysis gateway](docs/analysis-authorization.md) | Authenticated identity, fixed policy and replay storage required |
+| Encrypt selected VM instruction storage | [Native code](docs/native-code.md) | **Experimental** LLVM 18 / Linux x86-64 scalar-integer subset |
+
+## Trust and limits
+
+A release scan checks configured rules on inspected bytes. It does not disable Ghidra, IDA, REA, Frida or another independent reader. Authorized process memory can hold keys and plaintext; distributed code and public helpers remain observable; a modified local client cannot be the authority for a server operation. Keep staging directories, interpreters, policies, keys and replay storage trusted. Unknown encodings and unsupported formats are not silently promoted to a resistance guarantee.
+
+The 1.x series keeps existing v1 signed-document formats and the CLI/import names. It is not an independent security audit, and experimental native transformations are explicitly scoped. [Security policy](SECURITY.md) · [Upgrade notes](docs/releases/v1.0.0.md) · [Historical recovery failures](docs/testing-2026-10-15.zh-CN.md)
+
+## Reproduce and contribute
+
+```sh
+python -m pip install -e .
+python -m unittest discover -s tests -v
+npm test --prefix packages/releaseguard
+# Set RELEASEGUARD_PYTHON to your installed interpreter before real CLI integration:
+npm run test:integration --prefix packages/releaseguard
+```
+
+The CI workflow pins external compiler/analyzer inputs and marks required controls as mandatory. Missing local tools are reported as skips, not successes. Contributions with a small owned fixture and a reproducible failure are welcome. [Contributing](CONTRIBUTING.en.md) · [MIT license](LICENSE)

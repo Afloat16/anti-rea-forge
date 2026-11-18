@@ -253,3 +253,16 @@ The recovered control key reproduced all 82,014 reference outputs. Patching the 
 A subsequent validation regression rejects `speculatable` helpers and affected callers, because nullable storage bindings invalidate that promise. The machine-readable record binds the final local source hashes separately from the preserved CI sample. [Memory-mapping change and CI](https://github.com/Afloat16/anti-rea-forge/pull/9)
 
 Modern IDA/Hex-Rays engine execution and independent reconstruction of v2 remain pending. The historical recovery records above retain their original sample identities and outcomes.
+
+## Final emission and shutdown checks in 1.0
+
+Final sealed IR rejects actual `prefix`, `prologue` and assembly syntax across the
+whole module, including retained private helper code. Strings, comments and ordinary
+identifiers may contain those words. This closes post-transform/direct-API emission
+paths; original-source preflight already rejected the constructs. Real LLVM controls
+verify marker bytes in unprotected objects and rejection before sealing.
+
+The generated module permanently retires on automatic static teardown. A later
+global destructor cannot reinitialize destroyed ownership; ordinary explicit
+clear/reinitialize while the owner is alive remains supported. Initialize before
+workers and clear after joining them; caller synchronization is still required.

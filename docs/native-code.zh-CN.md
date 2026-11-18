@@ -171,3 +171,13 @@ LLVM 19 实验仅替换编译测试类的对象生成方法，后续 C++ 编译�
 原虚拟化恢复样本在同一台机器上进行三轮预热和七轮各一百万次相关调用。原生基线中位数为 16.91 ns，平坦化为 35.24 ns，组合变换为 47.34 ns，VM 为 4,425.94 ns。该小函数的 VM 成本约为原生基线的 262 倍。数据包含循环运算，编译、进程启动和输入输出另计。将目标函数的性能与功能测试纳入自己的构建验收。[完整测量](results/native-code-recovery.json)
 
 控制流 profile 使用固定 eshard 提交 `be910da9267b40cbe6ae8c946eb2ef008f6e55f4`，其许可证为 NCSA。VM 使用固定 Amice 提交 `19b6c473ee8a59d66a91d3b7c2d460bb6af7c99e`，其许可证为 Apache-2.0。构建阶段载入经过哈希核对的独立插件，仓库中保留集成与验证代码。[eshard 上游](https://github.com/eshard/obfuscator-llvm/tree/be910da9267b40cbe6ae8c946eb2ef008f6e55f4) · [Amice 上游](https://github.com/fuqiuluo/amice/tree/19b6c473ee8a59d66a91d3b7c2d460bb6af7c99e)
+
+## 1.0 的最终输出与销毁检查
+
+最终封装 IR 拒绝整个模块中的实际 prefix、prologue 与汇编语法，包括保留的私有 helper；
+合法标识符、字符串和注释中的同名内容仍允许。原始输入预检原本已拒绝这些构造，
+本次修复针对转换后/直接 API 的额外输出路径，不宣称已经证明正常 CLI 绕过。
+
+生成模块自动静态析构后永久退役，较晚执行的全局析构函数无法再次初始化已销毁的
+所有权对象。所有者仍存活时，显式 clear/reinitialize 继续支持；调用者仍须在工作线程
+开始前初始化，并在全部 join 后清理。

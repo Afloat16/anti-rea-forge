@@ -76,10 +76,41 @@ def canonical(value: dict[str, Any]) -> bytes:
 
 
 def read_limited(path: Path | str, limit: int = MAX_DOCUMENT_BYTES) -> bytes:
-    with Path(path).open("rb") as handle:
+    """Read one stable regular document; its parent directories must be trusted."""
+    if type(limit) is not int or not 0 <= limit <= MAX_DOCUMENT_BYTES:
+        raise GuardError("File byte limit must be an integer in 0..8388608")
+    source = Path(path)
+    before = source.lstat()
+    if _is_link(before) or not stat.S_ISREG(before.st_mode):
+        raise GuardError("Document must be a regular file, not a link or special file")
+    if before.st_size > limit:
+        raise GuardError(f"File exceeds the {limit}-byte limit")
+    flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+    descriptor = os.open(source, flags)
+    try:
+        handle = os.fdopen(descriptor, "rb")
+    except BaseException:
+        os.close(descriptor)
+        raise
+    with handle:
+        opened = os.fstat(handle.fileno())
+        if (_is_link(opened) or not stat.S_ISREG(opened.st_mode)
+                or (opened.st_dev, opened.st_ino, opened.st_size) !=
+                   (before.st_dev, before.st_ino, before.st_size)):
+            raise GuardError("Document changed while opening")
         value = handle.read(limit + 1)
+        after = os.fstat(handle.fileno())
     if len(value) > limit:
         raise GuardError(f"File exceeds the {limit}-byte limit")
+    if len(value) != opened.st_size or _stat_stamp(opened) != _stat_stamp(after):
+        raise GuardError("Document changed while reading")
+    try:
+        final = source.lstat()
+    except OSError:
+        raise GuardError("Document changed after reading") from None
+    if _stat_stamp(before) != _stat_stamp(final):
+        raise GuardError("Document changed after reading")
     return value
 
 

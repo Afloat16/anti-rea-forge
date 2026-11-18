@@ -1,6 +1,20 @@
 # Changelog
 
-## Unreleased — platform and input consistency hardening, 2026-11-18
+## 1.0.0 — 2026-11-18
+
+- Raise the cryptography dependency floor to 50.0.2 while keeping the <51 major bound, following upstream security and bundled OpenSSL fixes.
+- Align the Python core and JavaScript SDK at 1.0.0; retain existing v1 signed-document formats, CLI/import names and experimental native scope.
+- Detect stripped ELF CTF/BTF private type metadata and preserve exact eligible sections privately when splitting; verify public runtime segments, exports and private section hashes.
+- Recognize bounded UTF-16/32 XSSI source maps and root-array embedded maps; reject Brotli-suffixed files and structurally recognized V7 tar as explicitly unsupported.
+- Invoke the installed Python core in CMake isolated mode, with real cwd/PYTHONPATH shadow-module regressions.
+- Reject LLVM attached prefix/prologue constants and inline/module assembly in final sealed input. Add real emission and compatible-identifier controls.
+- Retire generated native loader ownership after automatic teardown to prevent late global destructors reopening already-destroyed storage; preserve ordinary clear/reinitialize behavior.
+- Recheck capability validity after durable replay consumption and bind live replay stores to database file identity. Expired admission remains spent and cannot invoke the handler.
+- Bound legacy document/key/policy reads and reject unsafe links, special files, oversized budgets and changing inputs without blocking on FIFOs.
+- Require fresh wheel/source/packed-SDK installation checks on Linux, Windows and macOS. Publish only artifacts bound to successful main CI, exact archive hashes and verified draft uploads; include checksums and machine-readable release evidence.
+- Rebuild both READMEs around traceable measurements, compatibility guidance and maintained architecture SVGs.
+
+### Cross-platform and input consistency hardening
 
 - Isolate generated native-token digests and verifiers per translation unit; add real two-unit, both-link-order controls at O0/O2.
 - Reject LLVM object-emitting pcsections attachments on functions and instructions before sealing. Add a real LLVM witness alongside syntax regressions.
@@ -14,7 +28,7 @@
 - Reject recognized ar/thin-ar libraries and renamed standalone MSF7/MSF2/raw CLI metadata as unsupported, including inside ZIP/ASAR. Never follow external thin-ar references. Add mandatory GNU ar and Windows MSVC-generated PDB controls.
 - Require a complete sealed-function inventory in addition to the global-storage inventory. Reject unaccounted definitions and noncanonical hidden definitions, while retaining verified wrappers, their private runtime helper closure and unused declarations.
 
-## Unreleased — release hardening, 2026-11-17
+### Release inspection and native storage hardening
 
 - Inspect canonical packed Electron ASAR by content, including renamed and mixed ZIP/ASAR nesting, under shared byte, entry and depth budgets. Validate paths, complete range coverage and optional SHA-256 integrity; reject links, unpacked sidecars, unknown layouts and ambiguous members without extracting or executing them.
 - Recognize bounded v3 JSON source maps independently of suffix, Unicode-escaped keys and equivalent numeric version spellings. Oversized or ambiguous JSON candidates produce an explicit incomplete-inspection finding.

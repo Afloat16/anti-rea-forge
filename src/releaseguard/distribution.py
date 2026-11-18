@@ -47,7 +47,7 @@ _FIELDS = {
     "max_archive_depth", "max_archive_entries", "max_files",
 }
 _ZIP_EXTENSIONS = {".zip", ".jar", ".war", ".ear", ".whl", ".nupkg", ".vsix", ".apk", ".aab"}
-_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst",
+_UNSUPPORTED_EXTENSIONS = {".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst", ".br",
                            ".a", ".lib", ".deb"}
 _UNSUPPORTED_MAGICS = (b"\x1f\x8b", b"BZh", b"\xfd7zXZ\x00", b"7z\xbc\xaf\x27\x1c",
                        b"Rar!\x1a\x07", b"\x28\xb5\x2f\xfd", b"CrAU", b"!<arch>\n", b"!<thin>\n")
@@ -83,35 +83,61 @@ def _native_token_rules():
 _TOKEN_RULES = tuple(_native_token_rules())
 
 
-def _json_object_offset(stream: BinaryIO, size: int) -> int | None:
-    """Recognize JSON objects without trusting a filename or allocating a payload.
+def _json_container_offset(stream: BinaryIO, size: int) -> int | None:
+    """Recognize JSON containers and encoded XSSI prefixes with bounded reads.
 
-    Match the same BOM/UTF-16/UTF-32 and UTF-8 XSSI forms used by the source-map
-    splitter. Long leading whitespace is inspected in bounded chunks, so an
-    over-budget JSON object cannot hide behind padding. A negative offset means
-    an XSSI prefix could not be verified within its small header budget.
+    Source maps can be wrapped in arrays as well as objects. Detect UTF-16/32
+    using a BOM or the initial ASCII code-unit pattern, as JSON byte readers do.
+    The XSSI newline must be aligned to that encoding; a byte inside another
+    character is not a delimiter. A negative result means the 4 KiB XSSI header
+    budget was exceeded. Long JSON whitespace is walked in fixed-size chunks.
     """
     stream.seek(0)
     probe = stream.read(min(size, 4096))
     bom_size = 0
-    for bom in (codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE, codecs.BOM_UTF16_LE,
-                codecs.BOM_UTF16_BE, codecs.BOM_UTF8):
+    encoding = "utf-8"
+    for bom, candidate in ((codecs.BOM_UTF32_LE, "utf-32-le"),
+                           (codecs.BOM_UTF32_BE, "utf-32-be"),
+                           (codecs.BOM_UTF16_LE, "utf-16-le"),
+                           (codecs.BOM_UTF16_BE, "utf-16-be"),
+                           (codecs.BOM_UTF8, "utf-8")):
         if probe.startswith(bom):
+            encoding = candidate
             bom_size = len(bom)
             probe = probe[bom_size:]
             break
+    else:
+        if len(probe) >= 4:
+            if probe[0] == 0:
+                encoding = "utf-32-be" if probe[1] == 0 else "utf-16-be"
+            elif probe[1] == 0:
+                encoding = "utf-32-le" if probe[2:4] == b"\0\0" else "utf-16-le"
+        elif len(probe) >= 2:
+            if probe[0] == 0:
+                encoding = "utf-16-be"
+            elif probe[1] == 0:
+                encoding = "utf-16-le"
     offset = 0
-    if probe.startswith(b")]}'"):
-        newline = probe.find(b"\n")
+    if probe.startswith(")]}'".encode(encoding)):
+        delimiter = "\n".encode(encoding)
+        unit = len(delimiter)
+        newline = probe.find(delimiter)
+        while newline >= 0 and newline % unit:
+            newline = probe.find(delimiter, newline + 1)
         if newline < 0:
             return -1
-        offset = bom_size + newline + 1
-        probe = probe[newline + 1:]
-    while not (start := probe.lstrip(b" \t\r\n\x00")):
+        offset = bom_size + newline + unit
+        probe = probe[newline + unit:]
+    while True:
+        # Only inspect the first non-whitespace character here. Replacement
+        # decoding prevents an incomplete character later in this chunk from
+        # hiding an earlier opening brace; json.loads validates the full bytes.
+        start = probe.decode(encoding, errors="replace").lstrip(" \t\r\n")
+        if start:
+            return offset if start.startswith(("{", "[")) else None
         probe = stream.read(min(4096, size - stream.tell()))
         if not probe:
             return None
-    return offset if start.startswith(b"{") else None
 
 
 def _strings(value: Any, label: str, maximum: int) -> list[str]:
@@ -195,6 +221,35 @@ def _validate_zip_extra(extra: bytes) -> None:
         position += 4 + length
         if field in {1, 0x7075} or position > len(extra):
             raise GuardError("ZIP64, Unicode Path aliases or malformed ZIP extra fields are unsupported")
+
+
+def _looks_like_v7_tar(prefix: bytes, size: int) -> bool:
+    """Recognize a bounded canonical V7 header, which has no ustar magic.
+
+    This identifies an unsupported container, not a complete TAR validation.
+    Require an octal numeric header, checksum, plausible first payload and room
+    for the conventional two end blocks. No member names are opened or exposed.
+    """
+    if len(prefix) != 512 or size < 1536 or size % 512 or any(prefix[257:]):
+        return False
+    name, separator, padding = prefix[:100].partition(b"\0")
+    if not name or (separator and any(padding)) or prefix[156:157] not in (
+        b"\0", b"0", b"1", b"2", b"3", b"4", b"5", b"6", b"7"
+    ):
+        return False
+    numbers = []
+    for start, end in ((100, 108), (108, 116), (116, 124),
+                       (124, 136), (136, 148), (148, 156)):
+        digits = prefix[start:end].strip(b" \0")
+        if not digits or any(digit < 48 or digit > 55 for digit in digits):
+            return False
+        numbers.append(int(digits, 8))
+    checked = prefix[:148] + b" " * 8 + prefix[156:]
+    # Older TAR readers also accepted signed-byte sums for non-ASCII names.
+    if numbers[-1] not in (sum(checked), sum(value if value < 128 else value - 256 for value in checked)):
+        return False
+    payload_size = numbers[3]
+    return ((payload_size + 511) // 512) * 512 <= size - 1536
 
 
 class _Scanner:
@@ -312,7 +367,7 @@ class _Scanner:
     def source_maps(self, stream: BinaryIO, size: int, path: str,
                     members: tuple[str, ...] = ()) -> None:
         """Inspect bounded JSON data, including escaped keys and indexed maps."""
-        offset = _json_object_offset(stream, size)
+        offset = _json_container_offset(stream, size)
         if offset is None:
             return
 
@@ -451,7 +506,8 @@ class _Scanner:
             return
         is_zip = zipfile.is_zipfile(stream)
         expected_zip = suffix in _ZIP_EXTENSIONS or prefix.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
-        unsupported = suffix in _UNSUPPORTED_EXTENSIONS or prefix.startswith(_UNSUPPORTED_MAGICS) or prefix[257:262] == b"ustar"
+        unsupported = (suffix in _UNSUPPORTED_EXTENSIONS or prefix.startswith(_UNSUPPORTED_MAGICS)
+                       or prefix[257:262] == b"ustar" or _looks_like_v7_tar(prefix, size))
         if not is_zip and not expected_zip:
             if unsupported:
                 self.archive_scan_completed = False
@@ -803,6 +859,7 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "ELF/PE/Mach-O checks report debug metadata and private/static symbols, including inside inspected archives. Standalone MSF7/MSF2 and raw CLI metadata are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports and runtime metadata remain observable; other native formats are not inspected.",
             "Native-token findings identify the public token format, not proof of validity. Reports retain file paths and archive member names.",
             "Stored/deflated ZIP and canonical ASAR containers are inspected; unpacked ASAR files must match exact siblings in the same disk/ZIP/ASAR namespace. Missing, mismatched or unindexed sidecars fail inspection. Recognized ar/thin-ar static libraries are unsupported; external thin members are never opened. ZIP64, links, path aliases, prefixed/concatenated archives and unindexed packed bytes remain unsupported.",
+            "Canonical V7 TAR headers are recognized by structure/checksum and rejected as unsupported. Brotli .br files are rejected by suffix; arbitrary renamed Brotli streams have no recognized magic and may remain undetected.",
             "scan_completed means the scan plan finished; archive_scan_completed is false for detected unexpanded archives.",
             "The byte budget counts disk bytes and all inspected ZIP/ASAR payloads, including deduplicated packed aliases; an unpacked sidecar is counted at its actual sibling location. No members are extracted or executed.",
             "Release roots and ancestors must stay under trusted build control. Verify later-used bytes with a signed manifest.",

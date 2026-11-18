@@ -1,6 +1,6 @@
 # 安全政策
 
-Anti-REA Forge（底层工具名 Open Release Guard）当前仍是 alpha 版本，尚未经过独立安全审计。它提供原生编译接入、选择性文字掩码、PE/ELF/Mach-O 发布检查、签名清单、离线授权、单向口令校验、外部密钥资产封装、原生敏感缓冲区和服务端请求能力凭证，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
+Anti-REA Forge（底层工具名 Open Release Guard）进入 1.x 发布系列，尚未经过独立安全审计。发布门禁、签名文档和 SDK 由兼容性测试维护；LLVM 原生转换仍是明确限定范围的实验功能。它提供原生编译接入、选择性文字掩码、PE/ELF/Mach-O 发布检查、签名清单、离线授权、单向口令校验、外部密钥资产封装、原生敏感缓冲区和服务端请求能力凭证，不承诺防止反编译、阻止客户端补丁或让软件无法破解。测试通过和使用成熟密码库都不能替代对完整系统的安全评估。
 
 ## 构建保护的范围
 
@@ -120,3 +120,13 @@ header. This isolates issuance instances; it does not make a distributed bearer 
 client-side verifier unpatchable. Sealed LLVM input also rejects pcsections attachments
 because they can emit auxiliary constants into the object. This specific rejection
 does not claim complete analysis of every future LLVM emission mechanism.
+
+## 1.0 admission, input and native-output hardening
+
+Capability admission checks the trusted clock again after durable replay-state consumption. A token that expires during commit/close cannot reach the handler and remains spent. A live ReplayStore binds the database file identity and rejects replacement; it is not rollback-resistant storage and does not protect against a malicious directory owner or in-place database rollback.
+
+Common document, PEM and policy reads require bounded regular files, reject unsafe leaf links/reparse points and special files, and compare file identity and metadata around the read. Trusted ancestors remain required. The read budget must be a plain integer in 0..8 MiB, with stricter limits retained by callers.
+
+CMake invokes the installed Python interpreter with `-I`; neither the working directory nor PYTHONPATH may replace native-init or the release gate. Regenerate exported CMake assets when upgrading and install the core in the chosen interpreter. The interpreter and site packages themselves remain trusted.
+
+ELF CTF/BTF type data is debug metadata even when ordinary strip keeps it. Eligible non-allocated sections can be preserved privately by split-elf-debug, with exact-byte, runtime-segment and export checks. Native sealing rejects known post-transform attached-data and assembly emission paths. Automatic generated-loader teardown permanently retires that instance; normal explicit clear/reinitialize remains supported. These checks do not hide public machine code or erase arbitrary caller-owned copies.

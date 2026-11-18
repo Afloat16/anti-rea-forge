@@ -19,7 +19,7 @@ MARKER = "releaseguard-demo-private-literal"
 PUBLIC_MESSAGE = "ReleaseGuard example: build mitigations enabled."
 
 
-class CMakeIntegrationTests(unittest.TestCase):
+class CMakeFixture(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         if not sys.platform.startswith("linux"):
@@ -49,12 +49,14 @@ class CMakeIntegrationTests(unittest.TestCase):
         self.base = Path(temporary.name)
         self.build = self.base / "build with spaces"
 
-    def run_command(self, *arguments: object, expected: int | None = 0) -> subprocess.CompletedProcess[str]:
+    def run_command(self, *arguments: object, expected: int | None = 0,
+                    cwd: Path | None = None, env: dict[str, str] | None = None
+                    ) -> subprocess.CompletedProcess[str]:
         command = [str(value) for value in arguments]
         try:
             result = subprocess.run(
                 command, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                timeout=60, check=False,
+                timeout=60, check=False, cwd=cwd, env=env,
             )
         except subprocess.TimeoutExpired as exc:
             self.fail(f"Command exceeded its 60-second timeout: {command!r}\n{exc.output!r}")
@@ -105,6 +107,8 @@ class CMakeIntegrationTests(unittest.TestCase):
         (source / "policy.json").write_text(json.dumps(policy), encoding="utf-8")
         return source
 
+
+class CMakeIntegrationTests(CMakeFixture):
     def test_release_examples_gate_failure_and_recovery(self) -> None:
         checkout = self.base / "repository with spaces"
         shutil.copytree(REPOSITORY / "examples", checkout / "examples")
