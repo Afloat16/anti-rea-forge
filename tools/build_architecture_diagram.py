@@ -16,7 +16,7 @@ COPY = {
              ("RELEASE GATE", ["Bounded format + disclosure checks", "Full inventory, key checks, final recheck"])],
             [("APPLICATION", ["Public code + authenticated ciphertext", "Required ABI and runtime behavior retained"]),
              ("SIGNED MANIFEST", ["Exact paths, sizes and file hashes", "Version and product bound to the signature"]),
-             ("PUBLICATION RULE", ["Recognized unsupported format or ambiguity?", "Stop the release and report the reason."])],
+             ("PUBLICATION RULE", ["Known unsupported format or ambiguity?", "Stop the release and report the reason."])],
             [("INDEPENDENT KEY", ["Check product / release / purpose context", "Authenticate before exposing plaintext"]),
              ("NATIVE LIFETIME", ["Guarded buffers and explicit clearing", "Authorized memory remains observable"]),
              ("SENSITIVE OPERATIONS", ["Trusted service verifies scoped capability", "Expiry and replay checks before admission"])],

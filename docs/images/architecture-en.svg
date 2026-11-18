@@ -33,7 +33,7 @@
 <text x="480" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >Exact paths, sizes and file hashes</text>
 <text x="480" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >Version and product bound to the signature</text>
 <text x="480" y="476" font-size="14" fill="#8db8ff" font-weight="700" letter-spacing="0.8">PUBLICATION RULE</text>
-<text x="480" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >Recognized unsupported format or ambiguity?</text>
+<text x="480" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >Known unsupported format or ambiguity?</text>
 <text x="480" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >Stop the release and report the reason.</text>
 <path d="M831 387h26" fill="none" stroke="#76d9cb" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="864" y="178" font-size="16" fill="#d3adff" font-weight="700" letter-spacing="1">03  AUTHORIZED USE</text>

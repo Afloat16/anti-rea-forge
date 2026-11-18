@@ -11,6 +11,9 @@ _path = Path(__file__).resolve().parents[1] / "tools/publish_release.py"
 _spec = importlib.util.spec_from_file_location("release_publisher", _path)
 publisher = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(publisher)
+_pack_spec = importlib.util.spec_from_file_location("release_packages", _path.with_name("check_release_artifacts.py"))
+packages = importlib.util.module_from_spec(_pack_spec)
+_pack_spec.loader.exec_module(packages)
 
 
 class ReleaseReadinessTests(unittest.TestCase):
@@ -110,6 +113,17 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertEqual(__version__, package["version"])
         self.assertEqual(__version__, policy["version"])
         self.assertIn(f'version = "{__version__}"', (root / "pyproject.toml").read_text())
+
+    def test_wheel_metadata_supports_windows_line_endings_without_ambiguous_identity(self):
+        text = "Metadata-Version: 2.4\nName: open-release-guard\nVersion: 1.0.0\n\nDescription\n"
+        for newline in ("\n", "\r\n"):
+            payload = text.replace("\n", newline).encode()
+            packages.validate_wheel_metadata(payload, self.version)
+        for payload in (text.replace("1.0.0", "0.10.0"),
+                        text.replace("open-release-guard", "different-package"),
+                        text.replace("Version: 1.0.0", "Version: 1.0.0\nVersion: 1.0.0")):
+            with self.subTest(payload=payload), self.assertRaises(RuntimeError):
+                packages.validate_wheel_metadata(payload.encode(), self.version)
 
 
 if __name__ == "__main__":

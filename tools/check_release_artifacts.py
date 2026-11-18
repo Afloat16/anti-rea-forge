@@ -7,6 +7,7 @@ Only project-owned temporary fixtures and fresh virtual environments are used.
 from __future__ import annotations
 
 import argparse
+from email.parser import BytesParser
 import hashlib
 import json
 import os
@@ -25,6 +26,14 @@ ROOT = Path(__file__).resolve().parents[1]
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise RuntimeError(message)
+
+
+def validate_wheel_metadata(data: bytes, version: str) -> None:
+    # Wheel metadata is an email-style header document. Both CRLF (Windows)
+    # and LF are valid; duplicate/incorrect identity fields still fail closed.
+    headers = BytesParser().parsebytes(data, headersonly=True)
+    require(headers.get_all("Name") == ["open-release-guard"], "Wheel metadata name differs")
+    require(headers.get_all("Version") == [version], "Wheel metadata version differs")
 
 
 def run(args: list[str], *, cwd: Path, env: dict[str, str] | None = None,
@@ -137,8 +146,7 @@ def main() -> int:
     with zipfile.ZipFile(wheels[0]) as archive:
         metadata = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
         require(len(metadata) == 1, "Ambiguous wheel metadata")
-        require(f"Version: {version}\n" in archive.read(metadata[0]).decode("utf-8"),
-                "Wheel metadata version differs")
+        validate_wheel_metadata(archive.read(metadata[0]), version)
 
     observations = []
     with tempfile.TemporaryDirectory(prefix="releaseguard-install-") as temporary:
