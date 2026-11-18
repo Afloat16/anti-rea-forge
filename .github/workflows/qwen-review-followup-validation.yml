@@ -19,11 +19,9 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - pr: '17581'
-            sha: '473b06fcc8d156af6fd111e2d6dadcbb7e5a1a51'
-            package: 'sdk-typescript'
-            tests: 'test/unit/Query.test.ts'
-            files: 'packages/sdk-typescript/test/unit/Query.test.ts'
+          - pr: '17578'
+            sha: '66973be53b0588576cda98a60b23eea55c2ab61b'
+            package: 'cli'
     env:
       CI: 'true'
       QWEN_SKIP_PREPARE: '1'
@@ -35,6 +33,7 @@ jobs:
           repository: Afloat16/qwen-code
           ref: '${{ matrix.sha }}'
           persist-credentials: false
+          fetch-depth: 2
       - name: Verify source identity
         env:
           EXPECTED_SHA: '${{ matrix.sha }}'
@@ -46,153 +45,70 @@ jobs:
           package-manager-cache: false
       - name: Install pinned dependencies
         run: corepack pnpm install --frozen-lockfile --reporter=append-only
-      - name: Build normal workspace prerequisites
+      - name: Build and bundle normal workspace
         run: |
-          if [ "${{ matrix.package }}" = "cli" ]; then
-            npm run build -- --cli-only
-          else
-            npm run build --workspace=packages/core
-            npm run build --workspace=packages/acp-bridge
-          fi
-      - name: SDK focused tests
-        if: matrix.package == 'sdk-typescript'
-        working-directory: packages/sdk-typescript
-        run: corepack pnpm exec vitest run ${{ matrix.tests }} --retry=0
-      - name: CLI focused tests with normal prerequisite guard
-        if: matrix.package == 'cli'
+          npm run build
+          DEV=true npm run bundle
+      - name: CLI renderer, copy command and continuation tests
         working-directory: packages/cli
-        run: corepack pnpm exec vitest run ${{ matrix.tests }} --retry=0
-      - name: Verify review regression witnesses
-        working-directory: packages/${{ matrix.package }}
+        run: corepack pnpm exec vitest run src/ui/utils/MarkdownDisplayCopy.test.tsx src/ui/utils/MarkdownDisplay.test.tsx src/ui/commands/copyCommand.test.ts src/ui/components/MainContent.test.tsx --retry=0
+      - name: Web Shell copy command parity tests
+        working-directory: packages/web-shell
+        run: corepack pnpm exec vitest run --config vitest.config.ts client/utils/copyCommand.test.ts --retry=0
+      - name: Prove new tests fail with the exact preceding renderer
+        working-directory: packages/cli
         env:
-          PR_NUMBER: '${{ matrix.pr }}'
+          BASELINE_SHA: 'ed7fb8a54cb9d44d4263e68f94f8f321ea51af91'
         run: |
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs';
           import { spawnSync } from 'node:child_process';
           import assert from 'node:assert/strict';
-          
-          function replaceOnce(text, before, after) {
-            assert.equal(text.split(before).length, 2, 'Mutation target must occur once');
-            return text.replace(before, after);
+
+          const file = 'src/ui/utils/MarkdownDisplay.tsx';
+          const original = readFileSync(file, 'utf8');
+          const parent = spawnSync('git', ['rev-parse', 'HEAD^'], { encoding: 'utf8' });
+          assert.equal(parent.status, 0);
+          assert.equal(parent.stdout.trim(), process.env.BASELINE_SHA);
+          const baseline = spawnSync('git', [
+            'show',
+            process.env.BASELINE_SHA + ':packages/cli/src/ui/utils/MarkdownDisplay.tsx',
+          ], { encoding: 'utf8', maxBuffer: 1024 * 1024 });
+          assert.equal(baseline.status, 0);
+          assert.notEqual(baseline.stdout, original);
+          try {
+            writeFileSync(file, baseline.stdout);
+            const result = spawnSync('corepack', [
+              'pnpm', 'exec', 'vitest', 'run',
+              'src/ui/utils/MarkdownDisplayCopy.test.tsx',
+              'src/ui/components/MainContent.test.tsx',
+              '-t', 'Markdown source copy hints|ignores fence-like content in continuation copy offsets',
+              '--retry=0',
+            ], {
+              encoding: 'utf8',
+              timeout: 240000,
+              maxBuffer: 32 * 1024 * 1024,
+            });
+            const output = (result.stdout ?? '') + (result.stderr ?? '');
+            process.stdout.write(output);
+            assert.ifError(result.error);
+            assert.equal(result.signal, null, 'Baseline test must finish normally');
+            assert.equal(result.status, 1, 'New tests must reject the preceding renderer');
+            const plain = output.replace(/\u001b\[[0-9;]*m/g, '');
+            assert.match(plain, /Tests\s+12 failed/);
+            assert.match(plain, /2 passed/);
+            assert.match(plain, /AssertionError/);
+            console.log('Confirmed exact-parent regression witness: 12 failed, 2 controls passed');
+          } finally {
+            writeFileSync(file, original);
           }
-          const pr = process.env.PR_NUMBER;
-          const cases = {
-            '17581': [{
-              label: 'catch-only permission timer cleanup',
-              file: 'src/query/Query.ts',
-              tests: ['test/unit/Query.test.ts', '-t', 'clears the permission deadline'],
-              failed: 2,
-              passed: 2,
-              mutate: (source) => replaceOnce(
-                replaceOnce(
-                  source,
-                  '    } finally {\n      if (timeoutId) {\n        clearTimeout(timeoutId);\n      }\n    }\n',
-                  '    }\n',
-                ),
-                '    } catch (error) {\n      /**\n       * Timeout or error',
-                '    } catch (error) {\n      if (timeoutId) clearTimeout(timeoutId);\n      /**\n       * Timeout or error',
-              ),
-            }, {
-              label: 'default permission deadline skipped without explicit timeout',
-              file: 'src/query/Query.ts',
-              tests: ['test/unit/Query.test.ts'],
-              failed: 2,
-              passed: 75,
-              mutate: (source) => replaceOnce(
-                source,
-                "        timeoutId = setTimeout(\n          () => reject(new Error('Permission callback timeout')),\n          canUseToolTimeout,\n        );",
-                "        if (this.options.timeout?.canUseTool !== undefined) {\n          timeoutId = setTimeout(\n            () => reject(new Error('Permission callback timeout')),\n            canUseToolTimeout,\n          );\n        }",
-              ),
-            }],
-            '17579': [{
-              label: 'case-sensitive header merge',
-              file: 'src/daemon/acpTransportUtils.ts',
-              tests: ['test/unit/AcpHttpTransport.test.ts', '-t', 'overrides authorization case-insensitively at the request boundary'],
-              failed: 1,
-              mutate: (source) => replaceOnce(
-                source,
-                "  const merged = new Headers(transportHeaders);\n  new Headers(initHeaders).forEach((value, key) => {\n    merged.set(key, value);\n  });\n  const headers: Record<string, string> = {};\n  merged.forEach((value, key) => {\n    headers[key] = value;\n  });\n  return headers;",
-                '  return Object.assign({}, transportHeaders, initHeaders);',
-              ),
-            }, {
-              label: 'caller headers omitted at transport boundary',
-              file: 'src/daemon/AcpHttpTransport.ts',
-              tests: ['test/unit/AcpHttpTransport.test.ts', '-t', 'overrides authorization case-insensitively at the request boundary'],
-              failed: 1,
-              mutate: (source) => {
-                const before = 'const headers = mergeHeaders(transportHeaders, callerHeaders);';
-                assert.equal(source.split(before).length, 3);
-                return source.replaceAll(before, 'const headers = mergeHeaders(transportHeaders, undefined);');
-              },
-            }],
-            '17569': [{
-              label: 'post-read abort guard removed',
-              file: 'src/daemon/sse.ts',
-              tests: ['test/unit/daemon-sse.test.ts', '-t', 'completes cleanly when an oversized read settles during cancellation'],
-              failed: 1,
-              mutate: (source) => replaceOnce(
-                source,
-                '      if (signal?.aborted) return;\n      if (done) {\n',
-                '      if (done) {\n',
-              ),
-            }],
-            '17572': [{
-              label: 'cleanup array iteration restored',
-              file: 'src/utils/cleanup.ts',
-              tests: ['src/services/mod-session.test.ts', '-t', 'does not skip the next registered exit cleanup'],
-              failed: 1,
-              mutate: (source) => replaceOnce(
-                source,
-                '    while (draining && cleanupFunctions.length > 0) {\n      // Remove the current entry before awaiting it so unregistering a\n      // cleanup cannot shift the next pending entry past the drain.\n      const { fn } = cleanupFunctions.shift()!;',
-                '    for (const { fn } of cleanupFunctions) {\n      if (!draining) break;',
-              ),
-            }, {
-              label: 'timed-out array iterator consumes the next pass',
-              file: 'src/utils/cleanup.ts',
-              tests: ['src/utils/cleanup.test.ts', '-t', 'does not drain registrations from a later pass after the overall timeout'],
-              failed: 1,
-              mutate: (source) => replaceOnce(
-                source,
-                '    while (draining && cleanupFunctions.length > 0) {\n      // Remove the current entry before awaiting it so unregistering a\n      // cleanup cannot shift the next pending entry past the drain.\n      const { fn } = cleanupFunctions.shift()!;',
-                '    for (const { fn } of cleanupFunctions) {',
-              ),
-            }],
-          };
-          assert.ok(cases[pr], 'Known PR required');
-          for (const probe of cases[pr]) {
-            const original = readFileSync(probe.file, 'utf8');
-            try {
-              writeFileSync(probe.file, probe.mutate(original));
-              const result = spawnSync('corepack', ['pnpm', 'exec', 'vitest', 'run', ...probe.tests, '--retry=0'], {
-                encoding: 'utf8',
-                timeout: 240000,
-                maxBuffer: 32 * 1024 * 1024,
-              });
-              const output = (result.stdout ?? '') + (result.stderr ?? '');
-              process.stdout.write(output);
-              assert.ifError(result.error);
-              assert.equal(result.signal, null, 'Mutation test must finish normally');
-              assert.equal(result.status, 1, 'Mutation must be caught by the focused test');
-              const plain = output.replace(/\u001b\[[0-9;]*m/g, '');
-              assert.match(plain, new RegExp('Tests\\s+' + probe.failed + ' failed'));
-              assert.match(plain, /AssertionError/);
-              if (probe.passed) assert.match(plain, new RegExp(probe.passed + ' passed'));
-              console.log('Confirmed regression witness:', probe.label);
-            } finally {
-              writeFileSync(probe.file, original);
-            }
-          }
+          assert.equal(readFileSync(file, 'utf8'), original);
           NODE
       - name: Check patch formatting and lint
         run: |
-          corepack pnpm exec prettier --check ${{ matrix.files }}
-          corepack pnpm exec eslint ${{ matrix.files }}
+          corepack pnpm exec prettier --check packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplayCopy.test.tsx packages/cli/src/ui/components/MainContent.test.tsx
+          corepack pnpm exec eslint packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplayCopy.test.tsx packages/cli/src/ui/components/MainContent.test.tsx
           git diff --exit-code
-      - name: Normal package typecheck
-        working-directory: packages/${{ matrix.package }}
+      - name: Normal CLI typecheck
+        working-directory: packages/cli
         run: npm run typecheck
-      - name: SDK public surface typecheck
-        if: matrix.package == 'sdk-typescript'
-        working-directory: packages/sdk-typescript
-        run: npm run typecheck:public-surface
