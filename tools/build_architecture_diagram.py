@@ -8,13 +8,13 @@ COPY = {
     "en": {
         "title": "A release is a boundary.",
         "subtitle": "Keep private material separate. Verify the bytes you ship. Authorize sensitive use.",
-        "description": "Snapshot private inputs, separate compiler IR and debug data, inspect encoded keys, then verify signed public artifacts. Keep sensitive operations and signing authority in a separately trusted service. Distributed code and authorized memory remain observable.",
+        "description": "Declare private inputs once, match complete contents inside bundles, inspect stringified keys, separate compiler IR and debug data, and explain release findings before verifying signed public artifacts. Sensitive operations stay in a separately trusted service. Distributed code and authorized memory remain observable.",
         "labels": ["01  TRUSTED BUILD", "02  PUBLIC DISTRIBUTION", "03  AUTHORIZED USE"],
         "titles": ["Separate & inspect", "Ship verified artifacts", "Authenticate & open"],
         "rows": [
-            [("PRIVATE INPUTS", ["Snapshot current private source / config", "Recheck inputs through signing"]),
+            [("PRIVATE INPUTS", ["Declare once; validate every build", "Match complete bytes inside bundles"]),
              ("BUILD TRANSFORMS", ["Split maps, debug data and LLVM IR", "Seal selected assets or VM instructions"]),
-             ("RELEASE GATE", ["Inspect PEM, PYC keys and source maps", "Reject exact private copies in archives"])],
+             ("RELEASE GATE", ["Inspect stringified / PEM / PYC keys", "Explain findings; block incomplete scans"])],
             [("APPLICATION", ["Public code + authenticated ciphertext", "Required ABI and runtime behavior retained"]),
              ("SIGNED MANIFEST", ["Exact paths, sizes and file hashes", "Version and product bound to the signature"]),
              ("PUBLICATION RULE", ["Known unsupported format or ambiguity?", "Stop the release and report the reason."])],
@@ -29,13 +29,13 @@ COPY = {
     "zh-CN": {
         "title": "把发布边界，变成保护边界。",
         "subtitle": "私有资料独立保存 · 发布字节完整核对 · 敏感操作由可信端授权",
-        "description": "取得当前私有输入快照，分离编译器 IR 和调试资料，检查编码密钥，再核对签名后的公开文件。敏感实现与签名权限保留在独立可信服务中。分发的代码与授权进程内存仍可观察。",
+        "description": "一次登记私有输入，在 bundle 中检查完整私有内容，识别再次序列化的密钥，分离编译器 IR 与调试资料，解释发布发现，再核对签名后的公开文件。敏感实现在独立可信服务中执行。分发代码与授权进程内存仍可观察。",
         "labels": ["01  可信构建", "02  公开分发", "03  授权使用"],
         "titles": ["分离敏感内容，检查产物", "发布经过验证的文件", "先认证，再开放数据"],
         "rows": [
-            [("私有输入", ["读取当前私有源码与配置的快照", "从扫描到签名持续复核私有输入"]),
+            [("私有输入", ["初始化登记，每次构建验证引用", "在 bundle 中核对完整私有内容"]),
              ("构建处理", ["分离 map、调试资料与 LLVM IR", "封装选定资产或 VM 指令"]),
-             ("发布门禁", ["检查 PEM、PYC 密钥与 source map", "拒绝归档中的私有文件完整副本"])],
+             ("发布门禁", ["检查字符串容器、PEM 与 PYC 密钥", "解释问题与修复动作，未完成则拒绝"])],
             [("应用产物", ["公开代码与经过认证的密文", "保留必要 ABI 和运行行为"]),
              ("签名清单", ["精确绑定路径、大小和文件哈希", "签名同时绑定产品与版本"]),
              ("发布规则", ["已识别的未支持格式、变化或歧义？", "阻止发布，并给出明确原因。"])],
@@ -63,7 +63,7 @@ def render(language: str) -> str:
     def text(x, y, value, size=20, color="#dce7f6", weight=400, extra=""):
         parts.append(f'<text x="{x}" y="{y}" font-size="{size}" fill="{color}" font-weight="{weight}" {extra}>{escape(value)}</text>')
 
-    text(48, 43, "ANTI-REA FORGE 1.3  /  ARCHITECTURE", 15, "#76d9cb", 700, 'letter-spacing="2"')
+    text(48, 43, "ANTI-REA FORGE 1.4  /  ARCHITECTURE", 15, "#76d9cb", 700, 'letter-spacing="2"')
     text(48, 94, c["title"], 37, "#f5f8ff", 700)
     text(48, 130, c["subtitle"], 19, "#aebfd6")
     for i, x in enumerate((48, 456, 864)):

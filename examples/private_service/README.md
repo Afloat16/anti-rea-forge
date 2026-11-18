@@ -7,18 +7,19 @@ in a separately controlled service repository.
 
 ## Check the public layout
 
-From the repository root, with Release Guard 1.3 or later installed:
+From the repository root, with Release Guard 1.4 or later installed:
 
 ```sh
-releaseguard check --config examples/private_service/project.json
+releaseguard check --config examples/private_service/project.json --format text
 releaseguard prepare --config examples/private_service/project.json \
   --private /trusted/issuer.pem --release 1.0.0 --out /trusted/new-release-evidence
 ```
 
 The checked project declares all three server source files as
-`private_input_files`. Their paths resolve relative to `project.json`. Exact
-copies in public files, supported ZIP members or ASAR payloads are rejected
-even after renaming. A file allowlist also rejects unexpected public paths.
+`private_input_files`. Their paths resolve relative to `project.json`. Complete
+unchanged copies in public files, supported ZIP members or ASAR payloads are rejected
+even after renaming, adding headers/footers or concatenating a bundle. A file allowlist
+also rejects unexpected public paths.
 The private inputs must remain unchanged through scanning, signing and the
 final publication check. Failed final checks remove the new sidecar bundle.
 
@@ -71,14 +72,19 @@ those absent bytes from that client. REA can still inspect and modify the public
 client. A modified client cannot create a valid issuer signature or replenish a
 consumed nonce in the separately controlled service.
 
-The file reference check detects **exact whole-file copies**. Added bytes,
-bundling, compilation, translation or partial copying change the digest and can
-evade that particular rule. It does not automatically partition an application
+The file reference check detects **exact complete private contents**, including
+contents inside larger payloads. Compilation, translation, minification, encoding
+or partial copying remain outside that byte profile. It does not automatically partition an application
 or prove semantic confidentiality. Review your build graph, keep the private
 service out of public build inputs, and list all private files relevant to the
 release. Authorized users still observe outputs and may learn behavior from
 them. Authentication, transport, quotas, request validation and service access
 control remain duties of the host application.
+
+The [bounded content profile](../../docs/private-input-content.md) explains candidate
+budgets and the separate incomplete-inspection result. Initialize your own project
+with repeatable `project-init --private-input-file` options to save validated references
+without hand-editing configuration-relative paths.
 
 The repository's existing `benchmarks/elf_symbols/patch_control.py` runs a real
 native client patch against a separate service process. This example reuses

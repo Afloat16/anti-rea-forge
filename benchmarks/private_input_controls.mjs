@@ -200,7 +200,7 @@ try {
     limitations: [
       "REA successfully analyzes the public JavaScript. Missing private source nodes mean those exact bytes were not supplied, not that equivalent behavior is impossible to infer.",
       "The existing manual forbid_file_sha256 rule can already block a known exact copy; live references additionally track changed private inputs and publication-time identity.",
-      "Only exact whole-file copies are matched. Transformed, compiled, concatenated, encoded and partial copies are outside this rule.",
+      "This control exercises exact whole-file copies. The separate private-content control covers unchanged full contents inside larger payloads; transformed, compiled, encoded and partial copies remain outside that profile.",
       "This benchmark does not execute authentication, patch or replay controls. The reusable service example uses run_authorized_operation; the existing native patch control separately tests a real client patch against a separate service.",
     ] };
   const serialized = JSON.stringify(report, null, 2) + "\n";

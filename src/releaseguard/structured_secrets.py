@@ -6,7 +6,8 @@ and contiguous byte-array windows, and supported private JWK material.  Bounded
 hex/Base64 strings whose decoded prefix identifies a private DER structure are
 checked by the same DER reader. Wrapped private PEM markers are recognized
 through a bounded streaming hint scan, including after leading text. DER and
-PEM candidates share per-document count and decoded-byte budgets. It does not
+PEM candidates and at most two additional JSON string-container decodes share
+per-document count and decoded-byte budgets. It does not
 execute JavaScript, evaluate expressions, or discover arbitrary application
 secrets.  A finding contains only a fixed code/representation/kind or the index
 of an operator-supplied key; no value, digest, JSON property name or path escapes.
@@ -24,6 +25,8 @@ from __future__ import annotations
 import base64
 import binascii
 import io
+import json
+import math
 import re
 from typing import Any, BinaryIO
 
@@ -31,13 +34,15 @@ from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, ed448, rsa, x25519, x448
 
-from .core import MAX_DOCUMENT_BYTES, GuardError
+from .core import MAX_DOCUMENT_BYTES, GuardError, _no_number, _pairs
 
 MAX_JSON_SECRET_NODES = 100_000
 MAX_JSON_SECRET_DEPTH = 64
 MAX_DER_PRIVATE_KEY_BYTES = 64 * 1024
 MAX_JSON_DER_CANDIDATES = 64
 MAX_JSON_DER_DECODED_BYTES = 256 * 1024
+MAX_JSON_STRINGIFIED_LAYERS = 2
+MAX_JSON_STRINGIFIED_TEXT_BYTES = 64 * 1024
 _DER_PREFIX_BYTES = 128
 _BASE64_NOISE = re.compile(rb"[^A-Za-z0-9+/_-]")
 _ASCII_FOLDING = str.maketrans("", "", " \t\r\n\v\f")
@@ -45,6 +50,7 @@ _MAX_JWK_FIELD_TEXT_BYTES = 32 * 1024
 _MAX_ASSET_KEY_TEXT_CHARS = 32 * 1024
 _MAX_ENCODED_DER_TEXT_CHARS = 256 * 1024
 _PEM_HINT_CHARS = 32 * 1024
+_JSON_CONTAINER_CLOSERS = {"{": "}", "[": "]", '"': '"'}
 PEM_PRIVATE_KEY_MARKERS = (
     "-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----",
     "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN EC PRIVATE KEY-----",
@@ -314,13 +320,74 @@ def _encoded_pem(value: str) -> tuple[str, bytes] | None:
     return encoding, data
 
 
+def _stringified_container(value: str) -> bool:
+    """Recognize only complete-looking JSON object, array or string envelopes.
+
+    Ordinary text never enters the JSON parser. Invalid template text within a
+    small envelope can be rejected as syntax without becoming a finding. The
+    caller charges every attempted parse, including invalid syntax, and treats
+    an oversized or overdeep recognizable envelope as incomplete inspection.
+    JSON whitespace is deliberately narrower than Python's Unicode whitespace.
+    """
+    first, last = 0, len(value) - 1
+    while first <= last and value[first] in " \t\r\n":
+        first += 1
+    if first >= last:
+        return False
+    opener = value[first]
+    closer = _JSON_CONTAINER_CLOSERS.get(opener)
+    if closer is None:
+        return False
+    while last > first and value[last] in " \t\r\n":
+        last -= 1
+    if value[last] != closer:
+        return False
+    if opener == '"' and last == first + 1:
+        return False  # An empty string cannot contain structured private data.
+    if opener != '"':
+        position = first + 1
+        while position < last and value[position] in " \t\r\n":
+            position += 1
+        if position == last:
+            # Empty object/array envelopes are conclusive without JSON parsing.
+            # Do not exhaust the decode budget on ordinary empty placeholders.
+            return False
+        # Most brace-delimited templates are plainly not JSON containers. The
+        # first member/value token is enough to avoid parsing those strings.
+        allowed = '"}' if opener == "{" else '{["-0123456789tfnNI]'
+        if value[position] not in allowed:
+            return False
+    return True
+
+
+def _stringified_json(value: str) -> Any:
+    """Parse one already bounded container with the outer JSON number rules."""
+    def finite_float(text: str) -> float:
+        number = float(text)
+        if not math.isfinite(number):
+            raise ValueError("Non-finite JSON number")
+        return number
+
+    try:
+        return json.loads(value, object_pairs_hook=_pairs, parse_constant=_no_number,
+                          parse_float=finite_float)
+    except json.JSONDecodeError:
+        return None
+    except (ValueError, RecursionError):
+        # Neither a duplicate field name nor a numeric token may enter reports.
+        raise GuardError("Stringified JSON is ambiguous or exceeds its parse profile") from None
+
+
 def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
                       check_private_keys: bool = True) -> list[dict[str, Any]]:
     """Inspect a bounded parsed JSON tree and return non-secret finding records.
 
-    The caller owns JSON decoding, its byte limit and duplicate-member policy.
-    Node/depth limits are independently enforced here, including cycles passed
-    by a direct Python caller.  Invalid/unbounded input raises ``GuardError``.
+    The caller owns the outer JSON decoding, its byte limit and duplicate-member
+    policy. Up to two additional JSON string-container decodes use the same
+    strict member/finite-number rules. They share count/byte budgets with DER
+    and PEM decoding, and all parsed nodes share the node/depth limits, including
+    cycles passed by a direct Python caller. Invalid/unbounded input raises
+    ``GuardError``.
     """
     if (type(asset_keys) is not tuple or len(asset_keys) > 16
             or any(type(key) is not bytes or len(key) != 32 for key in asset_keys)
@@ -330,16 +397,32 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
     findings: list[dict[str, Any]] = []
     seen: set[tuple[str, Any]] = set()
 
-    def add(code: str, identity: Any, **details: Any) -> None:
+    def add(code: str, identity: Any, *, stringified_layers: int = 0, **details: Any) -> None:
+        if stringified_layers:
+            representation = details["representation"]
+            details["representation"] = "json-stringified-" + representation.removeprefix("json-")
+            details["stringified_layers"] = stringified_layers
+            identity = (stringified_layers, identity)
         if (code, identity) not in seen:
             seen.add((code, identity))
             findings.append({"code": code, **details})
 
-    pending = [(document, 0)]
+    pending = [(document, 0, 0)]
     visited = 0
     encoded_candidates = decoded_private_bytes = 0
+
+    def charge_decode(size: int) -> None:
+        nonlocal encoded_candidates, decoded_private_bytes
+        encoded_candidates += 1
+        decoded_private_bytes += size
+        # The historical constant names are retained for callers, but all
+        # structured string decodes use this one per-document resource budget.
+        if (encoded_candidates > MAX_JSON_DER_CANDIDATES
+                or decoded_private_bytes > MAX_JSON_DER_DECODED_BYTES):
+            raise GuardError("Encoded private material exceeds the JSON decode budget")
+
     while pending:
-        value, depth = pending.pop()
+        value, depth, stringified_layers = pending.pop()
         visited += 1
         if visited > MAX_JSON_SECRET_NODES or depth > MAX_JSON_SECRET_DEPTH:
             raise GuardError("Structured secret JSON exceeds its node or depth limit")
@@ -354,11 +437,12 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
             if check_private_keys:
                 kind = _private_jwk_kind(value)
                 if kind is not None:
-                    add("private_key_structure", kind, representation="jwk", kind=kind)
+                    add("private_key_structure", kind, representation="jwk", kind=kind,
+                        stringified_layers=stringified_layers)
             # Keys themselves can carry leaked material. They are scanned as
             # data without ever being copied into the finding record.
-            pending.extend((key, depth + 1) for key in value)
-            pending.extend((item, depth + 1) for item in value.values())
+            pending.extend((key, depth + 1, stringified_layers) for key in value)
+            pending.extend((item, depth + 1, stringified_layers) for item in value.values())
         elif type(value) is list:
             if visited + len(value) > MAX_JSON_SECRET_NODES:
                 raise GuardError("Structured secret JSON exceeds its node or depth limit")
@@ -372,7 +456,8 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
                     if len(run) >= 32:
                         for index, key in enumerate(asset_keys):
                             if key in run:
-                                add("asset_key_exposure", index, representation="json-byte-array", rule_index=index)
+                                add("asset_key_exposure", index, representation="json-byte-array", rule_index=index,
+                                    stringified_layers=stringified_layers)
                     run.clear()
 
                 for item in value:
@@ -382,19 +467,34 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
                     else:
                         inspect_run()
                 inspect_run()
-            pending.extend((item, depth + 1) for item in value)
+            pending.extend((item, depth + 1, stringified_layers) for item in value)
         elif type(value) is str:
+            if (check_private_keys or asset_keys) and _stringified_container(value):
+                if stringified_layers >= MAX_JSON_STRINGIFIED_LAYERS:
+                    raise GuardError("Stringified JSON exceeds its decode layer limit")
+                # Bound characters before the allocating UTF-8 size check.
+                if len(value) > MAX_JSON_STRINGIFIED_TEXT_BYTES:
+                    raise GuardError("Stringified JSON exceeds its raw text limit")
+                size = len(value.encode("utf-8", errors="surrogatepass"))
+                if size > MAX_JSON_STRINGIFIED_TEXT_BYTES:
+                    raise GuardError("Stringified JSON exceeds its raw text limit")
+                charge_decode(size)
+                nested = _stringified_json(value)
+                if nested is not None:
+                    pending.append((nested, depth + 1, stringified_layers + 1))
             if check_private_keys:
                 for index, marker in enumerate(PEM_PRIVATE_KEY_MARKERS):
                     if marker in value:
-                        add("private_key_marker", index, representation="json-decoded-string", rule_index=index)
+                        add("private_key_marker", index, representation="json-decoded-string", rule_index=index,
+                            stringified_layers=stringified_layers)
             compact = value.translate(_ASCII_FOLDING) if asset_keys else value
             folded_hex = compact.lower() if asset_keys else ""
             decoded_key = _asset_key_bytes(value) if asset_keys else None
             for index, forms in enumerate(patterns):
                 if (any(form in value or form in compact for form in forms)
                         or asset_keys[index].hex() in folded_hex or decoded_key == asset_keys[index]):
-                    add("asset_key_exposure", index, representation="json-decoded-string", rule_index=index)
+                    add("asset_key_exposure", index, representation="json-decoded-string", rule_index=index,
+                        stringified_layers=stringified_layers)
             if check_private_keys:
                 encoded = _encoded_der(value)
                 kind = "der"
@@ -403,23 +503,20 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
                     kind = "pem"
                 if encoded is not None:
                     encoding, data = encoded
-                    encoded_candidates += 1
-                    decoded_private_bytes += len(data)
-                    if (encoded_candidates > MAX_JSON_DER_CANDIDATES
-                            or decoded_private_bytes > MAX_JSON_DER_DECODED_BYTES):
-                        raise GuardError("Encoded private material exceeds the JSON decode budget")
+                    charge_decode(len(data))
                     if kind == "pem":
                         for index, marker in enumerate(PEM_PRIVATE_KEY_MARKERS):
                             if marker.encode("ascii") in data:
                                 representation = "json-" + encoding + "-pem"
                                 add("private_key_marker", (representation, index),
-                                    representation=representation, rule_index=index)
+                                    representation=representation, rule_index=index,
+                                    stringified_layers=stringified_layers)
                         continue
                     for finding in scan_der_private_key(io.BytesIO(data), len(data)):
                         details = {key: item for key, item in finding.items() if key != "code"}
                         details["representation"] = "json-" + encoding + "-" + details["representation"]
                         add(finding["code"], (details["representation"], details.get("kind"), details.get("reason")),
-                            **details)
+                            stringified_layers=stringified_layers, **details)
         elif value is not None and type(value) not in (bool, int, float):
             raise GuardError("Structured secret scan requires parsed JSON data")
     return findings

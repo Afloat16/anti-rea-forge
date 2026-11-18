@@ -63,7 +63,8 @@ def cli(python: Path, work: Path, *args: str, expected: int = 0) -> dict:
 def installed_disclosure_controls(python: Path, work: Path, release: Path, policy: Path) -> dict:
     """Exercise new installed-module paths using bounded, locally authored inputs."""
     private_input = work / "owned-private-implementation.py"
-    private_bytes = b"def owned_private_quote(x):\n    return x * 37 + 19\n"
+    private_bytes = (b"# Owned private service implementation for the installed release control.\n"
+                     b"def owned_private_quote(x):\n    return x * 37 + 19\n")
     private_input.write_bytes(private_bytes)
     private_args = ["scan-release", "--root", str(release), "--policy", str(policy),
                     "--private-input-file", str(private_input)]
@@ -76,6 +77,14 @@ def installed_disclosure_controls(python: Path, work: Path, release: Path, polic
     require(exposed["ok"] is False and exposed["checks"]["private_inputs_checked"] == 1
             and any(item["code"] == "private_input_exposure" and item["rule_index"] == 0
                     for item in exposed["findings"]), "Installed private-input copy was not rejected")
+    copied.write_bytes(b"# public wrapper\n" + private_bytes + b"\n# footer\n")
+    contained = cli(python, work, *private_args, expected=3)
+    require(contained["checks"]["private_input_scan_completed"] is True
+            and contained["checks"]["private_input_profile"] == "exact-content/v1"
+            and contained["checks"]["private_input_verification_bytes"] >= len(private_bytes)
+            and any(item["code"] == "private_input_exposure"
+                    and item.get("representation") == "contained-bytes"
+                    for item in contained["findings"]), "Installed contained private input was not rejected")
     copied.unlink()
 
     # Compile only this trusted, locally authored source under the installed
@@ -120,6 +129,43 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps({"wrapped": wrapped}), encoding=
                     for item in pem_report["findings"]), "Installed wrapped private PEM was not rejected")
     wrapped.unlink()
 
+    # Initialize once with external references, then exercise the saved paths
+    # from outside the checkout. Both real package forms must ship this workflow.
+    configuration = work / "initialized-project"
+    initialized = cli(python, work, "project-init", "--root", str(release),
+                      "--product", "owned-installed-v14", "--out", str(configuration),
+                      "--private-input-file", str(private_input), "--asset-key-file", str(pyc_key))
+    require(initialized["ok"] is True, "Installed project initialization failed")
+    project_args = ["check", "--config", str(configuration / "project.json")]
+    initialized_clean = cli(python, work, *project_args)
+    require(initialized_clean["ok"] is True
+            and initialized_clean["checks"]["private_inputs_checked"] == 1
+            and initialized_clean["checks"]["asset_keys_checked"] == 1,
+            "Installed initialization did not preserve configured protection references")
+    copied.write_bytes(b"# public wrapper\n" + private_bytes)
+    configured = cli(python, work, *project_args, expected=3)
+    require(any(item["code"] == "private_input_exposure" for item in configured["findings"]),
+            "Installed saved private reference was not enforced")
+    readable = run([str(python), "-I", "-m", "releaseguard", *project_args, "--format", "text"],
+                   cwd=work, expected=3)
+    require(readable.stderr == "" and "BLOCKED (exit 3)" in readable.stdout
+            and "private_input_exposure" in readable.stdout and "Next:" in readable.stdout,
+            "Installed actionable text report failed")
+    require(str(private_input) not in readable.stdout and str(pyc_key) not in readable.stdout,
+            "Installed text report disclosed a private reference path")
+    copied.unlink()
+    serialized = release / "stringified-key.json"
+    key = pyc_key.read_bytes()
+    nested = json.dumps(json.dumps(list(key)))
+    require(bytes(json.loads(json.loads(nested))) == key, "Owned nested key fixture does not recover")
+    serialized.write_text(json.dumps({"serialized": nested}), encoding="ascii")
+    stringified = cli(python, work, *project_args, expected=3)
+    require(stringified["checks"]["structured_secret_scan_completed"] is True
+            and any(item["code"] == "asset_key_exposure"
+                    and item.get("representation") == "json-stringified-byte-array"
+                    for item in stringified["findings"]), "Installed stringified key was not rejected")
+    serialized.unlink()
+
     # Signature-boundary fixtures deliberately claim no LLVM module parsing.
     # The exact unsupported/incomplete result is the installed behavior tested.
     llvm = release / "renamed-compiler.data"
@@ -136,7 +182,9 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps({"wrapped": wrapped}), encoding=
     require(cli(python, work, *private_args)["ok"] is True, "Clean release after disclosure controls failed")
     return {"private_input_clean_accepted": True, "private_input_copy_blocked": True,
             "pyc_integer_key_blocked": True, "encoded_pem_blocked": True,
-            "standalone_llvm_unverifiable": True}
+            "standalone_llvm_unverifiable": True, "private_input_containment_blocked": True,
+            "stringified_key_blocked": True, "initialized_references_verified": True,
+            "text_report_verified": True}
 
 
 def installation(artifact: Path, version: str, work: Path) -> tuple[Path, dict]:
@@ -297,6 +345,7 @@ def main() -> int:
         require(not installed_sdk.get("dependencies"), "SDK runtime dependencies changed")
         smoke = """import assert from 'node:assert/strict';
 import {mkdir, writeFile, unlink} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
 import {createReleaseGuard} from '@anti-rea-forge/releaseguard';
 await mkdir('release'); await writeFile('release/app.js', 'export const x = 1;');
 await writeFile('policy.json', JSON.stringify({version:1}));
@@ -306,7 +355,8 @@ await writeFile('release/app.js.map','{}');
 const denied=await guard.scanRelease({root:'release',policy:'policy.json'});
 assert.equal(denied.ok,false); assert.equal(denied.exitCode,3);
 await unlink('release/app.js.map');
-const privateBytes='def owned_private_quote(x):\\n    return x * 37 + 19\\n';
+const privateBytes='# Owned private service implementation for installed SDK control.\\n'
+  +'def owned_private_quote(x):\\n    return x * 37 + 19\\n';
 await writeFile('private-implementation.py',privateBytes);
 const options={root:'release',policy:'policy.json',privateInputFiles:['private-implementation.py']};
 const privateClean=await guard.scanRelease(options);
@@ -317,8 +367,21 @@ assert.equal(privateCopy.ok,false); assert.equal(privateCopy.exitCode,3);
 assert.equal(privateCopy.findings.some(item=>item.code==='private_input_exposure' && item.rule_index===0),true);
 await unlink('release/renamed-private.data');
 assert.equal((await guard.scanRelease(options)).ok,true);
+execFileSync(process.env.RELEASEGUARD_PYTHON,['-I','-m','releaseguard','project-init',
+  '--root','release','--product','owned-installed-sdk-v14','--out','project',
+  '--private-input-file','private-implementation.py'],{stdio:'pipe',timeout:30000});
+assert.equal((await guard.checkProject({config:'project/project.json'})).ok,true);
+await writeFile('release/renamed-private.data','# wrapper\\n'+privateBytes+'# footer\\n');
+const contained=await guard.checkProject({config:'project/project.json'});
+assert.equal(contained.exitCode,3); assert.equal(contained.checks.private_input_scan_completed,true);
+assert.equal(contained.checks.private_input_profile,'exact-content/v1');
+assert(contained.checks.private_input_verification_bytes>=Buffer.byteLength(privateBytes));
+assert.equal(contained.findings.some(item=>item.code==='private_input_exposure'
+  && item.representation==='contained-bytes'),true);
+await unlink('release/renamed-private.data');
 console.log(JSON.stringify({installed_sdk:true,clean_release_accepted:true,source_map_blocked:true,
-  private_input_clean_accepted:true,private_input_copy_blocked:true}));
+  private_input_clean_accepted:true,private_input_copy_blocked:true,
+  private_input_containment_blocked:true,initialized_references_verified:true}));
 """
         (js / "smoke.mjs").write_text(smoke, encoding="utf-8")
         env = {**os.environ, "RELEASEGUARD_PYTHON": str(interpreters[0])}

@@ -5,15 +5,17 @@ a **JavaScript ESM bridge with TypeScript declarations**. The scanner reads a st
 directory without requiring an EXE, DLL or ELF entry file. The current scanner checks
 debug metadata and static symbols in every recognized ELF/PE/Mach-O/Wasm payload, including
 inspected ZIP and ASAR members. The native `gate` additionally provides
-artifact-specific policies and mitigation checks. Version 1.3 also checks declared
-private-file copies, canonical known-key integers in CPython bytecode, one-layer
-JSON-wrapped private PEM, and recognized embedded LLVM compiler records.
+artifact-specific policies and mitigation checks. Version 1.4 extends private-file
+checks to complete contents inside larger payloads, recognizes supported keys in
+stringified JSON containers, saves validated references during initialization and
+adds actionable text reports. Existing PYC, PEM and LLVM controls remain active.
 
 本版用 Python 统一维护扫描规则与安全判定，通过 JavaScript/TypeScript 接入 Node.js
 构建流程；C++ 只保留在原生内存和构建组件中。贡献一条规则不需要 C++ 编译器。
-v1.3 的 [PYC 已知密钥范围](python-pyc-key-profile.md)、
+v1.4 的 [私有内容包含范围](private-input-content.md) 与
+[本轮对照](rea-defense-v1.4.0.zh-CN.md) 记录新增防护及接入改进。v1.3 的 [PYC 已知密钥范围](python-pyc-key-profile.md)、
 [私有文件与 REA 源码对照](results/private-input-controls-v1.3.0-rea-source.json) 和
-[LLVM IR 实际读取对照](results/llvm-metadata-recovery-v1.3.0.json) 分别记录本轮证据；
+[LLVM IR 实际读取对照](results/llvm-metadata-recovery-v1.3.0.json) 保留历史证据；
 此前 REA 6.9.0 与固定源码实测见 [v1.2 扩展对照与修复](rea-defense-v1.2.0.zh-CN.md)；
 早期设计依据见 [6.8.0 源码审阅](rea-source-review-2026-11-04.zh-CN.md)。
 
@@ -33,6 +35,18 @@ your completed, nonempty release staging directory. Keep the policy outside that
 The command inspects files only; it does not execute the application, delete source maps,
 rewrite packages or change the release. Address each finding in your build configuration
 and rerun the check before signing or distributing the result.
+
+For saved protection references and a readable report, initialize once from the
+project directory (omit reference options your application does not use):
+
+```sh
+python -m releaseguard project-init --root dist --product MyApp --out .releaseguard \
+  --private-input-file service/private_quote.py --asset-key-file issuer/asset.key
+python -m releaseguard check --config .releaseguard/project.json --format text
+```
+
+Private files must already exist; the public root may be built later. Initialization
+validates references before writing and stores paths relative to `project.json`.
 
 先完成构建，再扫描实际要发布的目录。策略应由可信构建流程维护，不能由待检查的包自行决定。
 这份默认策略允许普通 `.py`、`.js`、`.ts` 源文件，适合本来就公开源码的项目；是否发布源码
@@ -78,7 +92,7 @@ const report = await guard.scanRelease({
   root: "./dist",
   policy: "./examples/policy-portable-release.json",
   assetKeyFiles: ["../asset-issuer/key.bin"], // optional known external key
-  privateInputFiles: ["../service/private_quote.py"], // optional exact-copy reference
+  privateInputFiles: ["../service/private_quote.py"], // complete private-content reference
 });
 console.log(JSON.stringify(report, null, 2));
 process.exitCode = report.ok ? 0 : 3;
@@ -154,6 +168,31 @@ produces `structured_secret_unverifiable` and
 not proof that a consumer cannot recover the key. See the
 [standard-consumer recovery driver](../benchmarks/encoded_pem_recovery.py) and
 [scope tests](../tests/test_encoded_pem.py).
+
+### Stringified structured keys in 1.4
+
+JSON configuration can contain another serialized JSON object or array as a string.
+The structured-secret scanner now recognizes complete-looking object, array and quoted
+string containers and parses up to **two additional layers along each nested path**.
+Supported private JWKs, PEM/DER forms and configured byte-array keys inside those
+containers use the same bounded checks. It does not execute JavaScript or add general
+source-map decoding inside strings.
+
+Each container is limited to **64 KiB of UTF-8 text**. Actual parse attempts, including
+invalid syntax attempts, share the existing **64-candidate / 256 KiB** budget with
+DER/PEM decodes. Every parsed node also counts toward the 100,000-node and 64-level
+limits. Ordinary text and obvious non-JSON templates do not enter this parser.
+Syntactically empty objects, arrays and empty quoted strings are recognized without
+parsing and do not consume decode budget. Nonempty public containers still count;
+for example, 65 serialized public objects require more than the supported 64 parses.
+Recognizable overdeep/over-budget containers, duplicate fields and nonfinite values
+produce `structured_secret_unverifiable`, not proof of a private key. New positive
+findings use a fixed `json-stringified-...` representation and `stringified_layers`;
+they never include decoded field names or values.
+
+The [real Node consumer comparison](results/stringified-key-recovery-v1.4.0-local.json)
+records six actual signing/decryption recoveries rejected by the new rules, six
+normal controls and six separately classified recoverable incomplete-inspection cases.
 
 源映射字节标记可能命中文档或有意公开的调试材料。关闭
 `check_source_maps` 不会自动移除 `forbid_extensions` 中的 `.map`；策略中的各项检查
@@ -311,8 +350,8 @@ number of independent vulnerabilities.
 
 ### Keep private implementation files out of the public release
 
-Version 1.3 accepts repeatable `--private-input-file` references on `scan-release`,
-`check` and `prepare`. Python uses the keyword-only `private_input_files` sequence;
+Version 1.4 accepts repeatable `--private-input-file` references on `project-init`,
+`scan-release`, `check` and `prepare`. Python uses the keyword-only `private_input_files` sequence;
 the SDK uses `privateInputFiles` on `scanRelease` and `checkProject`.
 These paths belong to the build configuration, not to the portable scan policy:
 
@@ -333,7 +372,7 @@ python -m releaseguard scan-release --root dist --policy .releaseguard/policy.js
 python -m releaseguard check --config .releaseguard/project.json \
   --private-input-file ../service/extra-model.dat
 python -m releaseguard prepare --config .releaseguard/project.json \
-  --private ../issuer/signing.pem --release 1.3 --out ../release-evidence
+  --private ../issuer/signing.pem --release 1.4 --out ../release-evidence --format text
 ```
 
 References must be **external, nonempty regular files: at most 64 files, 8 MiB per
@@ -342,12 +381,20 @@ points are rejected. Configuration paths resolve from `project.json`; additional
 CLI/API/SDK references are additive, and empty arrays do not clear configured inputs.
 The combined limits apply to both sources. Missing or changing files are errors.
 
-Each scan snapshots current reference bytes and identities, then checks exact
-whole-payload SHA-256 matches in physical files and inspected ZIP/ASAR members,
-including checked unpacked ASAR siblings. A renamed identical copy produces
-`private_input_exposure` with a `rule_index`. `private_inputs_checked` records the
-reference count. Reports omit reference paths, contents and separate reference
+Each scan snapshots current reference bytes and identities, then checks for the
+complete unchanged contents in physical files and inspected ZIP/ASAR members,
+including unpacked siblings. Prefixes, suffixes and concatenated bundles are covered.
+A match produces `private_input_exposure` with a `rule_index`; contained matches add
+`representation: "contained-bytes"`. `private_inputs_checked` records the reference
+count. Reports omit reference paths, contents, locating anchors and separate reference
 digests; the public inventory still contains hashes and paths of public files.
+
+The `exact-content/v1` profile uses at most 64 bytes per locating anchor and full-length
+candidate verification. Short references are matched exactly, including one-byte
+inputs. The whole scan shares **4,096 candidate checks and 512 MiB verification reads**.
+Exhaustion yields `private_input_unverifiable`, a false `private_input_scan_completed`
+and a blocked release. A budget refusal is not a positive match. See the
+[content profile](private-input-content.md) for counters, scope and matching costs.
 
 `prepare` retains reference snapshots across scanning, signing and sidecar creation.
 It reopens and hashes the references before completion, re-verifies the release after
@@ -355,8 +402,9 @@ writing sidecars, and removes the newly created output bundle on a failed final 
 Keep references, their ancestors and the release under trusted build control; these
 checks are not an atomic filesystem snapshot.
 
-This is an **exact whole-file copy** rule. Even an added newline changes the digest;
-rewritten, concatenated, minified, compiled or fragmented copies need other controls.
+This is an **exact complete-content** rule. Rewritten, minified, compiled, encoded or
+fragmented copies need other controls. Very short references can legitimately match
+ordinary files; declare meaningful complete private material.
 The rule does not relocate a service automatically. Keep the restricted implementation
 outside the public package, and use the
 [private-service example](../examples/private_service/README.md) when that architecture
@@ -429,6 +477,13 @@ CDN 缓存和发布目录之外的调试资料。要检查这些对象，应另�
 
 ## Reports and exit codes
 
+JSON remains the default. `scan-release`, `check` and `prepare` accept `--format text`
+to show configured reference counts, enabled/completed inspection status, finding
+locations and fixed next actions. Zero references are explicitly marked `not configured`.
+Text output escapes dynamic paths and control/Bidi characters. It does not print
+private reference paths or contents. `prepare` sidecars remain JSON in either mode,
+and the SDK continues to use the unchanged JSON protocol.
+
 | Exit | Meaning | Action |
 | --- | --- | --- |
 | `0` | Completed configured checks and found no violations | Continue the build's other verification steps |
@@ -448,9 +503,10 @@ deliberately unscanned detected archive also sets `checks.archive_scan_completed
 `false`. Check `ok` and all findings; even a true archive-completion flag only describes
 recognized containers, not every conceivable file format.
 `source_map_scan_completed`, `native_metadata_scan_completed`,
-`structured_secret_scan_completed` and `pyc_asset_key_scan_completed` describe their
+`structured_secret_scan_completed`, `private_input_scan_completed` and `pyc_asset_key_scan_completed` describe their
 respective inspection paths; the separate `*_checked` fields record policy opt-outs.
 Error reports go to stderr with `ok: false`; they are not partial passing reports.
+In text mode, the same failures go to stderr with a fixed status and next action.
 The JavaScript bridge returns validated exit-0/3 reports and throws `ReleaseGuardError`
 for tool/protocol/process failures. Callers should not catch such errors and continue a
 release as if it had passed.

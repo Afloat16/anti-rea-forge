@@ -107,7 +107,48 @@ test("private input references reach the real scanner and cannot clear configure
   const configured = await client.checkProject({ config, privateInputFiles: [] });
   assert.equal(configured.exitCode, 3);
   assert.equal(configured.checks.private_inputs_checked, 1);
+  await writeFile(join(root, "renamed.data"), "# public build header\n" + privateData + "\n# end\n");
+  const contained = await client.checkProject({ config });
+  assert.equal(contained.exitCode, 3);
+  assert.equal(contained.checks.private_input_profile, "exact-content/v1");
+  assert.equal(contained.checks.private_input_scan_completed, true);
+  assert(contained.findings.some((finding) => finding.code === "private_input_exposure"
+    && finding.representation === "contained-bytes"));
   await assert.rejects(client.scanRelease({ ...options, privateInputFiles: [join(base, "missing")] }), cliError);
+});
+
+test("initialization saves references for the real SDK without repeating command options", async (t) => {
+  const { base, root } = await release(t);
+  const privateFile = join(base, "service implementation.py");
+  const privateData = "def installed_quote(x):\n    return x * 43 + 17\n";
+  const keyFile = join(base, "external asset.key");
+  const key = randomBytes(32);
+  const configuration = join(base, "new configuration");
+  await writeFile(privateFile, privateData);
+  await writeFile(keyFile, key);
+  const initialized = await execute(python, ["-I", "-m", "releaseguard", "project-init",
+    "--root", root, "--product", "owned-initialized-project", "--out", configuration,
+    "--private-input-file", privateFile, "--asset-key-file", keyFile],
+    { timeout: 15_000, maxBuffer: 1024 * 1024 });
+  assert.equal(JSON.parse(initialized.stdout).ok, true);
+  const config = join(configuration, "project.json");
+  const clean = await client.checkProject({ config });
+  assert.equal(clean.ok, true);
+  assert.equal(clean.checks.private_inputs_checked, 1);
+  assert.equal(clean.checks.asset_keys_checked, 1);
+  await writeFile(join(root, "bundle.data"), "# wrapper\n" + privateData);
+  await writeFile(join(root, "settings.json"), JSON.stringify({ serialized: JSON.stringify(Array.from(key)) }));
+  const denied = await client.checkProject({ config });
+  assert.equal(denied.exitCode, 3);
+  assert.equal(denied.checks.private_input_scan_completed, true);
+  assert.equal(denied.checks.structured_secret_scan_completed, true);
+  for (const code of ["private_input_exposure", "asset_key_exposure"]) {
+    assert(denied.findings.some((finding) => finding.code === code));
+  }
+  const output = JSON.stringify(denied);
+  for (const privateValue of [privateFile, keyFile, key.toString("hex"), privateData]) {
+    assert.equal(output.includes(privateValue), false);
+  }
 });
 
 test("manifest verification transports trusted product/version and detects mutation", async (t) => {

@@ -1,38 +1,41 @@
-# Anti-REA Forge 1.3
+# Anti-REA Forge 1.4
 
 [![CI](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/Afloat16/anti-rea-forge/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Afloat16/anti-rea-forge)](https://github.com/Afloat16/anti-rea-forge/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-76d9cb.svg)](LICENSE)
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [Download v1.3.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.3.0) · [Upgrade guide](docs/releases/v1.3.0.md)
+[English](README.md) · [简体中文](README.zh-CN.md) · [Download v1.4.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.4.0) · [Upgrade guide](docs/releases/v1.4.0.md)
 
 **Reduce what reverse-engineering tools can recover from a release. Keep private material outside it.**
 
 Anti-REA Forge combines bounded release inspection, private debug/source-map separation, authenticated native data and trusted service authorization. It gives Python, CMake/C++ and JavaScript builds one set of release decisions, backed by reproducible positive and negative controls.
 
-| Python integer keys | Wrapped signing keys | Private compiler / service inputs |
+| Private contents inside bundles | Keys inside stringified JSON | Easier protection setup |
 | --- | --- | --- |
-| **12 / 12 real REA recoveries blocked before release** | **8 / 8 actual signing-key disclosures detected** | **Embedded LLVM IR separated · exact private copies rejected** |
-| Official v1.2 allowed all 12; v1.3 rejects standalone PYC and executable ZIP apps | Official v1.2 allowed all 8; 2 nonsecret controls still pass | Native instructions and runtime results retained; live source references rechecked through signing |
+| **3 / 3 formerly admitted source wrappers rejected** | **6 / 6 real signing/decryption disclosures detected** | **Save references at initialization · actionable text reports** |
+| Official v1.3 allowed prefixes, suffixes and concatenation; both real REA distributions still read the source | Official v1.3 allowed all 6; 6 normal controls pass; 6 recoverable budget/ambiguity cases are separately refused | Validated relative paths survive project moves; JSON and SDK decisions remain compatible |
 
-These are owned fixtures and specific publication controls. REA still reads ordinary client code; refusing a release does not make an already disclosed key unreadable. Positive findings, unsupported formats and exhausted budgets are recorded separately. **3 operating systems · 13 required CI jobs**, with published REA 6.9.0 and a separate pinned source build. [Python evidence](docs/results/python-key-recovery-v1.3.0-rea-6.9.0.json) · [PEM evidence](docs/results/encoded-pem-recovery-v1.3.0.json) · [Full assessment](docs/rea-defense-v1.3.0.zh-CN.md) · [Release gate policy](release-policy.json)
+These are owned fixtures and specific publication controls. REA still reads ordinary client code; refusing a release does not make an already disclosed key unreadable. Positive findings, unsupported formats and exhausted budgets are recorded separately. **3 operating systems · 13 required CI jobs**, with published REA 6.9.0 and a separate pinned source build. [Content evidence](docs/results/private-content-controls-v1.4.0-rea-6.9.0.json) · [Key evidence](docs/results/stringified-key-recovery-v1.4.0-local.json) · [Full assessment](docs/rea-defense-v1.4.0.zh-CN.md) · [Release gate policy](release-policy.json)
 
 ![Anti-REA Forge architecture: trusted build, public artifacts, authorized use and a separate private issuer](docs/images/architecture-en.svg)
 
-## What is new in 1.3
+## What is new in 1.4
 
-- **Catch keys stored as Python integers.** Real REA exposes constants that reconstruct an exact 32-byte asset key. The bounded PYC profile now checks configured keys in canonical marshal integers, including signed/endian variants and reference forms. Twelve owned representations decrypt successfully before both PYC and ZIP-app publication are refused. [Python evidence](docs/results/python-key-recovery-v1.3.0-rea-source.json)
-- **Separate embedded LLVM IR.** Removing ordinary symbols can leave the compiler's private names, source path and arithmetic in `.llvmbc`. The ELF splitter now preserves eligible compiler sections privately and verifies unchanged runtime segments. ELF, PE and Mach-O audits report canonical compiler sections; raw/wrapped bitcode is explicitly unsupported. [Actual Clang / llvm-dis control](docs/results/llvm-metadata-recovery-v1.3.0.json)
-- **Keep current private files out of the client.** Declare `private_input_files` once; checks snapshot their current bytes and reject exact copies on disk or inside inspected ZIP/ASAR files. `prepare` rechecks these inputs through signing and final verification. A reusable [public-client / private-service example](examples/private_service) uses the existing scoped authorization API.
-- **Recognize PEM inside one outer encoding.** Hex/Base64 wrappers, leading notes and consumer-compatible spellings no longer hide supported private-key markers in JSON. Eight actual signing recoveries are positively detected; two recoverable over-budget cases are separately refused as incomplete. [Consumer evidence](docs/results/encoded-pem-recovery-v1.3.0.json)
-- **Require the behavior in installed packages.** New real-tool controls join the existing Wasm, source-map, native, authorization and SDK gates. Fresh wheel, source archive and packed SDK installations exercise the new boundaries before the release publisher accepts their evidence.
+- **Detect complete private contents inside larger payloads.** Adding a build header, a trailing newline or a bundle wrapper no longer defeats a declared private-file reference. A bounded locating search verifies the entire candidate content on disk and in inspected ZIP/ASAR payloads. Short references are checked too. [Profile and limits](docs/private-input-content.md)
+- **Inspect keys serialized inside JSON strings.** Up to two additional container decodings expose supported private JWKs and configured byte-array keys to the shared rules. Six owned fixtures actually sign or decrypt with Node; all six are positively detected. Depth, byte-budget and ambiguous-input refusals are counted separately. [Consumer evidence](docs/results/stringified-key-recovery-v1.4.0-local.json)
+- **Enable references during initialization.** Repeatable `project-init --private-input-file` and `--asset-key-file` validate existing inputs and save the correct configuration-relative paths. Later CLI and SDK checks use them automatically; failed initialization leaves no new configuration bundle.
+- **Show status and the next action.** `scan-release`, `check` and `prepare --format text` explain configured references, incomplete inspections, finding locations and repairs. Zero references are explicitly shown as unconfigured. Machine JSON, exit codes and signed sidecar formats remain available unchanged. [Workflow evidence](docs/results/usability-controls-v1.4.0-local.json)
+- **Require the improvements in installed packages.** Fresh wheel, source archive and SDK installations must exercise containment and saved references; Python installations also require stringified-key rejection and text reports. Existing Wasm, maps, LLVM, native, authorization and REA controls remain mandatory.
 
-[Upgrade notes](docs/releases/v1.3.0.md) · [Portable release integration](docs/portable-release.md) · [Security boundaries](SECURITY.md)
+[Upgrade notes](docs/releases/v1.4.0.md) · [Portable release integration](docs/portable-release.md) · [Security boundaries](SECURITY.md)
 
 ## Evidence with controls
 
 | Question | Measured result | Exact scope / record |
 | --- | --- | --- |
+| Can a header, suffix or bundle evade declared private-file checks? | Official v1.3 allows **3 / 3**; v1.4 rejects **3 / 3** with complete-content findings | [npm](docs/results/private-content-controls-v1.4.0-rea-6.9.0.json) / [source](docs/results/private-content-controls-v1.4.0-rea-source.json); actual REA reads each owned function; Node preserves its outputs. Semantic rewrites remain a separate boundary. |
+| Can stringified JSON still disclose a usable key? | **6 / 6** actual signatures/decryptions; all rejected, **6 / 6** normal controls accepted | [Verified v1.3 comparison](docs/results/stringified-key-recovery-v1.4.0-local.json); another 6 recoverable incomplete-inspection refusals are excluded from positive detection |
+| Must saved protection references be hand-edited? | **0 manual configuration edits**; relocated CLI and SDK still enforce both reference types | [Workflow measurements](docs/results/usability-controls-v1.4.0-local.json); one identical finding: **74 JSON lines → 23 text lines**, with location and next action. This is output size, not a speed claim. |
 | Can an integer constant expose a configured asset key? | **12 / 12** real REA recoveries authenticate and decrypt; v1.2 allows all, v1.3 blocks all | [npm](docs/results/python-key-recovery-v1.3.0-rea-6.9.0.json) / [source](docs/results/python-key-recovery-v1.3.0-rea-source.json); PYC and executable ZIP-app gates; unconfigured/short keys are separate boundaries |
 | Can a stripped native program still carry private compiler IR? | **Yes**: `llvm-dis` recovers 4 names, a source path and arithmetic from v1.2 output | [Clang control](docs/results/llvm-metadata-recovery-v1.3.0.json); v1.3 removes that IR channel, preserves its private bytes, `.text`, dynamic symbols and 3 runtime results |
 | Does a changed private source evade an old manual digest? | **Yes**; live file references reject the updated exact copy | [REA layout control](docs/results/private-input-controls-v1.3.0-rea-source.json): private-source nodes **1 → 0 → 1**, all graphs complete; this is file absence, not algorithm secrecy |
@@ -46,27 +49,27 @@ These are owned fixtures and specific publication controls. REA still reads ordi
 | Does accidentally shipping the real key defeat that boundary? | **Yes**: key recovered, replayed, exact resource read | Both analyzers; the production release gate also reports the leaked key |
 | Does patching the local gate supply the missing encryption key? | Plaintext control recovers; encrypted control does not recover exact data | Actual gate patch and forced-GCM-success controls, [method](docs/native-assets.md) |
 | What does opening a 1 MiB native asset cost? | **189.860 µs median**, 25 calls after 5 warmups; maximum 1,456.005 µs | Historical v0.10 run on one Linux x86-64 host; includes allocation/cleansing, excludes key delivery/startup. [All samples](docs/results/native-asset-cost.json) |
-| What is validated for the downloadable release? | Exact commit, required CI job results, installed-package checks and archive hashes | `release-evidence.json`, `installation-report.json` and `SHA256SUMS` attached to the [Release](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.3.0) |
+| What is validated for the downloadable release? | Exact commit, required CI job results, installed-package checks and archive hashes | `release-evidence.json`, `installation-report.json` and `SHA256SUMS` attached to the [Release](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.4.0) |
 
 Ghidra, compiler, REA CLI/source-map, official ASAR, GNU binutils, macOS and MSVC controls run in CI. Historical observations stay dated and retain their failures. Ordinary and VM-only native samples were independently reconstructed across **1,081,924 hidden evaluations**; that failure motivated external-key instruction sealing. [Native code research and remaining validation](docs/native-code.md)
 
 ## Start with the release gate
 
-Python 3.10+ is required. Install the wheel from [v1.3.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.3.0) into your chosen virtual environment, or run `python -m pip install .` from this checkout. The public command and import name remain `releaseguard`.
+Python 3.10+ is required. Install the wheel from [v1.4.0](https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.4.0) into your chosen virtual environment, or run `python -m pip install .` from this checkout. The public command and import name remain `releaseguard`.
 
 ```sh
-python -m pip install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.3.0/open_release_guard-1.3.0-py3-none-any.whl
+python -m pip install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.4.0/open_release_guard-1.4.0-py3-none-any.whl
 python -m releaseguard --version
 python -m releaseguard project-init --root dist --product MyApp --out .releaseguard
-python -m releaseguard check --config .releaseguard/project.json
+python -m releaseguard check --config .releaseguard/project.json --format text
 ```
 
-Build your application into `dist`, review `.releaseguard/policy.json`, and keep private symbols, keys and signing material outside that directory. Add known external keys to `asset_key_files` and private source/config references to `private_input_files` in the saved project configuration. A failed check returns a nonzero exit code. `prepare` scans and signs an immutable staging directory and writes its evidence outside the release. [Complete workflow](docs/portable-release.md)
+Build your application into `dist`, review `.releaseguard/policy.json`, and keep private symbols, keys and signing material outside that directory. If you have private references, add `--private-input-file service/private_quote.py` and/or `--asset-key-file issuer/asset.key` to the initialization command; the files must already exist. Zero references are explicitly shown as unconfigured. A failed check returns a nonzero exit code. `prepare` scans and signs an immutable staging directory and writes its evidence outside the release. [Complete workflow](docs/portable-release.md)
 
 ### JavaScript / TypeScript
 
 ```sh
-npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.3.0/anti-rea-forge-releaseguard-1.3.0.tgz
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.4.0/anti-rea-forge-releaseguard-1.4.0.tgz
 ```
 
 ```js
@@ -83,7 +86,7 @@ Set `RELEASEGUARD_PYTHON` to the absolute path of the installed virtual-environm
 | Need | Integration | Status |
 | --- | --- | --- |
 | Detect accidental release disclosure and packaging ambiguity | [Portable release gate](docs/portable-release.md) | Cross-platform, policy-driven checks |
-| Keep declared private service source/config out of the client | [Private-service example](examples/private_service) | Current exact-file references; scan-to-sign rechecks |
+| Keep declared private service source/config out of the client | [Private-service example](examples/private_service) | Complete-content references; scan-to-sign rechecks |
 | Keep selected native data confidential without its external key | [Native assets](docs/native-assets.md) | C++17/OpenSSL; authenticated context binding |
 | Keep private source maps and debug/type information off the client | [Source maps](docs/private-source-maps.md), [ELF symbols](docs/private-elf-debug.md), [Wasm](docs/private-wasm-debug.md) | Public/private split with controlled inputs |
 | Enforce a sensitive operation in trusted code | [Service capabilities](docs/runtime-protection.md), [analysis gateway](docs/analysis-authorization.md) | Authenticated identity, fixed policy and replay storage required |
@@ -93,7 +96,7 @@ Set `RELEASEGUARD_PYTHON` to the absolute path of the installed virtual-environm
 
 A release scan checks configured rules on inspected bytes. It does not disable Ghidra, IDA, REA, Frida or another independent reader. Authorized process memory can hold keys and plaintext; distributed code and public helpers remain observable; a modified local client cannot be the authority for a server operation. Keep staging directories, interpreters, policies, keys and replay storage trusted. Unknown encodings and unsupported formats are not silently promoted to a resistance guarantee.
 
-The 1.x series keeps existing v1 signed-document formats and the CLI/import names. It is not an independent security audit, and experimental native transformations are explicitly scoped. [Security policy](SECURITY.md) · [Upgrade notes](docs/releases/v1.3.0.md) · [Historical recovery failures](docs/testing-2026-10-15.zh-CN.md)
+The 1.x series keeps existing v1 signed-document formats and the CLI/import names. It is not an independent security audit, and experimental native transformations are explicitly scoped. [Security policy](SECURITY.md) · [Upgrade notes](docs/releases/v1.4.0.md) · [Historical recovery failures](docs/testing-2026-10-15.zh-CN.md)
 
 ## Reproduce and contribute
 

@@ -83,8 +83,16 @@ def _new_bundle(directory: Path, files: dict[str, bytes], *,
 
 
 def init_project(root: Path | str, product: str,
-                 out: Path | str = ".releaseguard") -> dict[str, Any]:
-    """Generate an editable portable policy without touching the release."""
+                 out: Path | str = ".releaseguard", *,
+                 asset_key_files: tuple[Path | str, ...] | list[Path | str] = (),
+                 private_input_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
+    """Generate portable configuration with validated, config-relative inputs.
+
+    Input arguments resolve from the caller's working directory. Only their
+    paths are saved in the private build configuration; reports never include
+    the reference paths, contents or digests. The release may be built later,
+    but declared protection inputs must already exist and remain unchanged.
+    """
     _analysis_identifier(product, "product")
     release_root = Path(root).absolute()
     try:
@@ -96,19 +104,38 @@ def init_project(root: Path | str, product: str,
             raise GuardError("Release root must be a regular directory, not a link/reparse point")
     output = Path(out).absolute()
     outside_release(output, release_root, "Project configuration")
+    key_snapshots = snapshot_asset_keys(asset_key_files)
+    private_snapshots = snapshot_private_inputs(private_input_files, root=release_root)
+    try:
+        for item in key_snapshots:
+            outside_release(item.path, release_root, "Asset keys")
+        key_paths = [_relative_or_absolute(item.path, output.resolve()) for item in key_snapshots]
+        private_paths = [_relative_or_absolute(item.path, output.resolve()) for item in private_snapshots]
+    except GuardError:
+        raise
+    except (OSError, ValueError, RuntimeError):
+        raise GuardError("Cannot resolve external protection inputs for project configuration") from None
     document = {
         "version": 1,
         "product": product,
         "root": _relative_or_absolute(release_root.resolve(), output.resolve()),
         "policy": "policy.json",
-        "asset_key_files": [],
-        "private_input_files": [],
+        "asset_key_files": key_paths,
+        "private_input_files": private_paths,
     }
+    encoded = _json_bytes(document)
+    if len(encoded) > _CONFIG_LIMIT:
+        raise GuardError("Project configuration exceeds the 64 KiB limit")
+
+    def final_check() -> None:
+        assert_asset_keys_unchanged(key_snapshots)
+        assert_private_inputs_unchanged(private_snapshots)
+
     _new_bundle(output, {
-        "project.json": _json_bytes(document),
+        "project.json": encoded,
         "policy.json": _json_bytes(_DEFAULT_POLICY),
         "ANALYSIS_NOTICE.md": render_analysis_notice(product),
-    })
+    }, final_check=final_check)
     return {
         "ok": True,
         "config": str(output / "project.json"),

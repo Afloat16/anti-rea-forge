@@ -27,6 +27,7 @@ from .analysis import (
 from .passwords import create_password_verifier, verify_password
 from .sealed import generate_asset_key, load_asset_key, seal_asset, open_asset, MAX_ASSET_BYTES
 from .capabilities import issue_capability, consume_capability, ReplayStore, MAX_REQUEST_BYTES
+from .reporting import render_text_error, render_text_report
 
 
 def parser() -> argparse.ArgumentParser:
@@ -114,7 +115,7 @@ def parser() -> argparse.ArgumentParser:
     distribution.add_argument("--asset-key-file", type=Path, action="append", default=[],
                               help="External raw32-byte key to check for release exposure (repeatable)")
     distribution.add_argument("--private-input-file", type=Path, action="append", default=[],
-                              help="External private file to forbid as an exact release copy (repeatable)")
+                              help="External private file to check for release exposure (repeatable)")
 
     split = commands.add_parser(
         "split-source-maps", help="Separate external source maps from a public release without rewriting bundles"
@@ -138,6 +139,10 @@ def parser() -> argparse.ArgumentParser:
     project.add_argument("--root", type=Path, required=True, help="Release directory; it may be built later")
     project.add_argument("--product", required=True)
     project.add_argument("--out", type=Path, default=Path(".releaseguard"), help="Fresh configuration directory (default: .releaseguard)")
+    project.add_argument("--asset-key-file", type=Path, action="append", default=[],
+                         help="Validate and save an external raw 32-byte key reference (repeatable)")
+    project.add_argument("--private-input-file", type=Path, action="append", default=[],
+                         help="Validate and save an external private-file reference (repeatable)")
 
     project_check = commands.add_parser("check", help="Run portable release checks using saved project configuration")
     project_check.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -155,6 +160,9 @@ def parser() -> argparse.ArgumentParser:
                          help="Additional external 32-byte key to check before signing (repeatable)")
     prepare.add_argument("--private-input-file", type=Path, action="append", default=[],
                          help="Additional private file to check and revalidate before publication (repeatable)")
+    for report_command in (distribution, project_check, prepare):
+        report_command.add_argument("--format", choices=("json", "text"), default="json",
+                                    help="Report format: JSON protocol (default), or readable status and next steps")
 
     for command, description in (
         ("analysis-grant-issue", "Issuer only: grant scoped analysis of one signed manifest for at most 24 hours"),
@@ -300,7 +308,8 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
         result = split_source_maps(args.root, args.public, args.private)
         return result, 0 if result["ok"] else 3
     if args.command == "project-init":
-        return init_project(args.root, args.product, args.out), 0
+        return init_project(args.root, args.product, args.out, asset_key_files=args.asset_key_file,
+                            private_input_files=args.private_input_file), 0
     if args.command == "check":
         result = check_project(args.config, asset_key_files=args.asset_key_file,
                                private_input_files=args.private_input_file)
@@ -420,15 +429,23 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
+    text_output = getattr(args, "format", "json") == "text"
     try:
         result, code = _run(args)
     except (ValueError, OSError, OverflowError) as exc:
-        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=True), file=sys.stderr)
+        if text_output:
+            print(render_text_error(args.command, exc), file=sys.stderr)
+        else:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=True), file=sys.stderr)
         return 2
     except (KeyboardInterrupt, EOFError):
-        print('{"ok": false, "error": "Operation cancelled"}', file=sys.stderr)
+        if text_output:
+            print(render_text_error(args.command, cancelled=True), file=sys.stderr)
+        else:
+            print('{"ok": false, "error": "Operation cancelled"}', file=sys.stderr)
         return 130
-    print(json.dumps(result, indent=2, ensure_ascii=True))
+    print(render_text_report(args.command, result) if text_output
+          else json.dumps(result, indent=2, ensure_ascii=True))
     return code
 
 

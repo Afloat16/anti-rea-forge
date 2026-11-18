@@ -50,11 +50,14 @@ class ReleaseReadinessTests(unittest.TestCase):
                            "private_input_clean_accepted": True, "private_input_copy_blocked": True,
                            "pyc_integer_key_blocked": True, "encoded_pem_blocked": True,
                            "standalone_llvm_unverifiable": True,
+                           "private_input_containment_blocked": True, "stringified_key_blocked": True,
+                           "initialized_references_verified": True, "text_report_verified": True,
                            "native_resources_present": 5, "asset_roundtrip_bytes": 4096}
                            for name in names[:2]],
                        "javascript_installation": {"installed_sdk": True,
                            "clean_release_accepted": True, "source_map_blocked": True,
-                           "private_input_clean_accepted": True, "private_input_copy_blocked": True},
+                           "private_input_clean_accepted": True, "private_input_copy_blocked": True,
+                           "private_input_containment_blocked": True, "initialized_references_verified": True},
                        "artifacts": records}
 
     def test_complete_main_run_and_exact_bytes_are_accepted(self):
@@ -121,11 +124,14 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_missing_or_nonboolean_new_controls_cannot_authorize_publication(self):
         for section, fields in (
             ("python_installations", ("private_input_clean_accepted", "private_input_copy_blocked",
-                                      "pyc_integer_key_blocked", "encoded_pem_blocked", "standalone_llvm_unverifiable")),
-            ("javascript_installation", ("private_input_clean_accepted", "private_input_copy_blocked")),
+                                      "pyc_integer_key_blocked", "encoded_pem_blocked", "standalone_llvm_unverifiable",
+                                      "private_input_containment_blocked", "stringified_key_blocked",
+                                      "initialized_references_verified", "text_report_verified")),
+            ("javascript_installation", ("private_input_clean_accepted", "private_input_copy_blocked",
+                                         "private_input_containment_blocked", "initialized_references_verified")),
         ):
             for field in fields:
-                for value in (None, 1, "true"):
+                for value in (None, False, 1, "true"):
                     changed = copy.deepcopy(self.report)
                     target = changed[section][0] if section == "python_installations" else changed[section]
                     if value is None:
