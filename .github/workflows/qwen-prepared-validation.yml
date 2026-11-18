@@ -1,0 +1,77 @@
+name: Qwen prepared TypeScript and Web Shell validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-prepared-native-20261118'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    name: 'Native candidate ${{ matrix.key }}'
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - key: acpeof
+            head: bd430227b627dd2d6262fcea0e3954ddca10c77c
+          - key: stdinerror
+            head: 32abd8c88bf2e4fb3891395dc7d2f3a279c1c360
+          - key: imagequeue
+            head: d2b32dc99d798792d04f46fcffd98338913f737d
+    env:
+      CI: 'true'
+      QWEN_SKIP_PREPARE: '1'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: Checkout validation controller
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          path: validation
+          persist-credentials: false
+      - name: Checkout exact prepared candidate
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '${{ matrix.head }}'
+          path: candidate
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify exact candidate and parent
+        working-directory: candidate
+        env:
+          EXPECTED_CANDIDATE_HEAD: '${{ matrix.head }}'
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_CANDIDATE_HEAD"
+          test "$(git rev-parse HEAD^)" = '5fc5a98ecc08d2e89f29cbea57934928224977b5'
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Set up verification controller runtime
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+      - name: Install frozen dependencies
+        working-directory: candidate
+        run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: Normal build, development bundle and typecheck
+        working-directory: candidate
+        run: |
+          npm run build
+          DEV=true npm run bundle
+          npm run typecheck
+          git diff --exit-code
+      - name: Native package tests, exact-parent negative control and restoration
+        working-directory: candidate
+        env:
+          VALIDATION_CANDIDATE_KEY: '${{ matrix.key }}'
+        run: python ../validation/.github/scripts/qwen-prepared-validation.py "$VALIDATION_CANDIDATE_KEY"
