@@ -85,6 +85,31 @@ test("one project configuration runs the same release gate through JavaScript", 
   assert.equal(rejected.exitCode, 3);
 });
 
+test("private input references reach the real scanner and cannot clear configured files", async (t) => {
+  const { base, root, policy } = await release(t);
+  const privateFile = join(base, "private implementation.py");
+  const privateData = "def quote(x):\n    return x * 37 + 19\n";
+  await writeFile(privateFile, privateData);
+  const options = { root, policy, privateInputFiles: [privateFile] };
+  const clean = await client.scanRelease(options);
+  assert.equal(clean.checks.private_inputs_checked, 1);
+  assert.equal(JSON.stringify(clean).includes(privateFile), false);
+  await writeFile(join(root, "renamed.data"), privateData);
+  const denied = await client.scanRelease(options);
+  assert.equal(denied.exitCode, 3);
+  assert(denied.findings.some((finding) => finding.code === "private_input_exposure"));
+  assert.equal(JSON.stringify(denied).includes(privateFile), false);
+  const configDir = join(base, "private-config");
+  await mkdir(configDir);
+  const config = join(configDir, "project.json");
+  await writeFile(config, JSON.stringify({ version: 1, product: "owned-app", root: "../dist",
+    policy: "../rules.json", private_input_files: ["../private implementation.py"] }));
+  const configured = await client.checkProject({ config, privateInputFiles: [] });
+  assert.equal(configured.exitCode, 3);
+  assert.equal(configured.checks.private_inputs_checked, 1);
+  await assert.rejects(client.scanRelease({ ...options, privateInputFiles: [join(base, "missing")] }), cliError);
+});
+
 test("manifest verification transports trusted product/version and detects mutation", async (t) => {
   const { base, root } = await release(t);
   await execute(python, ["-I", join(fixtures, "materials.py"), base], { timeout: 10_000, maxBuffer: 4096 });

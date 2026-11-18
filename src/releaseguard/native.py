@@ -28,7 +28,8 @@ from .pe import audit_pe
 _FLAG_NAMES = {"dynamic_base", "nx_compat", "guard_cf", "high_entropy_va"}
 _POLICY_FIELDS = {
     "version", "formats", "forbid_literals", "forbid_extensions", "require_native",
-    "require_no_debug_metadata", "require_no_symbol_table", "required_pe_flags", "max_binary_bytes",
+    "require_no_debug_metadata", "require_no_symbol_table", "require_no_compiler_metadata",
+    "required_pe_flags", "max_binary_bytes",
     "forbid_path_components", "forbid_file_sha256", "scan_release_literals",
     "max_release_scan_bytes", "allowed_release_files",
 }
@@ -60,6 +61,7 @@ def _load_policy(path: Path | str) -> tuple[dict[str, Any], bool]:
         "version": 1, "formats": ["pe"], "forbid_literals": [],
         "forbid_extensions": [".pdb", ".ilk", ".map"], "require_native": True,
         "require_no_debug_metadata": True, "require_no_symbol_table": True,
+        "require_no_compiler_metadata": True,
         "required_pe_flags": [], "max_binary_bytes": 512 * 1024 * 1024,
         "forbid_path_components": [], "forbid_file_sha256": [],
         "scan_release_literals": False, "max_release_scan_bytes": 64 * 1024 * 1024,
@@ -103,7 +105,7 @@ def _load_policy(path: Path | str) -> tuple[dict[str, Any], bool]:
     flags = _list_of_strings(policy["required_pe_flags"], "required_pe_flags", 4)
     if set(flags) - _FLAG_NAMES:
         raise GuardError("Unknown required PE flag")
-    for name in ("require_native", "require_no_debug_metadata", "require_no_symbol_table",
+    for name in ("require_native", "require_no_debug_metadata", "require_no_symbol_table", "require_no_compiler_metadata",
                  "scan_release_literals"):
         if type(policy[name]) is not bool:
             raise GuardError(f"{name} must be a boolean")
@@ -361,11 +363,15 @@ def gate(binary: Path | str, policy_path: Path | str,
         findings.append({"code": "debug_metadata_present"})
     if policy["require_no_symbol_table"] and symbols:
         findings.append({"code": "symbol_table_present"})
+    if policy["require_no_compiler_metadata"] and report.get("compiler_metadata_present", False):
+        findings.append({"code": "compiler_metadata_present"})
     if format_name == "elf":
         if policy["require_no_debug_metadata"] and not report.get("section_names_available", False):
             findings.append({"code": "debug_metadata_unverifiable"})
         if policy["require_no_symbol_table"] and not report.get("section_table_present", False):
             findings.append({"code": "symbol_table_unverifiable"})
+        if policy["require_no_compiler_metadata"] and not report.get("section_names_available", False):
+            findings.append({"code": "compiler_metadata_unverifiable"})
     if format_name == "pe":
         for name in policy["required_pe_flags"]:
             if not report["flags"][name]:

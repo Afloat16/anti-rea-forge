@@ -421,6 +421,7 @@ def _thin(reader: _Reader) -> dict:
     sections = 0
     segments = 0
     debug_sections = 0
+    compiler_sections = []
     debug_segment = file_type == 10  # MH_DSYM is a debug companion, even if stripped.
     legacy_debug = False
     symtab = None
@@ -493,6 +494,13 @@ def _thin(reader: _Reader) -> dict:
                 file_data(reloff, nreloc * 8)
                 if is_debug:
                     debug_sections += 1
+                # Clang uses __bitcode/__cmdline; Apple's linker packages
+                # embedded modules in __bundle. Other __LLVM sections are not
+                # assumed to carry IR, nor is a lookalike in another segment.
+                # LLVM BitCodeFormat and Apple ld(1), -bitcode_bundle.
+                if section_segment == b"__LLVM" and section_name in (
+                        b"__bitcode", b"__cmdline", b"__bundle"):
+                    compiler_sections.append("__LLVM," + section_name.decode("ascii"))
             sections += nsects
         elif cmd == 2:
             exact(command, 24)
@@ -672,6 +680,8 @@ def _thin(reader: _Reader) -> dict:
         "private_symbols": private, "stab_symbols": stabs,
         "strip_compatibility_symbols": strip_compatibility_symbols,
         "debug_sections": debug_sections,
+        "compiler_metadata_present": bool(compiler_sections),
+        "compiler_metadata_sections": compiler_sections,
         "evidence": {
             "debug_metadata_present": bool(debug_sections or debug_segment or legacy_debug
                                            or stabs > strip_compatibility_symbols),
@@ -720,6 +730,10 @@ def audit_macho_stream(stream: BinaryIO, file_size: int) -> dict | None:
         "format": "macho", "container": container,
         "slice_count": len(architectures), "architectures": architectures,
         "metadata_complete": True,
+        "compiler_metadata_present": any(architecture["compiler_metadata_present"]
+                                         for architecture in architectures),
+        "compiler_metadata_sections": sorted({name for architecture in architectures
+                                               for name in architecture["compiler_metadata_sections"]}),
         "evidence": {
             key: any(architecture["evidence"][key] for architecture in architectures)
             for key in ("debug_metadata_present", "private_symbols_present")

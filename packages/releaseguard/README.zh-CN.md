@@ -7,7 +7,8 @@ JavaScript ESM，提供 TypeScript 类型声明；不需要 JavaScript 编译步
 一套密码学实现。Web、Node.js 和 Electron 项目可以把同一套发布检查接入自己的构建流程。
 
 需要 **Node.js 22+、Python 3.10+**，并把本仓库的 Python 包安装到所选解释器。
-该包目前是 **本地、private 工作区包**，尚不声称已发布到 npm 注册表。
+请使用匹配的 **1.3.0 SDK 与 Python 核心**。SDK 可从 GitHub Release 压缩包或本地目录安装；
+package.json 保持 `private`，尚不声称已发布到 npm 注册表。
 
 ## 安装和运行
 
@@ -79,7 +80,7 @@ node examples/javascript/scan-release.mjs --root dist --policy examples/policy-p
 
 ## 初始化一次，之后按配置检查
 
-v0.6 可以把可编辑配置保存在应用目录之外：
+自 v0.6 引入的项目工作流可以把可编辑配置保存在应用目录之外：
 
 ```sh
 python -m releaseguard project-init --root dist --product Demo --out .releaseguard
@@ -160,8 +161,8 @@ JSON 报告本身不会阻止工具。要形成有效边界，相关工具入口
 
 | 方法 | 必需参数 | 可选参数 | 对应 Python 命令 |
 | --- | --- | --- | --- |
-| `scanRelease(options, controls?)` | `root`、`policy` | `assetKeyFiles` | `scan-release` |
-| `checkProject(options, controls?)` | `config` | `assetKeyFiles` | `check` |
+| `scanRelease(options, controls?)` | `root`、`policy` | `assetKeyFiles`、`privateInputFiles` | `scan-release` |
+| `checkProject(options, controls?)` | `config` | `assetKeyFiles`、`privateInputFiles` | `check` |
 | `checkAnalysis(options, controls?)` | `manifest`、`root`、`publicKey`、`product`、`release`、`subject`、`audience`、`operation` | `grant` | `analysis-check` |
 | `withAnalysisAuthorization(options, handler, controls?)` | `checkAnalysis` 的参数及一个回调 | `grant` | `analysis-check`，允许后调用一次回调 |
 | `audit(path, options?)` | PE 文件路径 | `strict`、`signal` | `audit` |
@@ -185,7 +186,93 @@ const report = await guard.scanRelease({
 });
 ```
 
-客户端选项：
+### v1.3 私有实现文件引用
+
+`privateInputFiles` 接受发布目录之外的非空普通文件：**最多 64 个，每个最多 8 MiB，
+合计最多 64 MiB**。Python 拒绝目录、通配符、文件或祖先目录符号链接，以及 Windows
+reparse point。SDK 将每条路径作为独立 `--private-input-file` 参数传递，不接受内联私有内容。
+
+```javascript
+const report = await guard.scanRelease({
+  root: "dist",
+  policy: "release-policy.json",
+  privateInputFiles: ["../service/private_quote.py", "../service/model.dat"],
+  assetKeyFiles: ["../issuer/asset.key"],
+});
+if (!report.ok) process.exitCode = report.exitCode;
+```
+
+若每轮项目检查都必须带上这些文件，在构建专用 `.releaseguard/project.json` 中配置：
+
+```json
+{
+  "version": 1,
+  "product": "Demo",
+  "root": "../dist",
+  "policy": "policy.json",
+  "private_input_files": ["../../service/private_quote.py"]
+}
+```
+
+配置路径相对 `project.json` 解析。`checkProject` 的额外 `privateInputFiles` 会追加到
+配置中，省略选项或传 `[]` 都不会清空已有引用；两处引用合计受上述上限约束。每轮扫描
+读取引用文件当前的字节和身份，并在返回前重读、复核。文件缺失、替换或更改会让操作失败。
+`checks.private_inputs_checked` 报告引用数量；命中输出 `private_input_exposure` 和 `rule_index`。
+
+这条规则匹配**完整文件的 SHA-256 相同副本**，覆盖改名普通文件、已检查的 ZIP/ASAR
+成员和已验证的 unpacked 旁文件。它不识别改写、编译、拼接或分片后的实现；追加一个换行
+也会改变摘要。报告不列出私有引用路径、内容或单独的引用摘要，公开文件/成员路径及公开
+清单中的哈希仍然可见。[私有服务示例](../../examples/private_service/README.md) 及真实 REA
+[npm](../../docs/results/private-input-controls-v1.3.0-rea-6.9.0.json) /
+[源码](../../docs/results/private-input-controls-v1.3.0-rea-source.json) 对照保留了正常分离与
+故意重新发布私有文件的验证。
+
+等价 CLI 选项适用于 `scan-release`、`check`、`prepare`；Python 参数为
+`private_input_files`。`prepare` 将快照保留到签名和旁文件生成之后，再次复核引用与发布
+清单；最终验证失败会移除本轮新建输出目录。签名仍使用 Python CLI/API，SDK 不增加签发接口。
+操作期间应由可信构建流程保持引用文件、发布目录及其祖先目录稳定；这不是原子文件系统快照。
+
+### 新扫描范围与完成状态
+
+配置了 `assetKeyFiles` 后，核心独立启用 `canonical-marshal-integer/v1` PYC 检查，
+关闭 `check_private_keys` 或 `check_native_metadata` 不会关闭这条已知密钥规则。
+它检查 32 字节已知密钥在 signed/unsigned、大/小端重建下的规范 marshal LONG 表示，
+不反序列化、导入或执行待检查字节码。范围包括已支持的 CPython 3.7–3.14 稳定 magic/header，
+每个 payload 最多 64 MiB、最多 16 个已知密钥；每个密钥的四种整数解释都须至少有
+128 个有效位。短整数别名、不支持的头部或预算超限会使检查不完整。
+
+| 报告字段 | 含义 |
+| --- | --- |
+| `pyc_asset_keys_checked` | 是否由外置已知密钥启用该范围 |
+| `pyc_asset_key_files_checked` | PYC 候选检查数，包括不支持的候选及已检查归档中的成员 |
+| `pyc_asset_key_scan_completed` | 该精确模式检查是否完成，不代表完整 marshal body 已验证 |
+| `pyc_asset_key_profile` | 配置密钥时为 `canonical-marshal-integer/v1`，否则为 `null` |
+
+这些字段与 JSON/DER 的 `structured_secret_scan_completed` 独立。命中使用
+`asset_key_exposure` / `python-marshal-integer`；不支持的范围使用
+`structured_secret_unverifiable` / `invalid_or_unsupported_pyc_key_profile`。
+应同时看启用状态和候选数量，不能只看 completion 为真。未知密钥、计算/分片/非规范常量
+以及程序逻辑仍在范围之外。[PYC 范围说明](../../docs/python-pyc-key-profile.md) 列出完整边界。
+
+`check_private_keys: true` 还检查 JSON 字符串中私有 PEM 头部外面的**一层** hex/Base64
+包装，包括支持的前导说明、空白折叠和 Node Base64 表示。PEM 与 DER 包装共享每份 JSON
+**64 个候选、256 KiB 解码字节**预算；每个已识别候选最多 **256 Ki 字符原始文本、
+64 KiB 解码内容**，并继续受既有 JSON 结构预算约束。确认私有头部后输出
+`private_key_marker` 和 `json-hex-pem` / `json-base64-pem`；已识别但无效或超限的候选
+输出 `structured_secret_unverifiable`，并将结构检查完成状态设为 false。它不递归解任意
+包装，也不证明每个带标记的密钥都有效；公钥 PEM 与证书不会因此作为私钥被拒绝。
+
+原生扫描将精确识别的 LLVM 嵌入资料单列为 `native_compiler_metadata`。PE/ELF `gate`
+新增 `require_no_compiler_metadata`，**默认 true**；有意发布编译器资料时必须在原生策略
+中显式设为 false，其他要求仍有效。该字段不能放进通用扫描策略；`scanRelease` 使用范围
+更广的 `check_native_metadata` 开关。改名、归档内的独立 raw/wrapped LLVM bitcode
+被识别但不支持解析，输出 `native_metadata_unverifiable` 并将
+`native_metadata_scan_completed` 设为 false。合法 JIT 应用可能需要这些输入，退出检查
+并不使 IR 保密。普通 Linux ELF 中符合条件的编译器记录可用
+[split-elf-debug](../../docs/private-elf-debug.md) 私有分离；PE/Mach-O 只检测，不自动改写。
+精确 section 名称、预算和签名前后工作流见[通用发布指南](../../docs/portable-release.md)。
+
+### 客户端选项
 
 | 选项 | 默认值 | 范围 |
 | --- | --- | --- |
@@ -252,14 +339,14 @@ const report = await guard.scanRelease({
 `test/types-smoke.ts` 用于检查类型声明。
 新增功能应继续共用 Python 实现，并保留“检查完成且不通过”与“检查未完成”的区别。
 
-## 1.0 分发与安装
+## 自 1.0 起的归档分发与 1.3 安装
 
-SDK 与 Python 内核版本统一为 1.0.0。GitHub Release 提供可直接安装的 SDK 压缩包；
+SDK 与 Python 核心当前版本统一为 1.3.0。自 1.0 起，GitHub Release 提供可直接安装的 SDK 压缩包；
 package.json 保持 private 以防误发 npm，未声称 npm registry 发布。已有本地目录安装仍然支持。
 
 ```sh
-npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/anti-rea-forge-releaseguard-1.0.0.tgz
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.3.0/anti-rea-forge-releaseguard-1.3.0.tgz
 ```
 
-配套 Python 解释器必须已安装 1.0 内核，并通过绝对路径配置。Linux、Windows、macOS
+配套 Python 解释器必须已安装 1.3 核心，并通过绝对路径配置。Linux、Windows、macOS
 均执行归档安装和真实 CLI 正反对照；具体归档哈希与结果在 Release 附件中。

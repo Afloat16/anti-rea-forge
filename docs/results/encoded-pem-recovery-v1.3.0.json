@@ -1,0 +1,227 @@
+{
+  "schema": "releaseguard/encoded-pem-recovery/v1",
+  "ok": true,
+  "recorded_at": "2026-11-18T07:17:00.643351+00:00",
+  "baseline": {
+    "version": "1.2.0",
+    "package_files": 29,
+    "package_inventory_sha256": "318ea7a50fa6333adfb37140756fc5d32d449b028ff55e2759c33afe1be02dd2",
+    "wheel_sha256": "b16280c1f81cb6cec5a028102edeefdaf8b62e9300da3e87acb1878b3f0ab75b",
+    "release": "https://github.com/Afloat16/anti-rea-forge/releases/tag/v1.2.0"
+  },
+  "candidate": {
+    "version": "1.3.0",
+    "package_files": 31,
+    "package_inventory_sha256": "c7dabae9d565a0065850dc9e7d1e53673fb434b7694f4fc7780a7a874f3f7d44"
+  },
+  "benchmark_sha256": "ecfcdccfab5bf66a6330277aef42f88da21401c3b6dc5f32dfe8229ea3059d71",
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "cryptography": "50.0.2",
+    "node": "v24.22.1"
+  },
+  "recoverable_cases": [
+    {
+      "case": "pem-base64",
+      "bytes": 175,
+      "sha256": "f756ffde48b0a6228de6daf7b3a9b5f8b6271485f7e4b4d5c5bea0d2d1cb4bc7",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-hex",
+      "bytes": 253,
+      "sha256": "a6d3450a9bb894af2dc90199defeb09d8f1eea975d8b5749c4af75f26bc2af55",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-leading-one-byte",
+      "bytes": 175,
+      "sha256": "123b5e127e837efc13139d06437c6c3b9dae7274105be808c0823e5546e5bd1a",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-leading-two-bytes",
+      "bytes": 179,
+      "sha256": "86cf8c21446a3eda6d3441549dde5cfa4663c0a02c86626f88aa7df3d1b5e590",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-leading-notes",
+      "bytes": 1135,
+      "sha256": "011b4823f907ed42200454236d35e3c5025c6f4be72873475c0e77460d520ea7",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-base64-ignored-noise",
+      "bytes": 186,
+      "sha256": "e165416f4fa96af21094a765f238ee098f4d49d03c44b3c3e6cbf2219fbdc971",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Node Buffer.from / crypto.createPrivateKey",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-base64-utf16-alias",
+      "bytes": 975,
+      "sha256": "4027f43bd791319ac6dfda9a2ed99247d9983eb86c9f160fcf4156c0fa2050d9",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Node Buffer.from / crypto.createPrivateKey",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-hex-ascii-folding",
+      "bytes": 607,
+      "sha256": "0e77fc6ac0100d812e2002e23c96146b5592155b7be4ccd25411c03e619536a0",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [
+        "private_key_marker"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": true,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    }
+  ],
+  "nonsecret_controls": [
+    {
+      "case": "public-pem-base64",
+      "bytes": 167,
+      "sha256": "245dda55e2eb85e01326a56f8519bda145f09d8d7c98e1305464a2945e26e7bc",
+      "baseline_allowed": true,
+      "current_allowed": true,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [],
+      "input_unchanged": true,
+      "counted_as_positive_detection": false
+    },
+    {
+      "case": "public-unrelated-hex",
+      "bytes": 720015,
+      "sha256": "8d17a2373f71e635df0d688daf43f55bea5b020613dc33bf15e14aaccfd98acb",
+      "baseline_allowed": true,
+      "current_allowed": true,
+      "structured_inspection_complete": true,
+      "current_finding_codes": [],
+      "input_unchanged": true,
+      "counted_as_positive_detection": false
+    }
+  ],
+  "over_budget_controls": [
+    {
+      "case": "pem-raw-text-budget",
+      "bytes": 400175,
+      "sha256": "b23e5a244ffa2429b05a1389cce9f7a706ca96220d02998e488eb21238789658",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": false,
+      "current_finding_codes": [
+        "structured_secret_unverifiable"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": false,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    },
+    {
+      "case": "pem-decoded-byte-budget",
+      "bytes": 96175,
+      "sha256": "65288f73dfe33677ab9f52fd7dc028a21e3152ef8f160112d9d218572d9b03ee",
+      "baseline_allowed": true,
+      "current_allowed": false,
+      "structured_inspection_complete": false,
+      "current_finding_codes": [
+        "structured_secret_unverifiable"
+      ],
+      "input_unchanged": true,
+      "counted_as_positive_detection": false,
+      "consumer": "Python standard decoder / cryptography PEM loader",
+      "recovery_proof": "valid-exact-ed25519-signature",
+      "actual_recovery_completed": true
+    }
+  ],
+  "summary": {
+    "positive_recoveries": 8,
+    "baseline_missed": 8,
+    "current_positive_blocks": 8,
+    "nonsecret_controls_allowed": 2,
+    "recoverable_over_budget_rejections": 2
+  },
+  "limitations": [
+    "Eight representations of one owned key, not eight independent vulnerabilities or general recall.",
+    "Marker recognition is conservative; it does not prove every marked PEM is a mathematically valid key.",
+    "One outer hex/Base64 encoding is inspected; arbitrary nested encodings or computed keys remain outside scope.",
+    "Both over-budget cases really recover, but are refused as incomplete and excluded from positive detections.",
+    "REA and AI models are not called by this standard-consumer experiment.",
+    "Refusing a release does not erase keys already disclosed; fixture keys are public test material."
+  ]
+}

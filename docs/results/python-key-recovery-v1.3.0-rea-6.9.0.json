@@ -1,0 +1,1449 @@
+{
+  "schema": "releaseguard/python-key-recovery/v1",
+  "generated_at": "2026-11-18T07:19:59.884Z",
+  "baseline": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.2.0",
+    "package_files": 29,
+    "package_inventory_sha256": "318ea7a50fa6333adfb37140756fc5d32d449b028ff55e2759c33afe1be02dd2",
+    "python_version": "3.12.14",
+    "version": "1.2.0",
+    "official_wheel_sha256": "b16280c1f81cb6cec5a028102edeefdaf8b62e9300da3e87acb1878b3f0ab75b",
+    "installed_bytes_verified": true
+  },
+  "candidate": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.3.0",
+    "package_files": 31,
+    "package_inventory_sha256": "c7dabae9d565a0065850dc9e7d1e53673fb434b7694f4fc7780a7a874f3f7d44",
+    "python_version": "3.12.14",
+    "version": "1.3.0"
+  },
+  "rea_runtime": {
+    "distribution": "npm",
+    "version": "6.9.0",
+    "npm_integrity": "sha512-KqDn1UR5BMqHoQ3MGAnPuWiSKwgdFaz1L/uUNgrKt+1W8kPtgYP8AWEOXIF1lDIOBVyPuYIIst2iamo1Wf3r8g==",
+    "recorded_registry_provenance": {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/rea-agents@6.9.0",
+      "recorded_date": "2026-11-18",
+      "declared_source_commit": "d74549e495c58eb4a560279fd9f05508401ea0a0",
+      "subject_sha512": "2aa0e7d5447904ca87a10dcc1809cfb968922b081d15acf52ffb94360acab7ed56f243ed8183fc01610e5c817594320e055c8fb98208b2dda26a6a3559fdebf2",
+      "signature_chain_independently_verified": false
+    }
+  },
+  "dependency_lock_sha256": "caa0d17241b447eb4036edb4e9852265e67c5733d89247c5f79559779e071422",
+  "benchmark_files_sha256": {
+    "driver": "3801ea67fff719fc21dfc900dcf8749d850bd8b8ca84d7bbfcbbbc635bb4aaa2",
+    "helper": "282ab2466418662a89ad76bf8b2638dde8339a486ab11f2ed21754c4589ed82f"
+  },
+  "environment": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "architecture": "x64",
+    "fixture_python": "3.12.14",
+    "fixture_magic": 168627659
+  },
+  "summary": {
+    "disclosure_fixtures": 12,
+    "real_rea_exact_key_and_plaintext_recoveries": 12,
+    "baseline_allowed_disclosures": 12,
+    "candidate_rejected_disclosures": 12,
+    "packaging_profiles": [
+      "standalone-pyc",
+      "deflated-zipapp"
+    ],
+    "public_controls_passing_and_executable": 1,
+    "separately_reported_boundary_controls": 2,
+    "provider_errors_counted_as_protection": 0,
+    "algorithm_confidentiality_claimed": false
+  },
+  "scope": [
+    "Only project-owned synthetic keys/programs. REA runs as the real selected CLI provider; no simulated output.",
+    "The release gate detects canonical representations of configured keys; it does not alter or encrypt executable bytecode.",
+    "The 12 disclosure cases are paired representations, not independent attack samples or a security probability. Packaging variants and two REA distributions must not multiply this denominator.",
+    "Ordinary PYC and zipapp behavior, names and original filenames remain visible. REA's PYC command reports constants/metadata, not reconstructed Python source.",
+    "Unconfigured keys remain recoverable. Short signed/unsigned integer aliases are explicitly incomplete; this control is not counted as a detected disclosure.",
+    "Computed, split and noncanonical integer encodings, other secret forms and general client-side algorithms remain outside this exact-pattern profile.",
+    "Reports omit key bytes, integer values, key digests and raw recovered plaintext. Source/artifact/evidence hashes identify only synthetic experiment inputs and outputs."
+  ],
+  "fixtures": [
+    {
+      "artifact_bytes": 1277,
+      "artifact_sha256": "b74d1f5a4ec4b81fa584b6395788f5f9e5b5d3981c7f2ed28017c65b0c2b433f",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal2_big_unsigned",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 2,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": false,
+      "source_sha256": "587032f6c3a045c04de17aeee650e176f50ce5804ea37dbe54b18949b239a18e",
+      "zipapp_bytes": 696,
+      "zipapp_sha256": "e2beeada7e149e28c742b7751b743f4c3a060f59eb239f0410a6d94af71e97db",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "32fdee0d57c32878a8f2be54c365f831613c241263a3770a4543e36092788248",
+        "evidence_stdout_bytes": 5574,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 1261,
+          "marshal_depth": 5,
+          "objects": 77,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 1273,
+      "artifact_sha256": "227fdde3628910610cc7937ea4bb4896c87ded190d228a56415bb899df3d1cdd",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal2_big_signed",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 2,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": true,
+      "source_sha256": "cb99b524592dc9077e65b881d6bb28b0540e8c5f3cb8e997e7ab976a80efa835",
+      "zipapp_bytes": 692,
+      "zipapp_sha256": "8e1e78742f921c705b977df86abb676b68031b0477e57008679ed7f84118d40f",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "d65db2145d9b0964321bacd8eae498419518e1af7a338c1f46619d3b6f0da27e",
+        "evidence_stdout_bytes": 5562,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 1257,
+          "marshal_depth": 5,
+          "objects": 77,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 1295,
+      "artifact_sha256": "1de52f6f2dd2b9f8d26887bf2c2dade440a9133e15bffe1e5e128e1e92cde5e8",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "little",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal2_little_unsigned",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 2,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": false,
+      "source_sha256": "a5b8ee0ebfa0838a00cbe8fb89e96a3d25489f5349278bfecc25c6fbdc028c82",
+      "zipapp_bytes": 704,
+      "zipapp_sha256": "853c769395d2a1fcc7765270991978d3a327ecda993665cae17cfc3eb09830ca",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "9a7a7c49d6717dbd4f650522ce9f6ce2b64804708644863f93fb88ddadebf334",
+        "evidence_stdout_bytes": 5595,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 1279,
+          "marshal_depth": 5,
+          "objects": 77,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 1279,
+      "artifact_sha256": "116914ec536f713ce5d52512392db904b59072a965d9238e388db91b2a2563d1",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "little",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal2_little_signed",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 2,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": true,
+      "source_sha256": "945440de119e9b34b0a9c05bd271b30b0311fb0c04bd218da6072ab7845e073a",
+      "zipapp_bytes": 698,
+      "zipapp_sha256": "b87f8a3585dd162983334597160f3f1fdae8f830e4dd517ac4e195935e5b49fc",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "95af6061f39b8cbf3aa705a4b3a45102c2c90c55a9aabb78661b798f5ae9d2c9",
+        "evidence_stdout_bytes": 5575,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 1263,
+          "marshal_depth": 5,
+          "objects": 77,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 886,
+      "artifact_sha256": "b714896af2484de351aa579b1fba1ee9b955132cbd6887f02a70c2b635d35560",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal4_big_unsigned",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": false,
+      "source_sha256": "587032f6c3a045c04de17aeee650e176f50ce5804ea37dbe54b18949b239a18e",
+      "zipapp_bytes": 702,
+      "zipapp_sha256": "1d63bc0feb3e0caa3ba01efdfd6d4575bd0e81e8ff0a4fa3bcd9c22011fda6e6",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "7a2898b708e08b81eaa0ce91f943f612bf51d571cf03943f6e544bd766c4a7fb",
+        "evidence_stdout_bytes": 5571,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 870,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 884,
+      "artifact_sha256": "f5ca8f02ff70064d3ed9a9b8120145e2ba8df644f338b48732762d10fe13b5f8",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal4_big_signed",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": true,
+      "source_sha256": "cb99b524592dc9077e65b881d6bb28b0540e8c5f3cb8e997e7ab976a80efa835",
+      "zipapp_bytes": 699,
+      "zipapp_sha256": "77cd94ed47b195a4b916c5e4f0784bbfddf10275e3bb91f5020aa5f3e61caa84",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "750c5446d1fa5da340df8911c9a36b72c2ca40322e2228bf04e08253e20564db",
+        "evidence_stdout_bytes": 5559,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 868,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 895,
+      "artifact_sha256": "159ebcb452a627cff9720bae749a55eb0df09e9651a4bebe7524df6f2218fb6a",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "little",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal4_little_unsigned",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": false,
+      "source_sha256": "a5b8ee0ebfa0838a00cbe8fb89e96a3d25489f5349278bfecc25c6fbdc028c82",
+      "zipapp_bytes": 709,
+      "zipapp_sha256": "da8de05b476fb2e8282b76060c4a5dc8246ab4b0a4c6a5c4dc7600f85550f790",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "3b929e2584b652425139785586e2d1f8109a27f43033a48c9e3201cbe173e3cd",
+        "evidence_stdout_bytes": 5592,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 879,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 887,
+      "artifact_sha256": "fa274c9d75a8a28e2455a4f9e947245a70e795a3ef97946c35a4fd0bf0f66117",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "little",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "marshal4_little_signed",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": true,
+      "source_sha256": "945440de119e9b34b0a9c05bd271b30b0311fb0c04bd218da6072ab7845e073a",
+      "zipapp_bytes": 704,
+      "zipapp_sha256": "5eba3172de4be1490f1b40ad4fbdeb5705caae15e48992b0e88a44085072db8b",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "f7980111682442ea16bb9907dc428108417aaadc4bf7bde22c2e1a5de22f8298",
+        "evidence_stdout_bytes": 5572,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 871,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 880,
+      "artifact_sha256": "a2d719f7da82836ee921fd61bc0a9740f00f422e608cd232d9ff2a95bc92fd94",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "leading_zero_prefix_big",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": false,
+      "source_sha256": "a6907aa24607b8ab3f1a97815d68dd61beb7534054955a01cc6b884e19fa098e",
+      "zipapp_bytes": 699,
+      "zipapp_sha256": "19d02498a86d0ddec347bbff7da999a722590c922a289cb3d7cd8134f454fa5f",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "cf7b093d9e311a541a441b427c71dc7d9db08536c6bb3a9067a91be3236a6289",
+        "evidence_stdout_bytes": 5561,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 864,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 887,
+      "artifact_sha256": "2d4764df9190af106913a59464515ef62f67985217dce44d6a298c3974b4b44c",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "little",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "leading_zero_prefix_little",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": true,
+      "source_sha256": "b87c608e9b74d08c26fe96adadd8507de4124a54dafe755be2c028f0762847e9",
+      "zipapp_bytes": 698,
+      "zipapp_sha256": "b38ec86249b3f8915983b1d85cfd19bfa624cd172e671d54add4a3cde36d47aa",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "25d6064c58bbdbbb70eac1c15701a5b90958d02375d248a0d3dd01a6d1fdb71a",
+        "evidence_stdout_bytes": 5598,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 871,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 884,
+      "artifact_sha256": "18804f6f1c66d5c84d9053e06fd33e3814788af7031094fdc8d04a40a085117c",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "leading_zero_suffix_big",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": true,
+      "source_sha256": "4891d3a1d7b1fcab02cb15ea8704d60df680353a6b9b10eea1bc754da490c653",
+      "zipapp_bytes": 698,
+      "zipapp_sha256": "e24788d7c8f4a66382eb4646729be0e0c12d13386049e1165a8b901b1391d1da",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "70c4d174f3158c04f7a77b0250b989b1f68f5d5140dd3233297f665eb44d9cd3",
+        "evidence_stdout_bytes": 5579,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 868,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 883,
+      "artifact_sha256": "9b49856e2d443ea334220acf123c039e4e7e8d4ec62dd49ea46b2f277b929bb0",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "little",
+      "expected_candidate_gate": "reject",
+      "expected_recovery": true,
+      "id": "leading_zero_suffix_little",
+      "key_reconstruction_verified": true,
+      "kind": "disclosure",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": false,
+      "source_sha256": "6d04c30fa08e91d28eb6f748947d0b547ffe647e0f13f3d139c8d45b1b4cde9e",
+      "zipapp_bytes": 700,
+      "zipapp_sha256": "d26410ad1cbdc7a316294fda4260fe2c3a4cba6263c2f417ae91cb3565601d53",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "5f928201e3bfff6a1a20d242a9ca6287aa0cbf9d46fa6a0db57bd81f3cfb34ef",
+        "evidence_stdout_bytes": 5582,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 867,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "pricing.pyc",
+                "rule_index": 0,
+                "representation": "python-marshal-integer"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "asset_key_exposure",
+                "path": "application.pyz",
+                "rule_index": 0,
+                "representation": "python-marshal-integer",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 503,
+      "artifact_sha256": "244d4c4b7e185e87228663f5099e5b85204f195bef89cddb4d823a5db1a319b5",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "allow",
+      "expected_recovery": false,
+      "id": "ordinary_public_pyc",
+      "key_reconstruction_verified": false,
+      "kind": "public-control",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": false,
+      "signed": false,
+      "source_sha256": "546b9702c9119731ac6e29cd672a6fcf783abbeb2ff0d99f4a5ea18880407abd",
+      "zipapp_bytes": 498,
+      "zipapp_sha256": "2e58e10c6251a8335ef8f3deae0bf096c8f412cf76a3a31ceab718db54059319",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "122928a6d6781b040f89c669314eaf2c9b98de68a2d89f6cdb593421486b8f40",
+        "evidence_stdout_bytes": 3934,
+        "aes_plaintext_verified": false,
+        "authenticated_key_candidates": 0,
+        "coverage": {
+          "code_objects": 2,
+          "marshal_bytes": 487,
+          "marshal_depth": 4,
+          "objects": 37,
+          "status": "complete"
+        },
+        "exact_key_recovered": false,
+        "header_magic": 3531,
+        "original_filename_occurrences": 2,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 6,
+        "reconstruction_candidates": 11
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": true,
+            "findings": [],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": true,
+            "findings": [],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 886,
+      "artifact_sha256": "b714896af2484de351aa579b1fba1ee9b955132cbd6887f02a70c2b635d35560",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "allow",
+      "expected_recovery": true,
+      "id": "unconfigured_key_boundary",
+      "key_reconstruction_verified": true,
+      "kind": "unconfigured-key-boundary",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": false,
+      "source_sha256": "587032f6c3a045c04de17aeee650e176f50ce5804ea37dbe54b18949b239a18e",
+      "zipapp_bytes": 702,
+      "zipapp_sha256": "1d63bc0feb3e0caa3ba01efdfd6d4575bd0e81e8ff0a4fa3bcd9c22011fda6e6",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "0f01f2470c12a9f15d41bf7cae4e22494e410b8efd0f4de57c49622f76c89d5b",
+        "evidence_stdout_bytes": 5591,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 870,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 15
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": true,
+            "findings": [],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": true,
+            "findings": [],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": true
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    },
+    {
+      "artifact_bytes": 842,
+      "artifact_sha256": "7d1d65589126cec923936840cfd5effc68184ff6a540fb53675970d7aec84973",
+      "behavior": [
+        11,
+        11,
+        18,
+        74
+      ],
+      "byteorder": "big",
+      "expected_candidate_gate": "incomplete",
+      "expected_recovery": true,
+      "id": "short_signed_integer_boundary",
+      "key_reconstruction_verified": true,
+      "kind": "short-integer-boundary",
+      "magic": 3531,
+      "marshal_version": 4,
+      "raw_and_hex_embedded_key_absent": true,
+      "signed": true,
+      "source_sha256": "afdeb73a105141bb1c5e19df40b25c13e42ae08b101cb00bf4c9594600688a00",
+      "zipapp_bytes": 657,
+      "zipapp_sha256": "4ccc5cca8c0e51e582db416cc480d944f3b0e203e618cac4888e4b076918dabd",
+      "rea": {
+        "provider": "rea-python-pyc",
+        "exit_code": 0,
+        "evidence_envelope": "legacy-unversioned",
+        "evidence_stdout_sha256": "5023092e817dc22e3e5335cc183af9893f4608848bc7766c234580d697ef4f06",
+        "evidence_stdout_bytes": 5453,
+        "aes_plaintext_verified": true,
+        "authenticated_key_candidates": 1,
+        "coverage": {
+          "code_objects": 4,
+          "marshal_bytes": 826,
+          "marshal_depth": 5,
+          "objects": 69,
+          "status": "complete"
+        },
+        "exact_key_recovered": true,
+        "header_magic": 3531,
+        "original_filename_occurrences": 4,
+        "public_function_name_visible": true,
+        "python_version": "3.12",
+        "rea_claims_source_recovery": false,
+        "rea_integer_candidates": 8,
+        "reconstruction_candidates": 14
+      },
+      "gates": {
+        "disk": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "structured_secret_unverifiable",
+                "path": "pricing.pyc",
+                "format": "cpython-pyc",
+                "reason": "invalid_or_unsupported_pyc_key_profile"
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": false
+          },
+          "archives_scanned": 0
+        },
+        "zipapp": {
+          "baseline": {
+            "ok": true,
+            "findings": []
+          },
+          "candidate": {
+            "ok": false,
+            "findings": [
+              {
+                "code": "structured_secret_unverifiable",
+                "path": "application.pyz",
+                "format": "cpython-pyc",
+                "reason": "invalid_or_unsupported_pyc_key_profile",
+                "archive_members": [
+                  "__main__.pyc"
+                ]
+              }
+            ],
+            "pyc_files_checked": 1,
+            "pyc_scan_completed": false
+          },
+          "archives_scanned": 1
+        }
+      },
+      "zipapp_behavior_verified": true,
+      "analyzed_artifact_unchanged": true
+    }
+  ]
+}

@@ -27,8 +27,10 @@ from .core import (
     _pairs, _root, read_document, safe_relative_path,
 )
 from .elf import audit_elf_stream
+from .encoded_asset_keys import scan_pyc_asset_keys
 from .native import _assert_scanned_identity, _component_findings
 from .native_token import NATIVE_TOKEN_HEX_DIGITS, NATIVE_TOKEN_PREFIX
+from .private_inputs import assert_private_inputs_unchanged, snapshot_private_inputs
 from .pe import audit_pe_stream
 from .macho import MACHO_MAGICS, audit_macho_stream
 from .sealed import assert_asset_keys_unchanged, snapshot_asset_keys
@@ -63,6 +65,8 @@ _STANDALONE_METADATA_MAGICS = (
     ("msf7", b"Microsoft C/C++ MSF 7.00\r\n\x1aDS\0"),
     ("msf2", b"Microsoft C/C++ program database 2.00\r\n\x1aJG\0\0"),
     ("cli-metadata", b"BSJB"),
+    ("llvm-bitcode", b"BC\xc0\xde"),
+    ("llvm-bitcode-wrapper", b"\xde\xc0\x17\x0b"),
 )
 _KEY_MARKERS = ("-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----",
                 "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN EC PRIVATE KEY-----",
@@ -258,7 +262,8 @@ def _looks_like_v7_tar(prefix: bytes, size: int) -> bool:
 
 
 class _Scanner:
-    def __init__(self, policy: dict[str, Any], asset_keys: tuple[bytes, ...] = ()):
+    def __init__(self, policy: dict[str, Any], asset_keys: tuple[bytes, ...] = (),
+                 private_input_digests: tuple[str, ...] = ()):
         self.policy = policy
         self.total_bytes = 0
         self.archive_entries = 0
@@ -266,6 +271,8 @@ class _Scanner:
         self.archive_scan_completed = True
         self.source_map_scan_completed = True
         self.structured_secret_scan_completed = True
+        self.pyc_asset_key_files_checked = 0
+        self.pyc_asset_key_scan_completed = True
         self.asset_keys = asset_keys
         self.native_files_checked = 0
         self.native_metadata_scan_completed = True
@@ -296,6 +303,9 @@ class _Scanner:
         if self.token_rules:
             self.overlap = max(self.overlap, max(length for _, _, _, length in self.token_rules) - 1)
         self.digests = {value: index for index, value in enumerate(policy["forbid_file_sha256"])}
+        self.private_input_digests: dict[str, list[int]] = {}
+        for index, value in enumerate(private_input_digests):
+            self.private_input_digests.setdefault(value, []).append(index)
         self.components = {value.casefold(): index for index, value in enumerate(policy["forbid_path_components"])}
 
     def add(self, code: str, path: str, members: tuple[str, ...] = (), **details: Any) -> None:
@@ -361,6 +371,8 @@ class _Scanner:
         index = self.digests.get(hexdigest)
         if index is not None:
             self.add("forbidden_file_digest", path, members, rule_index=index)
+        for index in self.private_input_digests.get(hexdigest, ()):
+            self.add("private_input_exposure", path, members, rule_index=index)
         if self.policy["check_source_maps"] or self.policy["check_private_keys"] or self.asset_keys:
             self.structured_json(stream, size, path, members,
                                  source_content_marker_seen=any(code == "source_map_marker" and index == 1
@@ -379,6 +391,8 @@ class _Scanner:
                     if code == "structured_secret_unverifiable":
                         self.structured_secret_scan_completed = False
                     self.add(code, path, members, **details)
+        if self.asset_keys:
+            self.pyc_asset_keys(stream, size, path, members)
         if self.policy["check_native_metadata"]:
             self.native_metadata(stream, size, path, members)
         if sidecar is not None:
@@ -386,6 +400,25 @@ class _Scanner:
             self.checked_asar_sidecars.add(location)
         self.payload_locations.add(location)
         return {"size": total, "sha256": hexdigest}
+
+    def pyc_asset_keys(self, stream: BinaryIO, size: int, path: str,
+                       members: tuple[str, ...] = ()) -> None:
+        """Keep the exact PYC key profile separate from JSON/DER validation."""
+        try:
+            report = scan_pyc_asset_keys(stream, size, asset_keys=self.asset_keys)
+        except GuardError:
+            self.pyc_asset_key_files_checked += 1
+            self.pyc_asset_key_scan_completed = False
+            self.add("structured_secret_unverifiable", path, members, format="cpython-pyc",
+                     reason="invalid_or_unsupported_pyc_key_profile")
+            return
+        if report is None:
+            return
+        self.pyc_asset_key_files_checked += 1
+        for finding in report["findings"]:
+            details = dict(finding)
+            code = details.pop("code")
+            self.add(code, path, members, **details)
 
     def structured_json(self, stream: BinaryIO, size: int, path: str,
                         members: tuple[str, ...] = (), *, source_content_marker_seen: bool = False) -> None:
@@ -528,6 +561,8 @@ class _Scanner:
             return
         self.native_files_checked += 1
         evidence = report["evidence"]
+        if report.get("compiler_metadata_present", False):
+            self.add("native_compiler_metadata", path, members, format=format_name)
         if format_name == "wasm" and evidence.get("linker_metadata_present", False):
             # Relocatable/link-time symbols can expose private helpers after a
             # name-section split. Do not silently remove runtime-relevant data
@@ -830,7 +865,8 @@ class _Scanner:
 
 
 def scan_release(root: Path | str, policy_path: Path | str, *,
-                 asset_key_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
+                 asset_key_files: tuple[Path | str, ...] | list[Path | str] = (),
+                 private_input_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
     """Inspect an entire release with no requirement for a native entry point.
 
     Unsupported, disabled, malformed or over-budget containers never produce a
@@ -844,12 +880,13 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
     asset_keys = tuple(item.key for item in key_snapshots)
     policy = load_distribution_policy(policy_path)
     release_root = _root(root)
+    private_snapshots = snapshot_private_inputs(private_input_files, root=release_root)
     candidates = _inventory(release_root)
     if not candidates:
         raise GuardError("Cannot inspect an empty release")
     if len(candidates) > policy["max_files"]:
         raise GuardError("Release file count exceeds max_files")
-    scanner = _Scanner(policy, asset_keys)
+    scanner = _Scanner(policy, asset_keys, tuple(item.sha256 for item in private_snapshots))
     files: list[dict[str, Any]] = []
     identities: list[tuple[Path, tuple[int, ...]]] = []
     for relative, path in sorted(candidates.items()):
@@ -888,6 +925,7 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
         for relative in sorted(expected - set(final)):
             scanner.add("missing_release_file", relative)
     assert_asset_keys_unchanged(key_snapshots)
+    assert_private_inputs_unchanged(private_snapshots)
     return {
         "ok": not scanner.findings, "root": str(release_root), "files": files,
         "findings": scanner.findings,
@@ -904,6 +942,10 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "structured_secrets_checked": policy["check_private_keys"] or bool(asset_keys),
             "der_private_keys_checked": policy["check_private_keys"],
             "structured_secret_scan_completed": scanner.structured_secret_scan_completed,
+            "pyc_asset_keys_checked": bool(asset_keys),
+            "pyc_asset_key_files_checked": scanner.pyc_asset_key_files_checked,
+            "pyc_asset_key_scan_completed": scanner.pyc_asset_key_scan_completed,
+            "pyc_asset_key_profile": "canonical-marshal-integer/v1" if asset_keys else None,
             "source_map_markers_checked": policy["check_source_maps"],
             "source_map_structures_checked": policy["check_source_maps"],
             "source_map_scan_completed": scanner.source_map_scan_completed,
@@ -912,13 +954,16 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "native_files_checked": scanner.native_files_checked,
             "native_metadata_scan_completed": scanner.native_metadata_scan_completed,
             "asset_keys_checked": len(asset_keys),
+            "private_inputs_checked": len(private_snapshots),
             "release_allowlist_applied": policy["allowed_release_files"] is not None,
         },
         "notes": [
             "Static exposure checks only; passing does not measure REA or cracking resistance.",
-            "Marker checks are heuristics. Bounded JSON inspection also recognizes v3 source maps, decoded PEM and known asset-key representations, and supported private JWK structures. Bounded DER recognition checks supported private-key encodings; arbitrary JS, unknown encodings and custom key wrapping can remain undetected.",
+            "Declared private input files are snapshotted outside the public root and checked by exact whole-payload SHA-256 across physical and inspected archive files. Reference paths and separate reference digests are not listed; public inventory digests remain visible. Rewritten, compiled or fragmented copies require other controls.",
+            "Marker checks are heuristics. Bounded JSON inspection also recognizes v3 source maps, decoded and hex/Base64-wrapped PEM, known asset-key representations, and supported private JWK structures. Bounded DER recognition checks supported private-key encodings; arbitrary JS, unknown encodings and custom key wrapping can remain undetected.",
+            "With configured asset keys, recognized stable CPython PYC headers enter a bounded canonical marshal-integer exact-pattern profile. Its completion does not validate the marshal body or make code confidential. Unsupported PYC headers, short integer aliases or budgets fail this separate inspection; computed, split and noncanonical constants remain outside its scope.",
             "JSON-like payloads exceeding 8 MiB or structural limits fail each enabled structured inspection.",
-            "ELF/PE/Mach-O and core WebAssembly checks report supported debug metadata and private/static symbols, including inside inspected archives. WebAssembly inspection validates the section envelope, not all instruction semantics. Standalone MSF7/MSF2 and raw CLI metadata are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports, instructions and runtime metadata remain observable; other native formats are not inspected.",
+            "ELF/PE/Mach-O and core WebAssembly checks report supported debug metadata and private/static symbols, including inside inspected archives. Recognized embedded LLVM compiler sections are reported separately. WebAssembly inspection validates the section envelope, not all instruction semantics. Standalone MSF7/MSF2, raw CLI metadata and raw/wrapped LLVM bitcode are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports, instructions and runtime metadata remain observable; other native formats are not inspected.",
             "Native-token findings identify the public token format, not proof of validity. Reports retain file paths and archive member names.",
             "Stored/deflated ZIP and canonical ASAR containers are inspected; unpacked ASAR files must match exact siblings in the same disk/ZIP/ASAR namespace. Missing, mismatched or unindexed sidecars fail inspection. Recognized ar/thin-ar static libraries are unsupported; external thin members are never opened. ZIP64, links, path aliases, prefixed/concatenated archives and unindexed packed bytes remain unsupported.",
             "Canonical V7 TAR headers are recognized by structure/checksum and rejected as unsupported. Brotli .br files are rejected by suffix; arbitrary renamed Brotli streams have no recognized magic and may remain undetected.",

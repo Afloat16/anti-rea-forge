@@ -113,6 +113,8 @@ def parser() -> argparse.ArgumentParser:
     distribution.add_argument("--policy", type=Path, required=True, help="Portable release-scan JSON policy")
     distribution.add_argument("--asset-key-file", type=Path, action="append", default=[],
                               help="External raw32-byte key to check for release exposure (repeatable)")
+    distribution.add_argument("--private-input-file", type=Path, action="append", default=[],
+                              help="External private file to forbid as an exact release copy (repeatable)")
 
     split = commands.add_parser(
         "split-source-maps", help="Separate external source maps from a public release without rewriting bundles"
@@ -141,6 +143,8 @@ def parser() -> argparse.ArgumentParser:
     project_check.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     project_check.add_argument("--asset-key-file", type=Path, action="append", default=[],
                                help="Additional external 32-byte key to check; configured keys remain required")
+    project_check.add_argument("--private-input-file", type=Path, action="append", default=[],
+                               help="Additional private file to check; configured inputs remain required")
 
     prepare = commands.add_parser("prepare", help="Scan and sign an immutable release; write external sidecars without rewriting the app")
     prepare.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -149,6 +153,8 @@ def parser() -> argparse.ArgumentParser:
     prepare.add_argument("--out", type=Path, required=True, help="Fresh sidecar directory OUTSIDE the release")
     prepare.add_argument("--asset-key-file", type=Path, action="append", default=[],
                          help="Additional external 32-byte key to check before signing (repeatable)")
+    prepare.add_argument("--private-input-file", type=Path, action="append", default=[],
+                         help="Additional private file to check and revalidate before publication (repeatable)")
 
     for command, description in (
         ("analysis-grant-issue", "Issuer only: grant scoped analysis of one signed manifest for at most 24 hours"),
@@ -296,14 +302,15 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
     if args.command == "project-init":
         return init_project(args.root, args.product, args.out), 0
     if args.command == "check":
-        result = check_project(args.config, asset_key_files=args.asset_key_file)
+        result = check_project(args.config, asset_key_files=args.asset_key_file,
+                               private_input_files=args.private_input_file)
         return result, 0 if result["ok"] else 3
     if args.command == "prepare":
         project = load_project(args.config)
         outside_release(args.private, project["root"], "Issuer private key")
         outside_release(args.out, project["root"], "Prepared release sidecars")
         result = prepare_release(args.config, load_private_key(args.private, _passphrase()), args.release, args.out,
-                                 asset_key_files=args.asset_key_file)
+                                 asset_key_files=args.asset_key_file, private_input_files=args.private_input_file)
         return result, 0 if result["ok"] else 3
     if args.command in {"analysis-grant-issue", "analysis-check"}:
         manifest = parse_json(_crypto_input(args.manifest, 8 * 1024 * 1024))
@@ -373,7 +380,8 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
         result = gate(args.artifact, args.policy, args.root)
         return result, 0 if result["ok"] else 3
     if args.command == "scan-release":
-        result = scan_release(args.root, args.policy, asset_key_files=args.asset_key_file)
+        result = scan_release(args.root, args.policy, asset_key_files=args.asset_key_file,
+                              private_input_files=args.private_input_file)
         return result, 0 if result["ok"] else 3
     if args.command == "audit":
         report = audit_pe(args.path)

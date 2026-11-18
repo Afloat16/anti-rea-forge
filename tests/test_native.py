@@ -192,6 +192,7 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(policy["forbid_path_components"], [])
         self.assertEqual(policy["forbid_file_sha256"], [])
         self.assertIs(policy["scan_release_literals"], False)
+        self.assertIs(policy["require_no_compiler_metadata"], True)
         self.assertEqual(policy["max_release_scan_bytes"], 64 * 1024 * 1024)
         self.assertIsNone(policy["allowed_release_files"])
 
@@ -200,6 +201,7 @@ class NativeTests(unittest.TestCase):
             formats=["pe", "elf"], forbid_literals=["forbidden"],
             forbid_extensions=[".pdb"], require_native=False,
             require_no_debug_metadata=False, require_no_symbol_table=False,
+            require_no_compiler_metadata=False,
             required_pe_flags=["dynamic_base", "nx_compat", "guard_cf", "high_entropy_va"],
             max_binary_bytes=4 * 1024 * 1024 * 1024,
             forbid_path_components=["src", ".git", "Backups"],
@@ -234,6 +236,7 @@ class NativeTests(unittest.TestCase):
             {"required_pe_flags": "guard_cf"}, {"required_pe_flags": ["unknown"]},
             {"require_native": 1}, {"require_no_debug_metadata": "true"},
             {"require_no_symbol_table": None}, {"max_binary_bytes": True},
+            {"require_no_compiler_metadata": 1}, {"require_no_compiler_metadata": "true"},
             {"max_binary_bytes": "512"}, {"max_binary_bytes": 0},
             {"max_binary_bytes": 4 * 1024 * 1024 * 1024 + 1},
             {"forbid_path_components": "src"}, {"forbid_path_components": [True]},

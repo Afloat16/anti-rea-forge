@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="790" viewBox="0 0 1280 790" role="img" aria-labelledby="title desc">
 <title id="title">把发布边界，变成保护边界。</title>
-<desc id="desc">私有资料独立保存 · 发布字节完整核对 · 敏感操作由可信端授权 信任边界：公开客户端、目标文件中的声明、被修改的本地校验，都不能授予服务端权限。</desc>
+<desc id="desc">取得当前私有输入快照，分离编译器 IR 和调试资料，检查编码密钥，再核对签名后的公开文件。敏感实现与签名权限保留在独立可信服务中。分发的代码与授权进程内存仍可观察。</desc>
 <defs><linearGradient id="background" x2="1" y2="1"><stop stop-color="#101d32"/><stop offset="1" stop-color="#080f1d"/></linearGradient>
 <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="none" stroke="#76d9cb" stroke-width="1.7"/></marker></defs>
 <rect width="1280" height="790" rx="24" fill="url(#background)"/>
 <g font-family="Inter, Noto Sans CJK SC, Noto Sans, Arial, sans-serif">
-<text x="48" y="43" font-size="15" fill="#76d9cb" font-weight="700" letter-spacing="2">ANTI-REA FORGE  /  ARCHITECTURE</text>
+<text x="48" y="43" font-size="15" fill="#76d9cb" font-weight="700" letter-spacing="2">ANTI-REA FORGE 1.3  /  ARCHITECTURE</text>
 <text x="48" y="94" font-size="37" fill="#f5f8ff" font-weight="700" >把发布边界，变成保护边界。</text>
 <text x="48" y="130" font-size="19" fill="#aebfd6" font-weight="400" >私有资料独立保存 · 发布字节完整核对 · 敏感操作由可信端授权</text>
 <text x="48" y="178" font-size="16" fill="#76d9cb" font-weight="700" letter-spacing="1">01  可信构建</text>
@@ -13,14 +13,14 @@
 <rect x="72" y="220" width="36" height="4" rx="2" fill="#76d9cb"/>
 <text x="72" y="259" font-size="23" fill="#f2f6ff" font-weight="700" >分离敏感内容，检查产物</text>
 <text x="72" y="300" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">私有输入</text>
-<text x="72" y="327" font-size="16" fill="#c7d4e7" font-weight="400" >源代码、符号与选定的数据</text>
-<text x="72" y="351" font-size="16" fill="#c7d4e7" font-weight="400" >外部密钥保持在发布目录之外</text>
+<text x="72" y="327" font-size="16" fill="#c7d4e7" font-weight="400" >读取当前私有源码与配置的快照</text>
+<text x="72" y="351" font-size="16" fill="#c7d4e7" font-weight="400" >从扫描到签名持续复核私有输入</text>
 <text x="72" y="388" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">构建处理</text>
-<text x="72" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >分离 map、ELF 与 Wasm 调试资料</text>
+<text x="72" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >分离 map、调试资料与 LLVM IR</text>
 <text x="72" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >封装选定资产或 VM 指令</text>
 <text x="72" y="476" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">发布门禁</text>
-<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >解码密钥与内嵌 source map</text>
-<text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >Wasm 完成链接后，才允许发布</text>
+<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >检查 PEM、PYC 密钥与 source map</text>
+<text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >拒绝归档中的私有文件完整副本</text>
 <path d="M423 387h26" fill="none" stroke="#76d9cb" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="456" y="178" font-size="16" fill="#8db8ff" font-weight="700" letter-spacing="1">02  公开分发</text>
 <rect x="456" y="196" width="368" height="366" rx="18" fill="#142237" stroke="#31435e"/>
@@ -47,17 +47,17 @@
 <text x="888" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >受保护缓冲区与显式清理</text>
 <text x="888" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >授权进程中的明文仍可被观察</text>
 <text x="888" y="476" font-size="14" fill="#d3adff" font-weight="700" letter-spacing="0.8">敏感操作</text>
-<text x="888" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >可信服务验证限定范围的能力凭证</text>
+<text x="888" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >私有实现在可信服务中验证能力凭证</text>
 <text x="888" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >进入处理函数前核对过期与重放</text>
 <path d="M1048 614v-37" fill="none" stroke="#76d9cb" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
 <rect x="48" y="614" width="1184" height="103" rx="16" fill="#102b31" stroke="#32615f"/>
 <text x="72" y="646" font-size="15" fill="#76d9cb" font-weight="700" letter-spacing="1">可信签发方 / 私有存储</text>
 <circle cx="76" cy="678" r="4" fill="#76d9cb"/>
-<text x="90" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >私有 map、ELF / Wasm 调试原件</text>
+<text x="90" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >私有实现、map 与编译器 IR</text>
 <circle cx="480" cy="678" r="4" fill="#76d9cb"/>
 <text x="494" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >独立密钥与签名权限</text>
 <circle cx="884" cy="678" r="4" fill="#76d9cb"/>
 <text x="898" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >已认证身份与重放状态</text>
-<text x="48" y="755" font-size="16" fill="#aebfd6" font-weight="400" >信任边界：公开客户端、目标文件中的声明、被修改的本地校验，都不能授予服务端权限。</text>
+<text x="48" y="755" font-size="16" fill="#aebfd6" font-weight="400" >分发的代码仍可分析；敏感实现保留在可信服务端，授权进程中的明文仍可被观察。</text>
 </g>
 </svg>

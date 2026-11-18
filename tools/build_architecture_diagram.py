@@ -8,42 +8,44 @@ COPY = {
     "en": {
         "title": "A release is a boundary.",
         "subtitle": "Keep private material separate. Verify the bytes you ship. Authorize sensitive use.",
+        "description": "Snapshot private inputs, separate compiler IR and debug data, inspect encoded keys, then verify signed public artifacts. Keep sensitive operations and signing authority in a separately trusted service. Distributed code and authorized memory remain observable.",
         "labels": ["01  TRUSTED BUILD", "02  PUBLIC DISTRIBUTION", "03  AUTHORIZED USE"],
         "titles": ["Separate & inspect", "Ship verified artifacts", "Authenticate & open"],
         "rows": [
-            [("PRIVATE INPUTS", ["Source, symbols and selected data", "Keys stay outside build outputs"]),
-             ("BUILD TRANSFORMS", ["Split maps, ELF and Wasm debug data", "Seal selected assets or VM instructions"]),
-             ("RELEASE GATE", ["Bounded format + JSON/DER key checks", "Full inventory, key checks, final recheck"])],
+            [("PRIVATE INPUTS", ["Snapshot current private source / config", "Recheck inputs through signing"]),
+             ("BUILD TRANSFORMS", ["Split maps, debug data and LLVM IR", "Seal selected assets or VM instructions"]),
+             ("RELEASE GATE", ["Inspect PEM, PYC keys and source maps", "Reject exact private copies in archives"])],
             [("APPLICATION", ["Public code + authenticated ciphertext", "Required ABI and runtime behavior retained"]),
              ("SIGNED MANIFEST", ["Exact paths, sizes and file hashes", "Version and product bound to the signature"]),
              ("PUBLICATION RULE", ["Known unsupported format or ambiguity?", "Stop the release and report the reason."])],
             [("INDEPENDENT KEY", ["Check product / release / purpose context", "Authenticate before exposing plaintext"]),
              ("NATIVE LIFETIME", ["Guarded buffers and explicit clearing", "Authorized memory remains observable"]),
-             ("SENSITIVE OPERATIONS", ["Trusted service verifies scoped capability", "Expiry and replay checks before admission"])],
+             ("SENSITIVE OPERATIONS", ["Private logic behind scoped capabilities", "Expiry and replay checks before admission"])],
         ],
         "footerlabel": "TRUSTED ISSUER / PRIVATE STORAGE",
-        "footers": ["Maps + ELF / Wasm originals", "External keys + signing", "Identity + replay state"],
-        "note": "Trust boundary: a public client, target-supplied notice or patched local check cannot grant server authority.",
+        "footers": ["Private code + maps + compiler IR", "External keys + signing", "Identity + replay state"],
+        "note": "Client code remains readable. Sensitive logic belongs in a trusted service; authorized memory remains observable.",
     },
     "zh-CN": {
         "title": "把发布边界，变成保护边界。",
         "subtitle": "私有资料独立保存 · 发布字节完整核对 · 敏感操作由可信端授权",
+        "description": "取得当前私有输入快照，分离编译器 IR 和调试资料，检查编码密钥，再核对签名后的公开文件。敏感实现与签名权限保留在独立可信服务中。分发的代码与授权进程内存仍可观察。",
         "labels": ["01  可信构建", "02  公开分发", "03  授权使用"],
         "titles": ["分离敏感内容，检查产物", "发布经过验证的文件", "先认证，再开放数据"],
         "rows": [
-            [("私有输入", ["源代码、符号与选定的数据", "外部密钥保持在发布目录之外"]),
-             ("构建处理", ["分离 map、ELF 与 Wasm 调试资料", "封装选定资产或 VM 指令"]),
-             ("发布门禁", ["有界格式与 JSON/DER 密钥检查", "完整清单、密钥检查、最终复核"])],
+            [("私有输入", ["读取当前私有源码与配置的快照", "从扫描到签名持续复核私有输入"]),
+             ("构建处理", ["分离 map、调试资料与 LLVM IR", "封装选定资产或 VM 指令"]),
+             ("发布门禁", ["检查 PEM、PYC 密钥与 source map", "拒绝归档中的私有文件完整副本"])],
             [("应用产物", ["公开代码与经过认证的密文", "保留必要 ABI 和运行行为"]),
              ("签名清单", ["精确绑定路径、大小和文件哈希", "签名同时绑定产品与版本"]),
              ("发布规则", ["已识别的未支持格式、变化或歧义？", "阻止发布，并给出明确原因。"])],
             [("独立密钥", ["核对产品、版本与用途上下文", "认证成功后才开放明文"]),
              ("原生生命周期", ["受保护缓冲区与显式清理", "授权进程中的明文仍可被观察"]),
-             ("敏感操作", ["可信服务验证限定范围的能力凭证", "进入处理函数前核对过期与重放"])],
+             ("敏感操作", ["私有实现在可信服务中验证能力凭证", "进入处理函数前核对过期与重放"])],
         ],
         "footerlabel": "可信签发方 / 私有存储",
-        "footers": ["私有 map、ELF / Wasm 调试原件", "独立密钥与签名权限", "已认证身份与重放状态"],
-        "note": "信任边界：公开客户端、目标文件中的声明、被修改的本地校验，都不能授予服务端权限。",
+        "footers": ["私有实现、map 与编译器 IR", "独立密钥与签名权限", "已认证身份与重放状态"],
+        "note": "分发的代码仍可分析；敏感实现保留在可信服务端，授权进程中的明文仍可被观察。",
     },
 }
 
@@ -52,7 +54,7 @@ def render(language: str) -> str:
     c = COPY[language]
     parts = ['<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="790" viewBox="0 0 1280 790" role="img" aria-labelledby="title desc">',
              f'<title id="title">{escape(c["title"])}</title>',
-             f'<desc id="desc">{escape(c["subtitle"] + " " + c["note"])}</desc>',
+             f'<desc id="desc">{escape(c["description"])}</desc>',
              '<defs><linearGradient id="background" x2="1" y2="1"><stop stop-color="#101d32"/><stop offset="1" stop-color="#080f1d"/></linearGradient>',
              '<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="none" stroke="#76d9cb" stroke-width="1.7"/></marker></defs>',
              '<rect width="1280" height="790" rx="24" fill="url(#background)"/>',
@@ -61,7 +63,7 @@ def render(language: str) -> str:
     def text(x, y, value, size=20, color="#dce7f6", weight=400, extra=""):
         parts.append(f'<text x="{x}" y="{y}" font-size="{size}" fill="{color}" font-weight="{weight}" {extra}>{escape(value)}</text>')
 
-    text(48, 43, "ANTI-REA FORGE  /  ARCHITECTURE", 15, "#76d9cb", 700, 'letter-spacing="2"')
+    text(48, 43, "ANTI-REA FORGE 1.3  /  ARCHITECTURE", 15, "#76d9cb", 700, 'letter-spacing="2"')
     text(48, 94, c["title"], 37, "#f5f8ff", 700)
     text(48, 130, c["subtitle"], 19, "#aebfd6")
     for i, x in enumerate((48, 456, 864)):

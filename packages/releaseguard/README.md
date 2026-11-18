@@ -8,12 +8,13 @@ release checks and verification code used by the Python tools. There is no
 JavaScript build step and no second cryptographic implementation to maintain.
 
 **Node.js 22+ and Python 3.10+ are required.** Install this repository's Python
-package into the interpreter you select. The 1.0 SDK is available as an installable **GitHub Release archive** and as a local
+package into the interpreter you select. Use the matching **1.3.0 SDK and Python core**.
+The SDK is distributed as an installable **GitHub Release archive** and as a local
 workspace package. It remains marked private to prevent accidental npm publication;
 no npm registry release is claimed.
 
 ```sh
-npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/anti-rea-forge-releaseguard-1.0.0.tgz
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.3.0/anti-rea-forge-releaseguard-1.3.0.tgz
 ```
 
 ## Install and run
@@ -91,7 +92,7 @@ node examples/javascript/scan-release.mjs --root dist --policy examples/policy-p
 
 ## Configure once, check each build
 
-The v0.6 project workflow stores editable configuration outside the application:
+The project workflow, introduced in v0.6, stores editable configuration outside the application:
 
 ```sh
 python -m releaseguard project-init --root dist --product Demo --out .releaseguard
@@ -185,8 +186,8 @@ it does not establish legal ownership or permissions beyond this workflow.
 
 | Method | Required options | Optional options | Python command |
 | --- | --- | --- | --- |
-| `scanRelease(options, controls?)` | `root`, `policy` | `assetKeyFiles` | `scan-release` |
-| `checkProject(options, controls?)` | `config` | `assetKeyFiles` | `check` |
+| `scanRelease(options, controls?)` | `root`, `policy` | `assetKeyFiles`, `privateInputFiles` | `scan-release` |
+| `checkProject(options, controls?)` | `config` | `assetKeyFiles`, `privateInputFiles` | `check` |
 | `checkAnalysis(options, controls?)` | `manifest`, `root`, `publicKey`, `product`, `release`, `subject`, `audience`, `operation` | `grant` | `analysis-check` |
 | `withAnalysisAuthorization(options, handler, controls?)` | Same options as `checkAnalysis`, plus a callback | `grant` | `analysis-check`, then one callback if allowed |
 | `audit(path, options?)` | PE file path | `strict`, `signal` | `audit` |
@@ -213,7 +214,112 @@ const report = await guard.scanRelease({
 TypeScript consumers receive declarations from [index.d.ts](index.d.ts), including
 the report fields and error codes.
 
-Client options:
+### Private implementation references in 1.3
+
+`privateInputFiles` accepts at most **64 external, nonempty regular files**, limited
+to **8 MiB each and 64 MiB total**. Python rejects directories, globs, linked files
+or ancestors, and Windows reparse points. The SDK sends separate
+`--private-input-file` path arguments; it does not accept inline private contents.
+
+```javascript
+const report = await guard.scanRelease({
+  root: "dist",
+  policy: "release-policy.json",
+  privateInputFiles: ["../service/private_quote.py", "../service/model.dat"],
+  assetKeyFiles: ["../issuer/asset.key"],
+});
+if (!report.ok) process.exitCode = report.exitCode;
+```
+
+To require the same references on every project check, add the build-only field
+to `.releaseguard/project.json`:
+
+```json
+{
+  "version": 1,
+  "product": "Demo",
+  "root": "../dist",
+  "policy": "policy.json",
+  "private_input_files": ["../../service/private_quote.py"]
+}
+```
+
+Configuration paths resolve relative to `project.json`. `checkProject` adds optional
+`privateInputFiles` to the configured references; omitting the option or passing `[]`
+does not clear them. The combined limits apply. Each scan reads the current reference
+bytes and rechecks their identity and hash before completion. Missing, replaced or
+modified references fail the operation. `checks.private_inputs_checked` records the
+count, and a public copy yields `private_input_exposure` with its `rule_index`.
+
+The rule matches **exact whole-file SHA-256 copies**, including renamed physical
+files and inspected ZIP/ASAR members and verified unpacked siblings. It does not detect
+rewritten, compiled, concatenated or fragmented versions; even an appended newline
+changes the digest. Reference paths and separate reference digests are omitted from
+reports, while public file/member names and public inventory hashes remain visible.
+The [private-service example](../../examples/private_service/README.md) and real REA
+[npm](../../docs/results/private-input-controls-v1.3.0-rea-6.9.0.json) /
+[source](../../docs/results/private-input-controls-v1.3.0-rea-source.json) controls show
+the intended separation and deliberately republished-copy test.
+
+The equivalent CLI option works on `scan-release`, `check` and `prepare`; the Python
+keyword is `private_input_files`. `prepare` retains reference snapshots across signing
+and output creation, rechecks them after writing sidecars, and removes a new output
+bundle on final verification failure. Signing remains a Python CLI/API workflow, not
+an SDK method. Keep references, release files and their ancestors under trusted build
+control throughout the operation; these checks are not an atomic filesystem snapshot.
+
+### New scan profiles and completion fields
+
+With configured `assetKeyFiles`, the core applies the independent
+`canonical-marshal-integer/v1` PYC profile even if `check_private_keys` or
+`check_native_metadata` is disabled. It searches canonical signed/unsigned,
+big/little-endian integer representations of the known 32-byte keys without
+unmarshalling or executing the inspected bytecode. Supported stable CPython 3.7–3.14
+headers, a 64 MiB payload ceiling and the 16-key limit bound this check. Every
+configured key interpretation needs at least 128 significant bits; short aliases,
+unsupported headers and budget failures produce incomplete inspection.
+
+| Report field | Interpretation |
+| --- | --- |
+| `pyc_asset_keys_checked` | Known external keys enabled the profile |
+| `pyc_asset_key_files_checked` | PYC candidates inspected, including unsupported candidates and inspected archive members |
+| `pyc_asset_key_scan_completed` | Completion of this exact-pattern profile; not validation of the full marshal body |
+| `pyc_asset_key_profile` | `canonical-marshal-integer/v1`, or `null` without configured keys |
+
+These fields are separate from JSON/DER's `structured_secret_scan_completed`.
+A known-key match is `asset_key_exposure` with
+`representation: "python-marshal-integer"`; an unsupported profile is
+`structured_secret_unverifiable` / `invalid_or_unsupported_pyc_key_profile`.
+Use the enabled flag and candidate count when interpreting completion. Unknown keys,
+computed/split/noncanonical constants and program logic are outside this profile.
+The [PYC guide](../../docs/python-pyc-key-profile.md) documents the exact boundaries.
+
+`check_private_keys: true` also checks **one** hex/Base64 wrapper around private PEM
+headers in JSON strings, including supported leading notes and Node-compatible
+Base64 forms. PEM and DER wrappers share **64 candidates and 256 KiB decoded bytes
+per JSON document**; each recognized candidate is limited to **256 Ki characters of
+raw text and 64 KiB decoded bytes**, within the existing JSON structure limits.
+Confirmed private headers produce `private_key_marker` with `json-hex-pem` or
+`json-base64-pem`; recognized invalid/over-budget candidates produce
+`structured_secret_unverifiable` and a false structured completion flag. This does
+not recursively decode arbitrary wrappers or prove that every marked key is valid.
+Public-key PEM and certificates are allowed by this private-key rule.
+
+Native scans separately report exact embedded LLVM sections as
+`native_compiler_metadata`. The PE/ELF `gate` policy defaults
+`require_no_compiler_metadata` to `true`; intentional compiler-data distribution
+requires explicitly setting it to `false`, without disabling other requirements.
+That native-only field cannot be passed in a portable policy; `scanRelease` uses
+the broader `check_native_metadata` switch. Raw/wrapped standalone LLVM bitcode is
+recognized but unsupported (`native_metadata_unverifiable`,
+`native_metadata_scan_completed: false`), including renamed archive members.
+Legitimate JIT applications may require such IR, and an opt-out does not conceal it.
+Eligible ordinary Linux ELF compiler records can be separated with
+[split-elf-debug](../../docs/private-elf-debug.md); PE/Mach-O records are detected
+without automatic rewriting. See the [portable guide](../../docs/portable-release.md)
+for exact section names, budgets and scan-to-sign usage.
+
+### Client options
 
 | Option | Default | Accepted values |
 | --- | --- | --- |

@@ -47,10 +47,14 @@ class ReleaseReadinessTests(unittest.TestCase):
                            "structured_key_blocked": True, "wasm_split_verified": True,
                            "consumer_key_encodings_blocked": True, "incomplete_source_map_blocked": True,
                            "relocatable_wasm_blocked": True,
+                           "private_input_clean_accepted": True, "private_input_copy_blocked": True,
+                           "pyc_integer_key_blocked": True, "encoded_pem_blocked": True,
+                           "standalone_llvm_unverifiable": True,
                            "native_resources_present": 5, "asset_roundtrip_bytes": 4096}
                            for name in names[:2]],
                        "javascript_installation": {"installed_sdk": True,
-                           "clean_release_accepted": True, "source_map_blocked": True},
+                           "clean_release_accepted": True, "source_map_blocked": True,
+                           "private_input_clean_accepted": True, "private_input_copy_blocked": True},
                        "artifacts": records}
 
     def test_complete_main_run_and_exact_bytes_are_accepted(self):
@@ -100,12 +104,36 @@ class ReleaseReadinessTests(unittest.TestCase):
                                        ("python_installations", 0, "consumer_key_encodings_blocked"),
                                        ("python_installations", 1, "incomplete_source_map_blocked"),
                                        ("python_installations", 1, "relocatable_wasm_blocked"),
-                                       ("javascript_installation", None, "source_map_blocked")):
+                                       ("python_installations", 0, "private_input_clean_accepted"),
+                                       ("python_installations", 1, "private_input_copy_blocked"),
+                                       ("python_installations", 0, "pyc_integer_key_blocked"),
+                                       ("python_installations", 1, "encoded_pem_blocked"),
+                                       ("python_installations", 0, "standalone_llvm_unverifiable"),
+                                       ("javascript_installation", None, "source_map_blocked"),
+                                       ("javascript_installation", None, "private_input_clean_accepted"),
+                                       ("javascript_installation", None, "private_input_copy_blocked")):
             changed = copy.deepcopy(self.report)
             target = changed[section] if index is None else changed[section][index]
             target[field] = False
             with self.subTest(field=field), self.assertRaises(ValueError):
                 publisher.validate_artifacts(self.root, changed, self.version, self.sha)
+
+    def test_missing_or_nonboolean_new_controls_cannot_authorize_publication(self):
+        for section, fields in (
+            ("python_installations", ("private_input_clean_accepted", "private_input_copy_blocked",
+                                      "pyc_integer_key_blocked", "encoded_pem_blocked", "standalone_llvm_unverifiable")),
+            ("javascript_installation", ("private_input_clean_accepted", "private_input_copy_blocked")),
+        ):
+            for field in fields:
+                for value in (None, 1, "true"):
+                    changed = copy.deepcopy(self.report)
+                    target = changed[section][0] if section == "python_installations" else changed[section]
+                    if value is None:
+                        del target[field]
+                    else:
+                        target[field] = value
+                    with self.subTest(section=section, field=field, value=value), self.assertRaises(ValueError):
+                        publisher.validate_artifacts(self.root, changed, self.version, self.sha)
 
     def test_python_installation_records_must_cover_both_actual_archives(self):
         changed = copy.deepcopy(self.report)

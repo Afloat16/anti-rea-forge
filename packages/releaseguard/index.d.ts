@@ -199,7 +199,11 @@ export type AnalysisReport = AuthorizedAnalysisReport | DeniedAnalysisReport;
 
 export interface ReleaseGuard {
   checkProject(
-    options: { config: string; /** Added to keys saved in project.json. */ readonly assetKeyFiles?: readonly string[] },
+    options: {
+      config: string;
+      /** Added to keys saved in project.json. */ readonly assetKeyFiles?: readonly string[];
+      /** Added to private files saved in project.json; at most 64 combined. */ readonly privateInputFiles?: readonly string[];
+    },
     controls?: RunOptions,
   ): Promise<ScanReleaseReport>;
 
@@ -220,7 +224,12 @@ export interface ReleaseGuard {
   ): Promise<T>;
 
   scanRelease(
-    options: { root: string; policy: string; /** External raw 32-byte key paths; at most 16. */ readonly assetKeyFiles?: readonly string[] },
+    options: {
+      root: string;
+      policy: string;
+      /** External raw 32-byte key paths; at most 16. */ readonly assetKeyFiles?: readonly string[];
+      /** External private files to forbid as exact whole-file copies; at most 64. */ readonly privateInputFiles?: readonly string[];
+    },
     controls?: RunOptions,
   ): Promise<ScanReleaseReport>;
 

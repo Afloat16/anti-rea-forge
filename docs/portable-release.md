@@ -5,11 +5,16 @@ a **JavaScript ESM bridge with TypeScript declarations**. The scanner reads a st
 directory without requiring an EXE, DLL or ELF entry file. The current scanner checks
 debug metadata and static symbols in every recognized ELF/PE/Mach-O/Wasm payload, including
 inspected ZIP and ASAR members. The native `gate` additionally provides
-artifact-specific policies and mitigation checks.
+artifact-specific policies and mitigation checks. Version 1.3 also checks declared
+private-file copies, canonical known-key integers in CPython bytecode, one-layer
+JSON-wrapped private PEM, and recognized embedded LLVM compiler records.
 
 本版用 Python 统一维护扫描规则与安全判定，通过 JavaScript/TypeScript 接入 Node.js
 构建流程；C++ 只保留在原生内存和构建组件中。贡献一条规则不需要 C++ 编译器。
-当前 REA 6.9.0 与固定源码实测见 [v1.2 扩展对照与修复](rea-defense-v1.2.0.zh-CN.md)；
+v1.3 的 [PYC 已知密钥范围](python-pyc-key-profile.md)、
+[私有文件与 REA 源码对照](results/private-input-controls-v1.3.0-rea-source.json) 和
+[LLVM IR 实际读取对照](results/llvm-metadata-recovery-v1.3.0.json) 分别记录本轮证据；
+此前 REA 6.9.0 与固定源码实测见 [v1.2 扩展对照与修复](rea-defense-v1.2.0.zh-CN.md)；
 早期设计依据见 [6.8.0 源码审阅](rea-source-review-2026-11-04.zh-CN.md)。
 
 ## Quick start
@@ -73,6 +78,7 @@ const report = await guard.scanRelease({
   root: "./dist",
   policy: "./examples/policy-portable-release.json",
   assetKeyFiles: ["../asset-issuer/key.bin"], // optional known external key
+  privateInputFiles: ["../service/private_quote.py"], // optional exact-copy reference
 });
 console.log(JSON.stringify(report, null, 2));
 process.exitCode = report.ok ? 0 : 3;
@@ -86,7 +92,7 @@ Python must be installed into the chosen interpreter; a user-site-only installat
 is not available in isolated mode.
 
 For local package installation, cancellation, timeout/output budgets, error types and
-all five read-only APIs, see the [English SDK guide](../packages/releaseguard/README.md)
+the eight SDK methods, see the [English SDK guide](../packages/releaseguard/README.md)
 or [中文 SDK 指南](../packages/releaseguard/README.zh-CN.md). The SDK is a build/server
 tool, not a browser library or a security boundary on an attacker-controlled client.
 
@@ -103,12 +109,12 @@ invalid types, ambiguous paths and invalid resource limits are errors.
 | `forbid_literals` | `[]` | Up to 64 explicit strings, each 1–1024 characters; match UTF-8, UTF-16 LE/BE and UTF-32 LE/BE |
 | `forbid_extensions` | `[".pdb", ".ilk", ".map"]` | Case-insensitive final extension; lowercase `.extension` entries |
 | `forbid_path_components` | `[".git", ".svn", ".hg", ".env"]` | Exact path components, compared case-insensitively; no globs |
-| `forbid_file_sha256` | `[]` | Reject exact known file digests, including expanded ZIP members |
+| `forbid_file_sha256` | `[]` | Reject exact known file digests, including inspected ZIP/ASAR members |
 | `allowed_release_files` | Omitted | Optional nonempty exact list of physical files relative to the release root; reject missing or extra files |
-| `check_private_keys` | `true` | Detect supported PEM markers, decoded JSON/JWK private material and bounded unencrypted DER private keys, including supported JSON hex/Base64 encodings |
+| `check_private_keys` | `true` | Detect supported PEM markers, decoded JSON/JWK private material, bounded unencrypted DER keys and one-layer JSON hex/Base64 wrappers of private DER/PEM |
 | `check_source_maps` | `true` | Detect markers in five encodings, decoded `sourcesContent` keys even in incomplete maps, and bounded v3 structures including indexed maps |
 | `check_native_tokens` | `true` | Detect complete public-format native bearer tokens in five encodings |
-| `check_native_metadata` | `true` | Inspect recognized ELF/PE/Mach-O and core Wasm for supported private metadata; Wasm linker sections and other unverifiable recognized metadata produce a finding |
+| `check_native_metadata` | `true` | Inspect recognized ELF/PE/Mach-O and core Wasm for supported private metadata, including exact embedded LLVM sections; Wasm linker records and unsupported standalone metadata produce findings |
 | `scan_zip_archives` | `true` | Inspect recognized ZIP content recursively; disabling inspection creates a finding for each detected ZIP |
 | `scan_asar_archives` | `true` | Inspect canonical ASAR plus verified unpacked siblings, including renamed archives; disabling inspection creates a finding |
 | `max_file_bytes` | `67108864` (64 MiB) | Limit each physical file and each expanded member; maximum 512 MiB |
@@ -125,8 +131,29 @@ estimating the final install size.
 The private-key markers cover PKCS#8, encrypted PKCS#8, RSA, EC, DSA and OpenSSH PEM
 headers. Public-key PEM headers do not match this check. A marker is evidence of possible
 disclosure, not proof of a valid key, and its absence is not proof that no secret exists.
-Binary DER keys, credentials outside the configured literals, encrypted/encoded strings,
-split values and other secret formats need additional controls.
+Supported unencrypted DER structures and supported JSON-wrapped DER are also checked.
+Credentials outside configured literals, other encrypted/encoded strings, split values
+and unrecognized secret formats need additional controls.
+
+### One-layer private PEM wrappers in 1.3
+
+With `check_private_keys: true`, bounded JSON inspection also decodes one hex or
+Base64 wrapper around the supported private PEM headers. Leading notes, ASCII folding
+and the supported Node-compatible Base64 forms are included. The rule scans JSON
+strings, including object keys; it does not recursively unwrap arbitrary encodings,
+evaluate JavaScript or decrypt encrypted key material. A confirmed header yields
+`private_key_marker` with `representation: "json-hex-pem"` or `"json-base64-pem"`.
+Public-key PEM and certificates are not private-key findings under this rule.
+
+Wrapped PEM and wrapped DER share a per-JSON budget of **64 candidates and 256 KiB
+decoded bytes**. One recognized candidate is limited to **256 Ki characters of raw
+text and 64 KiB decoded bytes**; the existing 8 MiB JSON, 64-level and 100,000-node
+limits also apply. A recognized candidate that cannot be decoded or exceeds a budget
+produces `structured_secret_unverifiable` and
+`structured_secret_scan_completed: false`. This is a rejected incomplete inspection,
+not proof that a consumer cannot recover the key. See the
+[standard-consumer recovery driver](../benchmarks/encoded_pem_recovery.py) and
+[scope tests](../tests/test_encoded_pem.py).
 
 源映射字节标记可能命中文档或有意公开的调试材料。关闭
 `check_source_maps` 不会自动移除 `forbid_extensions` 中的 `.map`；策略中的各项检查
@@ -141,8 +168,8 @@ treated as a source-map document. `source_map_structure` records an identified f
 indexed v3 map without echoing its sources. Public maps can be an intentional choice;
 disable the relevant policy explicitly if your release is meant to include them.
 
-`check_native_metadata` adds `native_debug_metadata`, `native_symbol_table` or
-`native_metadata_unverifiable` findings. ELF section tables/names must be available for
+`check_native_metadata` adds `native_debug_metadata`, `native_symbol_table`,
+`native_compiler_metadata` or `native_metadata_unverifiable` findings. ELF section tables/names must be available for
 this metadata check; an absent table is not proof that private metadata was removed.
 PE inspection includes DWARF/STABS section names independently of the debug directory,
 including eight-byte truncated names and GNU `/decimal` references into a bounded COFF
@@ -165,13 +192,48 @@ and other executable formats are outside this metadata audit. An explicit policy
 opt-out is available for intentionally shipped native debug metadata. The report
 records whether the check was enabled and how many native payloads were inspected.
 
-Standalone Microsoft MSF7/MSF2 containers and raw `BSJB` CLI metadata roots are recognized
+Standalone Microsoft MSF7/MSF2 containers, raw `BSJB` CLI metadata roots, raw LLVM
+bitcode (`BC C0 DE`) and the LLVM bitcode wrapper (`DE C0 17 0B`) are recognized
 by signature, including in ZIP/ASAR and after renaming. They produce
 `native_metadata_unverifiable` with reason `unsupported_standalone_metadata` and set
-`native_metadata_scan_completed` to `false`. This is conservative refusal, not an MSF or
-Portable PDB parser. `BSJB` is shared with ordinary CLI metadata and does not alone prove
+`native_metadata_scan_completed` to `false`. These signatures do not constitute an MSF,
+Portable PDB or bitcode parser. `BSJB` is shared with ordinary CLI metadata and does not alone prove
 that a file contains a Portable PDB or private symbols. The same explicit
 `check_native_metadata` opt-out applies when such metadata is intentionally distributed.
+LLVM bitcode can be a legitimate JIT runtime input. This default release profile rejects
+direct distribution of readable IR; it does not call such a program invalid or safely
+remove its runtime input.
+
+### Embedded compiler records and native gate policy
+
+The native reports expose `compiler_metadata_present` and
+`compiler_metadata_sections` separately from debug/symbol evidence:
+
+| Format | Exact recognized sections |
+| --- | --- |
+| ELF | `.llvmbc`, `.llvmcmd`, `.llvm.lto` |
+| PE | `.llvmbc`, `.llvmcmd`, including resolved COFF string-table names |
+| Mach-O | `__LLVM,__bitcode`, `__LLVM,__cmdline`, `__LLVM,__bundle`, in every supported fat slice |
+
+Lookalikes and unrelated LLVM runtime/ABI sections are not classified by this rule.
+The [LLVM native wrapper format](https://llvm.org/docs/BitCodeFormat.html#native-object-file-wrapper-format),
+[FatLTO format](https://llvm.org/docs/FatLTO.html) and
+[Apple linker bitcode-bundle option](https://github.com/apple-oss-distributions/ld64/blob/main/doc/man/man1/ld-classic.1)
+describe these containers. Recognizing a section does not validate the IR payload.
+
+The PE/ELF `gate` policy adds **`require_no_compiler_metadata: true` by default**,
+independent of `require_no_debug_metadata` and `require_no_symbol_table`.
+A positive section produces `compiler_metadata_present`; missing ELF section names
+produce `compiler_metadata_unverifiable` when the requirement is enabled. If an
+intentional build profile distributes these compiler records, its native gate policy
+must explicitly set `require_no_compiler_metadata: false`. This setting does not
+disable the other native checks. It is a native policy field and is rejected by
+`scan-release`; the portable scanner's broader opt-out is `check_native_metadata: false`.
+An opt-out records a decision to allow the material, not proof of confidentiality.
+
+For ordinary linked Linux ELFs, [split-elf-debug](private-elf-debug.md) can privately
+separate eligible compiler records while preserving their exact bytes and the program's
+loadable contents. PE/Mach-O records are detected but are not rewritten by this command.
 
 ### Keep external keys in the scan-to-sign workflow
 
@@ -210,6 +272,97 @@ python -m releaseguard prepare --config .releaseguard/project.json \
 The Python APIs accept the keyword-only `asset_key_files` sequence. The SDK accepts
 `assetKeyFiles` on both `scanRelease` and `checkProject`. These are known-key exposure
 checks, not discovery of every possible secret or arbitrary transformed encoding.
+
+### Independent PYC known-key profile
+
+When external asset keys are configured, `scan-release`, `check` and `prepare` also
+inspect recognized CPython PYC payloads under `canonical-marshal-integer/v1`.
+The check runs independently of `check_private_keys` and `check_native_metadata`.
+It searches canonical marshal LONG representations of each known 32-byte key for
+signed/unsigned, big/little-endian `int.to_bytes` reconstruction, including marshal's
+reference flag. It does not unmarshal or execute the examined code.
+
+Supported stable CPython 3.7–3.14 magics use a checked 16-byte PEP 552 header; acceptance
+of that header does not validate the code-object body. The fixed payload limit is
+64 MiB, alongside the ordinary file/archive budgets and 16-key limit. Every configured
+key's four integer interpretations must have at least 128 significant bits. Recognized
+unsupported/truncated headers, short integer aliases and budget failures yield
+`structured_secret_unverifiable` with reason `invalid_or_unsupported_pyc_key_profile`.
+A match yields `asset_key_exposure` / `python-marshal-integer` and the configured
+`rule_index`, without the integer value or key bytes.
+
+| `checks` field | Meaning |
+| --- | --- |
+| `pyc_asset_keys_checked` | Whether configured keys enabled this profile |
+| `pyc_asset_key_files_checked` | Number of PYC candidate inspections, including incomplete candidates and inspected archive members |
+| `pyc_asset_key_scan_completed` | Whether this profile completed for its candidates; false on unsupported profiles or budget/read failures |
+| `pyc_asset_key_profile` | `canonical-marshal-integer/v1` when keys are configured; otherwise `null` |
+
+Use the enabled flag and candidate count with the completion flag. PYC completion is
+separate from JSON/DER's `structured_secret_scan_completed`; neither proves that all
+keys or program logic are hidden. Unknown keys, computed/split/noncanonical constants,
+function names, filenames and executable code remain outside this guarantee.
+The [profile guide](python-pyc-key-profile.md) and real REA
+[npm 6.9.0](results/python-key-recovery-v1.3.0-rea-6.9.0.json) /
+[pinned-source](results/python-key-recovery-v1.3.0-rea-source.json) reports retain the
+12 canonical regression fixtures, ordinary-PYC compatibility and two separate
+boundary cases. Repeating the same fixtures on two providers does not double the
+number of independent vulnerabilities.
+
+### Keep private implementation files out of the public release
+
+Version 1.3 accepts repeatable `--private-input-file` references on `scan-release`,
+`check` and `prepare`. Python uses the keyword-only `private_input_files` sequence;
+the SDK uses `privateInputFiles` on `scanRelease` and `checkProject`.
+These paths belong to the build configuration, not to the portable scan policy:
+
+```json
+{
+  "version": 1,
+  "product": "MyApp",
+  "root": "../dist",
+  "policy": "policy.json",
+  "asset_key_files": ["../../asset-issuer/data.key"],
+  "private_input_files": ["../../service/private_quote.py", "../../service/model.dat"]
+}
+```
+
+```sh
+python -m releaseguard scan-release --root dist --policy .releaseguard/policy.json \
+  --private-input-file ../service/private_quote.py
+python -m releaseguard check --config .releaseguard/project.json \
+  --private-input-file ../service/extra-model.dat
+python -m releaseguard prepare --config .releaseguard/project.json \
+  --private ../issuer/signing.pem --release 1.3 --out ../release-evidence
+```
+
+References must be **external, nonempty regular files: at most 64 files, 8 MiB per
+file and 64 MiB total**. Directories, globs, leaf/ancestor symlinks and Windows reparse
+points are rejected. Configuration paths resolve from `project.json`; additional
+CLI/API/SDK references are additive, and empty arrays do not clear configured inputs.
+The combined limits apply to both sources. Missing or changing files are errors.
+
+Each scan snapshots current reference bytes and identities, then checks exact
+whole-payload SHA-256 matches in physical files and inspected ZIP/ASAR members,
+including checked unpacked ASAR siblings. A renamed identical copy produces
+`private_input_exposure` with a `rule_index`. `private_inputs_checked` records the
+reference count. Reports omit reference paths, contents and separate reference
+digests; the public inventory still contains hashes and paths of public files.
+
+`prepare` retains reference snapshots across scanning, signing and sidecar creation.
+It reopens and hashes the references before completion, re-verifies the release after
+writing sidecars, and removes the newly created output bundle on a failed final check.
+Keep references, their ancestors and the release under trusted build control; these
+checks are not an atomic filesystem snapshot.
+
+This is an **exact whole-file copy** rule. Even an added newline changes the digest;
+rewritten, concatenated, minified, compiled or fragmented copies need other controls.
+The rule does not relocate a service automatically. Keep the restricted implementation
+outside the public package, and use the
+[private-service example](../examples/private_service/README.md) when that architecture
+fits the product. The real REA [npm](results/private-input-controls-v1.3.0-rea-6.9.0.json)
+and [source](results/private-input-controls-v1.3.0-rea-source.json) controls compare a
+public package, the separated service build and a deliberately republished private file.
 
 ## Archives and paths
 
@@ -294,7 +447,8 @@ path remain visible and should be considered before publishing a report.
 deliberately unscanned detected archive also sets `checks.archive_scan_completed` to
 `false`. Check `ok` and all findings; even a true archive-completion flag only describes
 recognized containers, not every conceivable file format.
-`source_map_scan_completed` and `native_metadata_scan_completed` describe their
+`source_map_scan_completed`, `native_metadata_scan_completed`,
+`structured_secret_scan_completed` and `pyc_asset_key_scan_completed` describe their
 respective inspection paths; the separate `*_checked` fields record policy opt-outs.
 Error reports go to stderr with `ok: false`; they are not partial passing reports.
 The JavaScript bridge returns validated exit-0/3 reports and throws `ReleaseGuardError`
@@ -316,7 +470,7 @@ or make a patched client's authorization trustworthy. Keep issuer keys and genui
 restricted operations in the trusted service, using the existing
 [request-bound authorization](runtime-protection.md) where appropriate.
 
-Run `python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_asar tests.test_release_disclosures tests.test_project_asset_keys -v`
+Run `python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_asar tests.test_release_disclosures tests.test_project_asset_keys tests.test_private_inputs tests.test_project_private_inputs tests.test_native_compiler_metadata tests.test_encoded_pem -v`
 for the focused portable regression suite. [Current tool coverage and observations](rea-coverage-2026-11-17.zh-CN.md)
 and the [historical validation record](testing-v0.5-2026-11-04.md) retain their distinct
 results and untested scope. Source review and functional tests are distinct from a full

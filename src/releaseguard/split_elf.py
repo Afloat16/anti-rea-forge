@@ -14,7 +14,7 @@ import sys
 import tempfile
 
 from .core import GuardError, safe_relative_path, write_new
-from .elf import _TYPE_METADATA_NAMES, audit_elf
+from .elf import _COMPILER_METADATA_NAMES, _TYPE_METADATA_NAMES, audit_elf
 from .native import _ENCODINGS, _assert_scanned_identity
 from .split_maps import _destination, _portable_identity, _read
 
@@ -68,8 +68,8 @@ def _objcopy(tool: str, *args: str | Path) -> bytes:
     return result.stdout
 
 
-def _type_metadata(image: bytes) -> dict[str, tuple[int, str]]:
-    """Fingerprint exact type/index sections from an already audited ELF.
+def _metadata_sections(image: bytes, selected: frozenset[bytes], kind: str) -> dict[str, tuple[int, str]]:
+    """Fingerprint exact private sections from an already audited ELF.
 
     Only nonallocated PROGBITS data can be moved out of the public program.
     ELF validation bounds the section table, name table and data before this
@@ -85,6 +85,23 @@ def _type_metadata(image: bytes) -> dict[str, tuple[int, str]]:
     layout = endian + ("IIQQQQIIQQ" if is64 else "IIIIIIIIII")
     names_section = struct.unpack_from(layout, image, shoff + names_index * entry_size)
     names = image[names_section[4]:names_section[4] + names_section[5]]
+    program_ranges = []
+    if kind == "compiler":
+        # SHF_ALLOC is not enough: a malformed section can clear that flag
+        # while its bytes remain in a load/program segment. Do not remove only
+        # the section header and then certify an IR payload still in the file.
+        word = "Q" if is64 else "I"
+        phoff = struct.unpack_from(endian + word, image, 32 if is64 else 28)[0]
+        phsize, phnum = struct.unpack_from(endian + "HH", image, header_size - 10)
+        for pos in range(phoff, phoff + phsize * phnum, phsize or 1):
+            if not struct.unpack_from(endian + "I", image, pos)[0]:  # PT_NULL
+                continue
+            offset = struct.unpack_from(endian + word, image, pos + (8 if is64 else 4))[0]
+            size = struct.unpack_from(endian + word, image, pos + (32 if is64 else 16))[0]
+            if size:
+                if offset > len(image) or size > len(image) - offset:
+                    raise GuardError("ELF program segment exceeds file while splitting compiler metadata")
+                program_ranges.append((offset, offset + size))
     result = {}
     view = memoryview(image)
     for index in range(1, count):
@@ -92,14 +109,30 @@ def _type_metadata(image: bytes) -> dict[str, tuple[int, str]]:
         if section[1] == 0:
             continue
         name = names[section[0]:names.find(b"\0", section[0])]
-        if name not in _TYPE_METADATA_NAMES:
+        if name not in selected:
             continue
         label = name.decode("ascii")
         if label in result or section[1] != 1 or section[2] & 2:  # SHT_PROGBITS / SHF_ALLOC
-            raise GuardError("Duplicate, allocated or unsupported ELF type metadata cannot be split")
+            raise GuardError(f"Duplicate, allocated or unsupported ELF {kind} metadata cannot be split")
+        # Compiler metadata is accepted only as ordinary data (possibly marked
+        # SHF_EXCLUDE by FatLTO), without links/entry semantics. Unknown flags
+        # are not a license to discard a section used by a specialized loader.
+        if kind == "compiler" and (section[2] & ~0x80000000 or section[6]
+                                   or section[7] or section[9]):
+            raise GuardError("Unsupported ELF compiler metadata flags or links cannot be split")
         offset, size = section[4:6]
+        if size and any(offset < end and start < offset + size for start, end in program_ranges):
+            raise GuardError("ELF compiler metadata overlaps a program segment and cannot be split")
         result[label] = (size, hashlib.sha256(view[offset:offset + size]).hexdigest())
     return result
+
+
+def _type_metadata(image: bytes) -> dict[str, tuple[int, str]]:
+    return _metadata_sections(image, _TYPE_METADATA_NAMES, "type")
+
+
+def _compiler_metadata(image: bytes) -> dict[str, tuple[int, str]]:
+    return _metadata_sections(image, _COMPILER_METADATA_NAMES, "compiler")
 
 
 def split_elf_debug(artifact: Path | str, public: Path | str, private: Path | str,
@@ -148,17 +181,22 @@ def split_elf_debug(artifact: Path | str, public: Path | str, private: Path | st
         if set(source_meta["sections"]) & {".gnu_debuglink", ".gnu_debugaltlink", ".gnu_debugdata", ".debug_sup"}:
             raise GuardError("Already split or supplementary debug metadata is unsupported")
         type_metadata = _type_metadata(original)
+        compiler_metadata = _compiler_metadata(original)
         _objcopy(tool, "--only-keep-debug", snapshot, sidecar)
-        remove_types = ["--remove-section=" + name for name in sorted(type_metadata)]
-        _objcopy(tool, "--strip-all", *remove_types, f"--add-gnu-debuglink={sidecar}", snapshot, stripped)
+        remove_metadata = ["--remove-section=" + name
+                           for name in sorted(type_metadata.keys() | compiler_metadata.keys())]
+        _objcopy(tool, "--strip-all", *remove_metadata, f"--add-gnu-debuglink={sidecar}", snapshot, stripped)
         public_meta = audit_elf(stripped)
         private_meta = audit_elf(sidecar)
-        if (any(public_meta["evidence"].values()) or ".gnu_debuglink" not in public_meta["sections"]
+        if (any(public_meta["evidence"].values()) or public_meta["compiler_metadata_present"]
+                or ".gnu_debuglink" not in public_meta["sections"]
                 or not private_meta["evidence"]["symbol_table_present"]):
             raise GuardError("Could not verify separated ELF symbol and debug metadata")
         released, debug = stripped.read_bytes(), sidecar.read_bytes()
         if _type_metadata(debug) != type_metadata:
             raise GuardError("Could not preserve exact private ELF type metadata")
+        if _compiler_metadata(debug) != compiler_metadata:
+            raise GuardError("Could not preserve exact private ELF compiler metadata")
         _check_load_image(original, released)
         for marker in dict.fromkeys(private_names):
             needle = marker.encode("ascii")

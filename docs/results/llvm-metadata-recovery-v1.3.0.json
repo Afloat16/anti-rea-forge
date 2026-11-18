@@ -1,0 +1,232 @@
+{
+  "schema": "releaseguard-llvm-metadata-recovery/v1",
+  "generated_at": "2026-11-18T07:17:00.088581+00:00",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "tools": {
+    "clang": "Debian clang version 19.1.7 (3+b1)",
+    "llvm_dis": "Debian LLVM version 19.1.7",
+    "gcc": "gcc (Debian 14.2.0-19) 14.2.0",
+    "objcopy": "GNU objcopy (GNU Binutils for Debian) 2.44",
+    "readelf": "GNU readelf (GNU Binutils for Debian) 2.44",
+    "nm": "GNU nm (GNU Binutils for Debian) 2.44"
+  },
+  "compiler_flags": [
+    "-O0",
+    "-g0",
+    "-fno-discard-value-names",
+    "-fembed-bitcode=all"
+  ],
+  "producer": "Clang -fembed-bitcode=all object; GNU GCC link; no manual metadata injection before baseline",
+  "baseline_wheel_sha256": "b16280c1f81cb6cec5a028102edeefdaf8b62e9300da3e87acb1878b3f0ab75b",
+  "baseline_package": {
+    "version": "1.2.0",
+    "package_files": 29,
+    "package_inventory_sha256": "318ea7a50fa6333adfb37140756fc5d32d449b028ff55e2759c33afe1be02dd2"
+  },
+  "candidate_package": {
+    "version": "1.3.0",
+    "package_files": 31,
+    "package_inventory_sha256": "c7dabae9d565a0065850dc9e7d1e53673fb434b7694f4fc7780a7a874f3f7d44"
+  },
+  "source_sha256": "cc323b53c1267c015f468d1c8c534e50ebdf530d35477f0945ccc6d15fef3622",
+  "benchmark_sha256": "95707f21ac36d9001126df056c8b160bbb85c1cb1ff01651afe0722c85995188",
+  "original_sha256": "2f3a885371b3da33b486fa418174ac20de0dc7bd30f43dd259d636e6815a3bd9",
+  "original_recovery": {
+    "reader_completed": true,
+    "private_names_recovered": 4,
+    "source_path_recovered": true,
+    "arithmetic_recovered": true,
+    "bitcode_sha256": "c6959de3d57a4bb4fe995be72755a151349017531bf34c19799f2b23845dfea6",
+    "bitcode_bytes": 2744
+  },
+  "baseline": {
+    "gate_allowed": true,
+    "public_sha256": "a50eff2abda6478cc626d2399327637adf51537221c8912c2140f358e54443b9",
+    "recovery": {
+      "reader_completed": true,
+      "private_names_recovered": 4,
+      "source_path_recovered": true,
+      "arithmetic_recovered": true,
+      "bitcode_sha256": "c6959de3d57a4bb4fe995be72755a151349017531bf34c19799f2b23845dfea6",
+      "bitcode_bytes": 2744
+    },
+    "candidate_findings": [
+      {
+        "code": "native_compiler_metadata",
+        "path": "owned",
+        "format": "elf"
+      }
+    ]
+  },
+  "separated_public": {
+    "gate_allowed": true,
+    "compiler_sections_absent": true,
+    "sha256": "b3ad8f71204f67bbd3a0c88523c95a69e2acbc683cc37d0ff7042c1ae4391b13",
+    "private_names_recovered_from_embedded_ir": 0,
+    "recovery_status": "section absent; no embedded IR payload available to llvm-dis"
+  },
+  "private": {
+    "exact_bitcode_and_command_bytes_preserved": true,
+    "recovery": {
+      "reader_completed": true,
+      "private_names_recovered": 4,
+      "source_path_recovered": true,
+      "arithmetic_recovered": true,
+      "bitcode_sha256": "c6959de3d57a4bb4fe995be72755a151349017531bf34c19799f2b23845dfea6",
+      "bitcode_bytes": 2744
+    },
+    "sidecar_sha256": "0eaf3463aa0d8a1f9bbb5eb9341eb39dc6492be39c55f83a809a04076dc5d8dc"
+  },
+  "restored_controls": [
+    {
+      "section": ".llvmbc",
+      "gate_rejected": true,
+      "findings": [
+        {
+          "code": "native_compiler_metadata",
+          "path": "owned",
+          "format": "elf"
+        }
+      ],
+      "runtime_exit_codes": [
+        48,
+        85,
+        122
+      ],
+      "sha256": "d4d080c24da49bfb1599a19bc1c4a0c02b717cd3653b5821a593b30989206702",
+      "recovery": {
+        "reader_completed": true,
+        "private_names_recovered": 4,
+        "source_path_recovered": true,
+        "arithmetic_recovered": true,
+        "bitcode_sha256": "c6959de3d57a4bb4fe995be72755a151349017531bf34c19799f2b23845dfea6",
+        "bitcode_bytes": 2744
+      }
+    },
+    {
+      "section": ".llvmcmd",
+      "gate_rejected": true,
+      "findings": [
+        {
+          "code": "native_compiler_metadata",
+          "path": "owned",
+          "format": "elf"
+        }
+      ],
+      "runtime_exit_codes": [
+        48,
+        85,
+        122
+      ],
+      "sha256": "12914bf365695f74559bf8a4cf8c3596601a5e5cc477eb56c274d52ed2c1024a"
+    }
+  ],
+  "runtime_exit_codes": {
+    "original": [
+      48,
+      85,
+      122
+    ],
+    "v1.2_public": [
+      48,
+      85,
+      122
+    ],
+    "public": [
+      48,
+      85,
+      122
+    ]
+  },
+  "standalone_bitcode": [
+    {
+      "format": "raw",
+      "compiler_target_flags": [],
+      "recovery": {
+        "reader_completed": true,
+        "private_names_recovered": 4,
+        "source_path_recovered": true,
+        "arithmetic_recovered": true,
+        "bitcode_sha256": "c6959de3d57a4bb4fe995be72755a151349017531bf34c19799f2b23845dfea6",
+        "bitcode_bytes": 2744
+      },
+      "gate_controls": [
+        {
+          "container": "renamed",
+          "baseline_allowed": true,
+          "candidate_rejected_as_unsupported": true,
+          "finding": {
+            "code": "native_metadata_unverifiable",
+            "path": "renamed.data",
+            "format": "llvm-bitcode",
+            "reason": "unsupported_standalone_metadata"
+          }
+        },
+        {
+          "container": "nested",
+          "baseline_allowed": true,
+          "candidate_rejected_as_unsupported": true,
+          "finding": {
+            "code": "native_metadata_unverifiable",
+            "path": "renamed.data",
+            "format": "llvm-bitcode",
+            "reason": "unsupported_standalone_metadata",
+            "archive_members": [
+              "nested.data",
+              "module.data"
+            ]
+          }
+        }
+      ],
+      "native_execution_claimed": false
+    },
+    {
+      "format": "wrapper",
+      "compiler_target_flags": [
+        "--target=x86_64-apple-macosx10.13"
+      ],
+      "recovery": {
+        "reader_completed": true,
+        "private_names_recovered": 4,
+        "source_path_recovered": true,
+        "arithmetic_recovered": true,
+        "bitcode_sha256": "beef7208bb6a79390a38a4be3a5fb891699f3e14b83db8318dc8cf8c522d08e2",
+        "bitcode_bytes": 2864
+      },
+      "gate_controls": [
+        {
+          "container": "renamed",
+          "baseline_allowed": true,
+          "candidate_rejected_as_unsupported": true,
+          "finding": {
+            "code": "native_metadata_unverifiable",
+            "path": "renamed.data",
+            "format": "llvm-bitcode-wrapper",
+            "reason": "unsupported_standalone_metadata"
+          }
+        },
+        {
+          "container": "nested",
+          "baseline_allowed": true,
+          "candidate_rejected_as_unsupported": true,
+          "finding": {
+            "code": "native_metadata_unverifiable",
+            "path": "renamed.data",
+            "format": "llvm-bitcode-wrapper",
+            "reason": "unsupported_standalone_metadata",
+            "archive_members": [
+              "nested.data",
+              "module.data"
+            ]
+          }
+        }
+      ],
+      "native_execution_claimed": false
+    }
+  ],
+  "native_text_sha256_unchanged": "0f1af1815ad138554ccda073e0226a942c63ad3c6034b30811cf4e72d9867b3d",
+  "dynamic_symbols_unchanged": true,
+  "native_code_still_distributed": true,
+  "rea_or_model_called": false,
+  "scope": "Closes canonical embedded LLVM IR/command sections; does not prevent machine-code analysis, custom serialization or runtime capture."
+}

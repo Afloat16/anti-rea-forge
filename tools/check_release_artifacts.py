@@ -60,6 +60,85 @@ def cli(python: Path, work: Path, *args: str, expected: int = 0) -> dict:
     return json.loads(output.stdout)
 
 
+def installed_disclosure_controls(python: Path, work: Path, release: Path, policy: Path) -> dict:
+    """Exercise new installed-module paths using bounded, locally authored inputs."""
+    private_input = work / "owned-private-implementation.py"
+    private_bytes = b"def owned_private_quote(x):\n    return x * 37 + 19\n"
+    private_input.write_bytes(private_bytes)
+    private_args = ["scan-release", "--root", str(release), "--policy", str(policy),
+                    "--private-input-file", str(private_input)]
+    clean = cli(python, work, *private_args)
+    require(clean["ok"] is True and clean["checks"]["private_inputs_checked"] == 1,
+            "Installed private-input clean control failed")
+    copied = release / "renamed-private.data"
+    copied.write_bytes(private_bytes)
+    exposed = cli(python, work, *private_args, expected=3)
+    require(exposed["ok"] is False and exposed["checks"]["private_inputs_checked"] == 1
+            and any(item["code"] == "private_input_exposure" and item["rule_index"] == 0
+                    for item in exposed["findings"]), "Installed private-input copy was not rejected")
+    copied.unlink()
+
+    # Compile only this trusted, locally authored source under the installed
+    # interpreter. No module or fixture is imported from the source checkout.
+    pyc = release / "renamed-bytecode.data"
+    pyc_key = work / "owned-pyc.key"
+    pem = work / "owned-wrapped-pem.json"
+    generator = r'''
+import base64, importlib.util, json, marshal, pathlib, struct, sys
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+key = bytes(range(224, 256))
+source = "def owned_key():\n    return (%d).to_bytes(32, 'big')\n" % int.from_bytes(key, "big")
+code = compile(source, "/owned-installation/fixture.py", "exec", dont_inherit=True, optimize=0)
+body = importlib.util.MAGIC_NUMBER + struct.pack("<I", 3) + importlib.util.source_hash(source.encode()) + marshal.dumps(code, 4)
+assert key not in body and key.hex().encode() not in body
+pathlib.Path(sys.argv[1]).write_bytes(body)
+pathlib.Path(sys.argv[2]).write_bytes(key)
+issuer = Ed25519PrivateKey.from_private_bytes(bytes(range(32)))
+private = issuer.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                               serialization.NoEncryption())
+wrapped = base64.b64encode(private).decode("ascii")
+recovered = serialization.load_pem_private_key(base64.b64decode(wrapped), password=None)
+issuer.public_key().verify(recovered.sign(b"owned installed PEM control"), b"owned installed PEM control")
+pathlib.Path(sys.argv[3]).write_text(json.dumps({"wrapped": wrapped}), encoding="ascii")
+'''
+    run([str(python), "-I", "-c", generator, str(pyc), str(pyc_key), str(pem)], cwd=work)
+    pyc_report = cli(python, work, "scan-release", "--root", str(release), "--policy", str(policy),
+                     "--asset-key-file", str(pyc_key), expected=3)
+    require(pyc_report["checks"]["pyc_asset_key_files_checked"] == 1
+            and pyc_report["checks"]["pyc_asset_key_scan_completed"] is True
+            and any(item["code"] == "asset_key_exposure"
+                    and item.get("representation") == "python-marshal-integer"
+                    for item in pyc_report["findings"]), "Installed canonical PYC integer key was not rejected")
+    pyc.unlink()
+    wrapped = release / "wrapped-private-key.json"
+    wrapped.write_bytes(pem.read_bytes())
+    pem_report = cli(python, work, "scan-release", "--root", str(release), "--policy", str(policy), expected=3)
+    require(pem_report["checks"]["structured_secret_scan_completed"] is True
+            and any(item["code"] == "private_key_marker"
+                    and item.get("representation") == "json-base64-pem"
+                    for item in pem_report["findings"]), "Installed wrapped private PEM was not rejected")
+    wrapped.unlink()
+
+    # Signature-boundary fixtures deliberately claim no LLVM module parsing.
+    # The exact unsupported/incomplete result is the installed behavior tested.
+    llvm = release / "renamed-compiler.data"
+    for magic, format_name in ((b"BC\xc0\xde", "llvm-bitcode"),
+                               (b"\xde\xc0\x17\x0b", "llvm-bitcode-wrapper")):
+        llvm.write_bytes(magic + b"\0" * 20)
+        report = cli(python, work, "scan-release", "--root", str(release), "--policy", str(policy), expected=3)
+        require(report["checks"]["native_metadata_scan_completed"] is False
+                and any(item["code"] == "native_metadata_unverifiable"
+                        and item.get("format") == format_name
+                        and item.get("reason") == "unsupported_standalone_metadata"
+                        for item in report["findings"]), "Installed LLVM signature was incorrectly treated as inspected absence")
+    llvm.unlink()
+    require(cli(python, work, *private_args)["ok"] is True, "Clean release after disclosure controls failed")
+    return {"private_input_clean_accepted": True, "private_input_copy_blocked": True,
+            "pyc_integer_key_blocked": True, "encoded_pem_blocked": True,
+            "standalone_llvm_unverifiable": True}
+
+
 def installation(artifact: Path, version: str, work: Path) -> tuple[Path, dict]:
     environment = work / "venv"
     venv.EnvBuilder(with_pip=True).create(environment)
@@ -163,13 +242,14 @@ def installation(artifact: Path, version: str, work: Path) -> tuple[Path, dict]:
             and any(item.get("reason") == "linker_metadata_requires_final_link" for item in unlinked["findings"]),
             "Unexamined Wasm linker metadata was not rejected")
     (release / "unlinked.wasm").unlink()
+    new_controls = installed_disclosure_controls(python, work, release, policy)
     return python, {"artifact": artifact.name, "version": version,
                     "isolated_import": True, "clean_release_accepted": True,
                     "renamed_source_map_blocked": True, "native_resources_present": len(resources),
                     "asset_roundtrip_bytes": len(payload.read_bytes()), "leaked_key_blocked": True,
                     "structured_key_blocked": True, "wasm_split_verified": True,
                     "consumer_key_encodings_blocked": True, "incomplete_source_map_blocked": True,
-                    "relocatable_wasm_blocked": True}
+                    "relocatable_wasm_blocked": True, **new_controls}
 
 
 def main() -> int:
@@ -216,7 +296,7 @@ def main() -> int:
         require(installed_sdk["version"] == version, "Installed SDK version differs")
         require(not installed_sdk.get("dependencies"), "SDK runtime dependencies changed")
         smoke = """import assert from 'node:assert/strict';
-import {mkdir, writeFile} from 'node:fs/promises';
+import {mkdir, writeFile, unlink} from 'node:fs/promises';
 import {createReleaseGuard} from '@anti-rea-forge/releaseguard';
 await mkdir('release'); await writeFile('release/app.js', 'export const x = 1;');
 await writeFile('policy.json', JSON.stringify({version:1}));
@@ -225,7 +305,20 @@ assert.equal((await guard.scanRelease({root:'release',policy:'policy.json'})).ok
 await writeFile('release/app.js.map','{}');
 const denied=await guard.scanRelease({root:'release',policy:'policy.json'});
 assert.equal(denied.ok,false); assert.equal(denied.exitCode,3);
-console.log(JSON.stringify({installed_sdk:true,clean_release_accepted:true,source_map_blocked:true}));
+await unlink('release/app.js.map');
+const privateBytes='def owned_private_quote(x):\\n    return x * 37 + 19\\n';
+await writeFile('private-implementation.py',privateBytes);
+const options={root:'release',policy:'policy.json',privateInputFiles:['private-implementation.py']};
+const privateClean=await guard.scanRelease(options);
+assert.equal(privateClean.ok,true); assert.equal(privateClean.checks.private_inputs_checked,1);
+await writeFile('release/renamed-private.data',privateBytes);
+const privateCopy=await guard.scanRelease(options);
+assert.equal(privateCopy.ok,false); assert.equal(privateCopy.exitCode,3);
+assert.equal(privateCopy.findings.some(item=>item.code==='private_input_exposure' && item.rule_index===0),true);
+await unlink('release/renamed-private.data');
+assert.equal((await guard.scanRelease(options)).ok,true);
+console.log(JSON.stringify({installed_sdk:true,clean_release_accepted:true,source_map_blocked:true,
+  private_input_clean_accepted:true,private_input_copy_blocked:true}));
 """
         (js / "smoke.mjs").write_text(smoke, encoding="utf-8")
         env = {**os.environ, "RELEASEGUARD_PYTHON": str(interpreters[0])}
