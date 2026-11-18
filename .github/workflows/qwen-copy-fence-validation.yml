@@ -1,0 +1,83 @@
+name: Qwen copy fence follow-up validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-copy-fence-20261118'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: PR 17578 closing-fence verification
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: 'true'
+      QWEN_SKIP_PREPARE: '1'
+      QWEN_REVIEW_SHA: 'b29476036b8be9d2a04d7cbc7df33785abecca9c'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+      PNPM_CONFIG_WORKSPACE_CONCURRENCY: '1'
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '${{ env.QWEN_REVIEW_SHA }}'
+          persist-credentials: false
+      - name: Verify source identity
+        run: test "$(git rev-parse HEAD)" = "$QWEN_REVIEW_SHA"
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Install pinned dependencies
+        run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: Normal CLI build and workspace prerequisites
+        run: npm run build -- --cli-only
+      - name: Focused suites with normal prerequisite guard
+        working-directory: packages/cli
+        run: corepack pnpm exec vitest run src/ui/commands/copyCommand.test.ts src/ui/utils/MarkdownDisplay.test.tsx src/ui/utils/pending-rendered-height.test.ts src/ui/utils/markdown-utilities.test.ts --maxWorkers=1 --minWorkers=1 --retry=0
+      - name: Confirm shared closing guard regression witnesses
+        working-directory: packages/cli
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          import assert from 'node:assert/strict';
+          const path = 'src/ui/utils/pending-rendered-height.ts';
+          const original = readFileSync(path, 'utf8');
+          const before = "    match[1]!.length >= openingFence.length &&\n    /^[ \\t]*$/.test(match[2] ?? '')\n";
+          assert.equal(original.split(before).length, 2, 'Unique shared guard anchor');
+          try {
+            writeFileSync(path, original.replace(before,
+              '    match[1]!.length >= openingFence.length\n'));
+            const result = spawnSync('corepack', ['pnpm', 'exec', 'vitest', 'run',
+              'src/ui/commands/copyCommand.test.ts',
+              'src/ui/utils/MarkdownDisplay.test.tsx',
+              'src/ui/utils/pending-rendered-height.test.ts',
+              '--maxWorkers=1', '--minWorkers=1', '--retry=0', '-t',
+              'source .*false fence|pending pipe content.*false fence|table-like content as code after|after a streaming split',
+            ], { encoding: 'utf8', timeout: 240000, maxBuffer: 32 * 1024 * 1024 });
+            const log = `${result.stdout ?? ''}${result.stderr ?? ''}`.replace(/\u001b\[[0-9;]*m/g, '');
+            process.stdout.write(log);
+            assert.ifError(result.error);
+            assert.equal(result.status, 1);
+            assert.match(log, /Tests\s+17 failed\s*\|\s*4 passed/);
+            assert.match(log, /AssertionError/);
+            console.log('Confirmed shared closing-guard witness: 17 regressions fail, four marker controls pass.');
+          } finally {
+            writeFileSync(path, original);
+          }
+          NODE
+      - name: Changed-file formatting and lint
+        run: |
+          corepack pnpm exec prettier --check packages/cli/src/ui/commands/copyCommand.ts packages/cli/src/ui/commands/copyCommand.test.ts packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplay.test.tsx packages/cli/src/ui/utils/pending-rendered-height.ts packages/cli/src/ui/utils/pending-rendered-height.test.ts packages/cli/src/ui/utils/markdown-utilities.ts packages/cli/src/ui/utils/markdown-utilities.test.ts
+          corepack pnpm exec eslint packages/cli/src/ui/commands/copyCommand.ts packages/cli/src/ui/commands/copyCommand.test.ts packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplay.test.tsx packages/cli/src/ui/utils/pending-rendered-height.ts packages/cli/src/ui/utils/pending-rendered-height.test.ts packages/cli/src/ui/utils/markdown-utilities.ts packages/cli/src/ui/utils/markdown-utilities.test.ts
+          git diff --exit-code
+      - name: Normal CLI typecheck
+        working-directory: packages/cli
+        run: npm run typecheck
