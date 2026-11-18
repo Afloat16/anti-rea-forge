@@ -23,6 +23,96 @@ For PIEs and shared libraries, use the link-time address after accounting for th
 
 The command accepts ordinary ET_EXEC/ET_DYN files up to 64 MiB. It rejects missing static symbols, recognized supplementary debug metadata, trailing payloads and altered loadable bytes. Exit 0 creates both outputs. Exit 3 reports configured residual names, and exit 2 reports invalid input or a tool failure. Deploy only after exit 0. Use this on trusted build products under your own control. Dynamic exports, unwind data, language-specific reflection metadata and application strings can still identify code. Separate DWARF packages, custom ELF containers and applications that inspect their entire on-disk image require their own packaging checks.
 
+## Embedded LLVM IR in 1.3
+
+`clang -fembed-bitcode=all` can ship full LLVM IR and compiler-command records next
+to native instructions. GNU `strip --strip-all` can remove static symbols while
+leaving `.llvmbc` and `.llvmcmd` intact. The public binary can therefore run normally
+and still expose private function/local names, `source_filename` and typed operations
+to `llvm-dis`. LLVM also defines `.llvm.lto` for ELF FatLTO material. See the
+[native bitcode wrapper specification](https://llvm.org/docs/BitCodeFormat.html#native-object-file-wrapper-format)
+and [FatLTO documentation](https://llvm.org/docs/FatLTO.html).
+
+Version 1.3 separates those three exact ELF section names in addition to the existing
+debug/type sections. Start from the original linked ELF with static symbols, then use
+the same `split-elf-debug` command above. Compiler records are accepted only when all
+of these conditions hold:
+
+- Each name occurs once and the section is `SHT_PROGBITS`.
+- `SHF_ALLOC`, writable/executable and other unsupported flags are absent; only the
+  optional `SHF_EXCLUDE` flag is allowed.
+- The section has no link, info or entry-size semantics, and its bytes overlap no
+  file-backed program segment. Clearing `SHF_ALLOC` alone does not make mapped IR safe
+  to remove.
+- The private debug sidecar retains each section's exact size and SHA-256. Both the
+  bitcode and command-line records must survive, and none of the recognized compiler
+  sections may remain public.
+- Existing ELF identification, execution/program-header and `PT_LOAD` byte-preservation
+  checks pass, allowing only the documented section-table header changes.
+
+Unsupported flags, allocated/mapped records, duplicate sections, lost or changed
+private bytes, and altered execution contents abort the split without publishing the
+new output directories. The original input remains unchanged. This preserves one
+ordinary native load image; applications that interpret their own file or use bitcode
+as runtime input need an application-specific build workflow.
+
+The private sidecar now holds compiler IR as well as debugging material. Keep it,
+any extracted `.bc`/`.ll` files, and the original compiler output outside the served
+release. The source spelling policy remains a byte check: `--private-name` is not an
+LLVM parser, and arbitrary encoded names need the independent recovery controls below.
+The tool leaves the native instructions available for disassembly and decompilation.
+
+### Paired compiler/reader control
+
+The [recorded owned fixture](results/llvm-metadata-recovery-v1.3.0.json) used actual
+Clang 19.1.7 compilation, GNU linking and LLVM 19 `llvm-dis`, with debug generation
+disabled (`-g0`). The official v1.2 wheel allowed its split public ELF; `llvm-dis`
+recovered four private function/local names, the source path and arithmetic. In the
+v1.3 split public ELF the embedded sections are absent. The private sidecar and a
+control with bitcode added back both recover those four names. Reintroducing only
+`.llvmcmd` also makes the new gate reject the artifact.
+
+The original, v1.2 public and v1.3 public programs all return **48, 85 and 122** for
+the same three fixture inputs. Their `.text` bytes and dynamic-symbol listings match.
+These observations isolate an avoidable IR disclosure channel; they do not measure
+general machine-code recovery or REA/model success rates. PE/Mach-O coverage here is
+structural detection, with no Windows/macOS native-runtime claim.
+
+From a checkout with the candidate core installed, real Clang/LLVM tools and GNU
+binutils, reproduce against an environment installed from the official v1.2 wheel:
+
+```sh
+python benchmarks/llvm_metadata_recovery.py \
+  --llvm-bin /usr/lib/llvm-18/bin \
+  --baseline-python /path/to/v1.2-env/bin/python \
+  --baseline-wheel /path/to/open_release_guard-1.2.0-py3-none-any.whl \
+  --work /tmp/rg-llvm-corpus --out /tmp/rg-llvm-result.json
+```
+
+Both output paths must be new. The driver checks the official wheel SHA-256 and
+every installed baseline package file, and rechecks package inventories before
+completion. The Linux LLVM 18 CI job requires the same actual producer/reader controls;
+missing tools are failures in that job. The bitcode-wrapper control uses Clang's Darwin
+IR target without claiming a linked or executed macOS program.
+
+### Metadata gates and intentional opt-outs
+
+`scan-release` reports recognized compiler sections as `native_compiler_metadata`.
+The PE/ELF `gate` independently defaults `require_no_compiler_metadata` to `true`;
+setting only the older debug/symbol requirements to `false` does not disable this new
+requirement. A native policy can explicitly set `require_no_compiler_metadata: false`
+for intentional compiler-data distribution. Other native requirements still apply.
+The portable policy uses the broader `check_native_metadata: false` instead; native
+policy fields are not accepted by the portable scanner.
+
+The same scanner detects PE `.llvmbc`/`.llvmcmd` and Mach-O
+`__LLVM,__bitcode`/`__cmdline`/`__bundle`; the ELF splitter does not rewrite those formats.
+Standalone raw/wrapped LLVM bitcode, even renamed or nested in inspected ZIP/ASAR,
+is recognized but unsupported: `native_metadata_unverifiable`,
+`unsupported_standalone_metadata` and `native_metadata_scan_completed: false`.
+This is a decision to block direct IR publication. Such files can be valid JIT inputs;
+their signatures do not prove a malformed program, and opting out does not conceal IR.
+
 ## Put the restricted operation behind a service-side check
 
 An attacker who controls a binary can change its return value. For a service-backed operation, have the service authenticate the caller, choose the route and handler, bind the exact request bytes, and consume a short-lived issuer-signed capability before execution.

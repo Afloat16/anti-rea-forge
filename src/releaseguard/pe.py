@@ -244,6 +244,11 @@ def audit_pe_stream(stream: BinaryIO, file_size: int) -> dict:
     debug_sections = [name for name in names if
                       name.startswith((b".debug", b".zdebug", b".stab"))
                       or name in (b".gnu_debugdata", b".gnu_deb")]
+    # LLVM embeds full IR and command records independently of PE debug data.
+    # Both canonical COFF section names fit in the eight-byte inline field.
+    # https://llvm.org/docs/BitCodeFormat.html#native-object-file-wrapper-format
+    compiler_sections = [name.decode("ascii") for name in names
+                         if name in (b".llvmbc", b".llvmcmd")]
     evidence = {
         "relocations_present": checked_directory(5),
         "load_config_present": checked_directory(10),
@@ -331,6 +336,8 @@ def audit_pe_stream(stream: BinaryIO, file_size: int) -> dict:
         warnings.append("未设置 GUARD_CF 标记。")
     if debug_sections:
         warnings.append("检测到 PE section 中的 DWARF、STABS 或其它调试资料；发布前分离私有调试信息。")
+    if compiler_sections:
+        warnings.append("检测到嵌入的 LLVM 编译器 IR 或编译命令记录；发布构建应关闭此类嵌入资料。")
     if debug_metadata_present:
         warnings.append("检测到调试目录中的调试信息或未验证条目；发布前检查 PDB 路径及调试信息。")
     if extended_characteristics_count:
@@ -355,6 +362,8 @@ def audit_pe_stream(stream: BinaryIO, file_size: int) -> dict:
         "evidence": evidence,
         "debug_directory_types": debug_types,
         "debug_sections": [name.decode("utf-8", errors="replace") for name in debug_sections],
+        "compiler_metadata_present": bool(compiler_sections),
+        "compiler_metadata_sections": compiler_sections,
         "warnings": warnings,
         "notes": notes,
     }

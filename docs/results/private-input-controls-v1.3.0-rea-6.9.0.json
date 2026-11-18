@@ -1,0 +1,225 @@
+{
+  "schema": "releaseguard/private-input-controls/v1",
+  "ok": true,
+  "core_version": "1.3.0",
+  "recorded_at": "2026-11-18T07:10:48.901Z",
+  "node": "v24.22.1",
+  "host": "linux/x64",
+  "rea_cli_executed": true,
+  "rea_runtime": {
+    "distribution": "npm",
+    "version": "6.9.0",
+    "npm_integrity": "sha512-KqDn1UR5BMqHoQ3MGAnPuWiSKwgdFaz1L/uUNgrKt+1W8kPtgYP8AWEOXIF1lDIOBVyPuYIIst2iamo1Wf3r8g==",
+    "recorded_registry_provenance": {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/rea-agents@6.9.0",
+      "recorded_date": "2026-11-18",
+      "declared_source_commit": "d74549e495c58eb4a560279fd9f05508401ea0a0",
+      "subject_sha512": "2aa0e7d5447904ca87a10dcc1809cfb968922b081d15acf52ffb94360acab7ed56f243ed8183fc01610e5c817594320e055c8fb98208b2dda26a6a3559fdebf2",
+      "signature_chain_independently_verified": false
+    }
+  },
+  "baseline_version": "1.2.0",
+  "baseline": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.2.0",
+    "package_files": 29,
+    "package_inventory_sha256": "318ea7a50fa6333adfb37140756fc5d32d449b028ff55e2759c33afe1be02dd2",
+    "python_version": "3.12.14",
+    "version": "1.2.0",
+    "official_wheel_sha256": "b16280c1f81cb6cec5a028102edeefdaf8b62e9300da3e87acb1878b3f0ab75b",
+    "installed_bytes_verified": true
+  },
+  "candidate": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.3.0",
+    "package_files": 31,
+    "package_inventory_sha256": "c7dabae9d565a0065850dc9e7d1e53673fb434b7694f4fc7780a7a874f3f7d44",
+    "python_version": "3.12.14",
+    "version": "1.3.0"
+  },
+  "benchmark_files_sha256": {
+    "driver": "fa30d3398cbc371b8d135ab7636e8c7e1d839b2f54bd55b62b3f822e001c1a4c",
+    "identity_helper": "282ab2466418662a89ad76bf8b2638dde8339a486ab11f2ed21754c4589ed82f"
+  },
+  "owned_private_fixture_sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f",
+  "fixture_inputs": [
+    -2,
+    0,
+    1,
+    11
+  ],
+  "fixture_outputs": [
+    -55,
+    19,
+    56,
+    426
+  ],
+  "public_client_sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee",
+  "sides": {
+    "accidental_copy": {
+      "inventory": [
+        {
+          "path": "client.mjs",
+          "size": 515,
+          "sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee"
+        },
+        {
+          "path": "package.json",
+          "size": 84,
+          "sha256": "e7041e05f8ed36a7ff07f46172882c1cd1899f628a84a9dd343991e93472a122"
+        },
+        {
+          "path": "renamed-pricing.mjs",
+          "size": 117,
+          "sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f"
+        }
+      ],
+      "exact_private_file_copies": 1,
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_34dbbaf593cbc9309bd17c57906050935cde6c572969f931d878cb287f7f7d77",
+        "evidence_stdout_sha256": "391fb2a404f2d4cbe1fc18677e7802f28d0672bc05dd8b5080fe84b20b495068",
+        "evidence_stdout_bytes": 153686,
+        "graph_id": "jag_bba3384094b2a9496b46526a655cdc8b112b8e701bdfef006208544cf0ee0253",
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 2,
+        "private_source_nodes": 1
+      },
+      "configured_check": {
+        "exit_code": 3,
+        "ok": false,
+        "private_inputs_checked": 1,
+        "private_copy_findings": 1,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "renamed-pricing.mjs",
+            "rule_index": 0
+          }
+        ]
+      },
+      "baseline_without_private_reference": {
+        "exit_code": 0,
+        "ok": true
+      }
+    },
+    "public_only": {
+      "inventory": [
+        {
+          "path": "client.mjs",
+          "size": 515,
+          "sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee"
+        },
+        {
+          "path": "package.json",
+          "size": 84,
+          "sha256": "e7041e05f8ed36a7ff07f46172882c1cd1899f628a84a9dd343991e93472a122"
+        }
+      ],
+      "exact_private_file_copies": 0,
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_41bff81fce78cd29faf54a3b2f72ebb9b9222de1a6b3490d9f846511fea033d1",
+        "evidence_stdout_sha256": "d45b4ffbb2fa297643f2a06757b6024bfcf9c9fa0d4d79a0e751b50b9355c23e",
+        "evidence_stdout_bytes": 120630,
+        "graph_id": "jag_5fee4147fc30247cb14da08df00ec88b5f6ae64b89d08f84f9bd0ce105002252",
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_source_nodes": 0
+      },
+      "configured_check": {
+        "exit_code": 0,
+        "ok": true,
+        "private_inputs_checked": 1,
+        "private_copy_findings": 0,
+        "findings": []
+      },
+      "baseline_without_private_reference": {
+        "exit_code": 0,
+        "ok": true
+      }
+    },
+    "private_restored": {
+      "inventory": [
+        {
+          "path": "client.mjs",
+          "size": 515,
+          "sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee"
+        },
+        {
+          "path": "package.json",
+          "size": 84,
+          "sha256": "e7041e05f8ed36a7ff07f46172882c1cd1899f628a84a9dd343991e93472a122"
+        },
+        {
+          "path": "renamed-pricing.mjs",
+          "size": 117,
+          "sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f"
+        }
+      ],
+      "exact_private_file_copies": 1,
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_5725401c616c123c0af6740067237092d4b634a06830a5f572802e3bcb516aa6",
+        "evidence_stdout_sha256": "174654e6cdb41efda098cdef181a4fee70c52180e120b221b6ace53956163833",
+        "evidence_stdout_bytes": 153690,
+        "graph_id": "jag_bba3384094b2a9496b46526a655cdc8b112b8e701bdfef006208544cf0ee0253",
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 2,
+        "private_source_nodes": 1
+      },
+      "configured_check": {
+        "exit_code": 3,
+        "ok": false,
+        "private_inputs_checked": 1,
+        "private_copy_findings": 1,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "renamed-pricing.mjs",
+            "rule_index": 0
+          }
+        ]
+      },
+      "baseline_without_private_reference": {
+        "exit_code": 0,
+        "ok": true
+      }
+    }
+  },
+  "publication": {
+    "prepared": true,
+    "private_inputs_checked": 1
+  },
+  "updated_private_input": {
+    "stale_manual_digest_passed": true,
+    "configured_check": {
+      "exit_code": 3,
+      "ok": false,
+      "private_inputs_checked": 1,
+      "private_copy_findings": 1,
+      "findings": [
+        {
+          "code": "private_input_exposure",
+          "path": "renamed.data",
+          "rule_index": 0
+        }
+      ]
+    }
+  },
+  "scope": "Exact declared private files remain outside the public client, with the production configured publication gate.",
+  "limitations": [
+    "REA successfully analyzes the public JavaScript. Missing private source nodes mean those exact bytes were not supplied, not that equivalent behavior is impossible to infer.",
+    "The existing manual forbid_file_sha256 rule can already block a known exact copy; live references additionally track changed private inputs and publication-time identity.",
+    "Only exact whole-file copies are matched. Transformed, compiled, concatenated, encoded and partial copies are outside this rule.",
+    "This benchmark does not execute authentication, patch or replay controls. The reusable service example uses run_authorized_operation; the existing native patch control separately tests a real client patch against a separate service."
+  ]
+}

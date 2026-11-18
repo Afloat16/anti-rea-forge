@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "product": "owned-quote-app",
+  "root": "public",
+  "policy": "policy.json",
+  "private_input_files": [
+    "service/__init__.py",
+    "service/entry.py",
+    "service/operation.py"
+  ]
+}

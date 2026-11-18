@@ -31,6 +31,11 @@ function assetKeyArguments(value = []) {
   return [...value].map((item) => "--asset-key-file=" + path(item, "asset key path"));
 }
 
+function privateInputArguments(value = []) {
+  if (!Array.isArray(value) || value.length > 64) input("privateInputFiles must contain at most 64 paths.");
+  return [...value].map((item) => "--private-input-file=" + path(item, "private input path"));
+}
+
 function integer(value, minimum, maximum, label) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     input(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -118,9 +123,10 @@ export function createClient(options = {}, runner = runCommand) {
 
   return Object.freeze({
     async checkProject(options, controls) {
-      object(options, ["config", "assetKeyFiles"], "checkProject options");
+      object(options, ["config", "assetKeyFiles", "privateInputFiles"], "checkProject options");
       return call("check", ["--config=" + path(options.config, "config"),
-        ...assetKeyArguments(options.assetKeyFiles)], {}, controls);
+        ...assetKeyArguments(options.assetKeyFiles),
+        ...privateInputArguments(options.privateInputFiles)], {}, controls);
     },
 
     checkAnalysis,
@@ -143,11 +149,12 @@ export function createClient(options = {}, runner = runCommand) {
     },
 
     async scanRelease(options, controls) {
-      object(options, ["root", "policy", "assetKeyFiles"], "scanRelease options");
+      object(options, ["root", "policy", "assetKeyFiles", "privateInputFiles"], "scanRelease options");
       return call("scan-release", [
         `--root=${path(options.root, "root")}`,
         `--policy=${path(options.policy, "policy")}`,
         ...assetKeyArguments(options.assetKeyFiles),
+        ...privateInputArguments(options.privateInputFiles),
       ], {}, controls);
     },
 

@@ -69,6 +69,26 @@ test("invalid external key lists fail before a Python process starts", async () 
   assert.equal(calls.length, 0);
 });
 
+test("private input references use exact argv and are independent of asset keys", async () => {
+  const { client, calls } = fake();
+  const inputs = ["private service/规则;$(ignored).py", "private model/data.bin"];
+  await client.scanRelease({ root: "dist", policy: "rules.json", privateInputFiles: inputs,
+    assetKeyFiles: ["keys/asset.bin"] });
+  await client.checkProject({ config: "project.json", privateInputFiles: inputs });
+  const expected = inputs.map((item) => "--private-input-file=" + resolve(item));
+  for (const call of calls) assert.deepEqual(call[1].slice(-2), expected);
+  assert(calls[0][1].includes("--asset-key-file=" + resolve("keys/asset.bin")));
+});
+
+test("invalid private input references fail before a Python process starts", async () => {
+  const { client, calls } = fake();
+  for (const privateInputFiles of [null, "file", Array(1), [undefined], [42], [""], ["bad\0path"], Array(65).fill("file")]) {
+    await assert.rejects(client.scanRelease({ root: "dist", policy: "rules.json", privateInputFiles }), hasCode("INVALID_ARGUMENT"));
+    await assert.rejects(client.checkProject({ config: "project.json", privateInputFiles }), hasCode("INVALID_ARGUMENT"));
+  }
+  assert.equal(calls.length, 0);
+});
+
 test("policy failures return exitCode 3 without throwing", async () => {
   const { client } = fake(scan(false));
   const result = await client.scanRelease({ root: "dist", policy: "rules.json" });

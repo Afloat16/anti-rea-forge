@@ -61,13 +61,16 @@ def validate_artifacts(directory: Path, report: dict, version: str, sha: str) ->
                 all(item.get(name) is True for name in (
                     "isolated_import", "clean_release_accepted", "renamed_source_map_blocked",
                     "leaked_key_blocked", "structured_key_blocked", "wasm_split_verified",
-                    "consumer_key_encodings_blocked", "incomplete_source_map_blocked", "relocatable_wasm_blocked"))
+                    "consumer_key_encodings_blocked", "incomplete_source_map_blocked", "relocatable_wasm_blocked",
+                    "private_input_clean_accepted", "private_input_copy_blocked", "pyc_integer_key_blocked",
+                    "encoded_pem_blocked", "standalone_llvm_unverifiable"))
                 and item.get("native_resources_present") == 5 and
                 item.get("asset_roundtrip_bytes") == 4096,
                 "Installed Python controls are incomplete")
     javascript = report.get("javascript_installation", {})
     require(all(javascript.get(name) is True for name in (
-        "installed_sdk", "clean_release_accepted", "source_map_blocked")),
+        "installed_sdk", "clean_release_accepted", "source_map_blocked",
+        "private_input_clean_accepted", "private_input_copy_blocked")),
         "Installed SDK controls are incomplete")
     expected = {f"open_release_guard-{version}-py3-none-any.whl",
                 f"open_release_guard-{version}.tar.gz",

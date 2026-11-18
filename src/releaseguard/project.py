@@ -23,6 +23,7 @@ from .core import (
 from .analysis import _identifier as _analysis_identifier
 from .distribution import scan_release
 from .sealed import assert_asset_keys_unchanged, snapshot_asset_keys
+from .private_inputs import assert_private_inputs_unchanged, snapshot_private_inputs
 
 DEFAULT_CONFIG = Path(".releaseguard/project.json")
 _CONFIG_LIMIT = 64 * 1024
@@ -101,6 +102,7 @@ def init_project(root: Path | str, product: str,
         "root": _relative_or_absolute(release_root.resolve(), output.resolve()),
         "policy": "policy.json",
         "asset_key_files": [],
+        "private_input_files": [],
     }
     _new_bundle(output, {
         "project.json": _json_bytes(document),
@@ -144,7 +146,7 @@ def load_project(config: Path | str = DEFAULT_CONFIG) -> dict[str, Any]:
     path = Path(config).absolute()
     document = _read_config(path)
     required = {"version", "product", "root", "policy"}
-    if not required <= set(document) or set(document) - required - {"asset_key_files"}:
+    if not required <= set(document) or set(document) - required - {"asset_key_files", "private_input_files"}:
         raise GuardError("Missing or unknown project configuration fields")
     _version(document["version"])
     _analysis_identifier(document["product"], "product")
@@ -162,6 +164,20 @@ def load_project(config: Path | str = DEFAULT_CONFIG) -> dict[str, Any]:
     for value in key_paths:
         candidate = Path(_text(value, "project asset key path", 32768))
         resolved["asset_key_files"].append(candidate if candidate.is_absolute() else path.parent / candidate)
+    private_paths = document.get("private_input_files", [])
+    if type(private_paths) is not list or len(private_paths) > 64:
+        raise GuardError("Project private_input_files must contain at most 64 paths")
+    resolved["private_input_files"] = []
+    for value in private_paths:
+        candidate = Path(_text(value, "project private-input path", 32768))
+        candidate = candidate if candidate.is_absolute() else path.parent / candidate
+        try:
+            outside_release(candidate, resolved["root"], "Private inputs")
+        except GuardError:
+            raise
+        except (OSError, ValueError, RuntimeError):
+            raise GuardError("Cannot resolve an external private-input path") from None
+        resolved["private_input_files"].append(candidate)
     return resolved
 
 
@@ -174,11 +190,22 @@ def _project_asset_keys(project: dict[str, Any], extra: tuple[Path | str, ...] |
     return keys
 
 
+def _project_private_inputs(project: dict[str, Any], extra: tuple[Path | str, ...] | list[Path | str]) -> list[Path | str]:
+    if not isinstance(extra, (list, tuple)) or any(not isinstance(value, (str, Path)) for value in extra):
+        raise GuardError("Expected external private-input file paths")
+    inputs = [*project["private_input_files"], *extra]
+    if len(inputs) > 64:
+        raise GuardError("Expected at most 64 configured and additional private-input files combined")
+    return inputs
+
+
 def check_project(config: Path | str = DEFAULT_CONFIG, *,
-                  asset_key_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
+                  asset_key_files: tuple[Path | str, ...] | list[Path | str] = (),
+                  private_input_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
     project = load_project(config)
     return scan_release(project["root"], project["policy"],
-                        asset_key_files=_project_asset_keys(project, asset_key_files))
+                        asset_key_files=_project_asset_keys(project, asset_key_files),
+                        private_input_files=_project_private_inputs(project, private_input_files))
 
 
 def render_analysis_notice(product: str, *, release: str | None = None,
@@ -225,7 +252,8 @@ def render_analysis_notice(product: str, *, release: str | None = None,
 
 def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str,
                     out: Path | str, *,
-                    asset_key_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
+                    asset_key_files: tuple[Path | str, ...] | list[Path | str] = (),
+                    private_input_files: tuple[Path | str, ...] | list[Path | str] = ()) -> dict[str, Any]:
     """Scan, sign the same inventory, and create external publication sidecars."""
     _analysis_identifier(release, "release")
     project = load_project(config)
@@ -235,10 +263,14 @@ def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str
         raise GuardError("Prepared output must be a new directory")
     key_paths = _project_asset_keys(project, asset_key_files)
     key_snapshots = snapshot_asset_keys(key_paths)
-    scan = scan_release(project["root"], project["policy"], asset_key_files=key_paths)
+    private_paths = _project_private_inputs(project, private_input_files)
+    private_snapshots = snapshot_private_inputs(private_paths, root=project["root"])
+    scan = scan_release(project["root"], project["policy"], asset_key_files=key_paths,
+                        private_input_files=private_paths)
     if not scan["ok"]:
         return {"ok": False, "prepared": False, "scan": scan, "outputs": {}}
     assert_asset_keys_unchanged(key_snapshots)
+    assert_private_inputs_unchanged(private_snapshots)
     manifest = create_manifest(project["root"], project["product"], release, private)
     signed = verify_document(manifest, "manifest", private.public_key())
     if signed["files"] != scan["files"]:
@@ -259,13 +291,16 @@ def prepare_release(config: Path | str, private: Ed25519PrivateKey, release: str
         "note": "Build-time inspection has an I/O cost; no application benchmark is implied.",
     }
     assert_asset_keys_unchanged(key_snapshots)
+    assert_private_inputs_unchanged(private_snapshots)
 
     def final_check() -> None:
         # Revalidate the release after publishing files into the new directory;
         # a failure makes _new_bundle remove the complete new bundle.
         assert_asset_keys_unchanged(key_snapshots)
+        assert_private_inputs_unchanged(private_snapshots)
         verify_manifest(manifest, project["root"], private.public_key(), project["product"], release)
         assert_asset_keys_unchanged(key_snapshots)
+        assert_private_inputs_unchanged(private_snapshots)
 
     _new_bundle(output, {
         "manifest.json": _json_bytes(manifest),

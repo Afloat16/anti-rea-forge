@@ -1,0 +1,244 @@
+{
+  "schema": "releaseguard/private-input-controls/v1",
+  "ok": true,
+  "core_version": "1.3.0",
+  "recorded_at": "2026-11-18T07:10:48.290Z",
+  "node": "v24.22.1",
+  "host": "linux/x64",
+  "rea_cli_executed": true,
+  "rea_runtime": {
+    "distribution": "source-build",
+    "version_field": "6.9.0",
+    "source_repository": "https://github.com/morluto/rea",
+    "source_commit": "675287517c98c702ee88ad036c5e3b8dd4bcc7a7",
+    "source_tree": "a1e4211a76f9fd712b92a553d609531c5d9c773d",
+    "tracked_source_clean": true,
+    "source_package_lock_sha256": "9007a84043338a39ef2d766cb1323846813d43ce040e2cf09ddcaa4f5939a0bf",
+    "installed_lock_sha256": "0cbddc686839c688658455dad6fab84a6040007c59f9c51b1d510cb4ee82da8f",
+    "build_script": "node scripts/clean-build-output.mjs && node scripts/run-typescript.mjs -p tsconfig.build.json && node scripts/record-catalog-digests.mjs && node scripts/record-mcp-catalog.mjs && node scripts/record-cli-commands.mjs && node scripts/bundle-runtime.mjs",
+    "installed_build_tools": {
+      "tsrs": {
+        "version": "0.18.0-ts7.1.0-dev.20260929",
+        "npm_integrity": "sha512-9T0b4Uam/yMFIK16GUx0fUrJqYZnJ/gvSmV9JB8NTyDePvwCI45WFWxyEV/UMV3KfdNRJG/PBsm3fSIB9WmWsA=="
+      },
+      "typescript": {
+        "version": "7.0.2",
+        "npm_integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="
+      },
+      "rolldown": {
+        "version": "1.2.12",
+        "npm_integrity": "sha512-8wafseiaG80xmXSfqidUNqZcylTlhmPZZt+za2m+js2sFZ8dTNlhIOV2WcbIPx2hgwPBJpEUGFAMZ9bgBBLTSQ=="
+      }
+    },
+    "launcher_sha256": "e73f40ef2f63092ed5c6f2c480c89d79f8d85c2e3fd73c1bb8781ccb29ec4e5b",
+    "compiled_runtime": {
+      "files": 3454,
+      "bytes": 62317909,
+      "inventory_sha256": "9a7c608f982c648b2dd032c3c14397c5f1154f8d9fdd9c1ff88bef963f458414"
+    }
+  },
+  "baseline_version": "1.2.0",
+  "baseline": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.2.0",
+    "package_files": 29,
+    "package_inventory_sha256": "318ea7a50fa6333adfb37140756fc5d32d449b028ff55e2759c33afe1be02dd2",
+    "python_version": "3.12.14",
+    "version": "1.2.0",
+    "official_wheel_sha256": "b16280c1f81cb6cec5a028102edeefdaf8b62e9300da3e87acb1878b3f0ab75b",
+    "installed_bytes_verified": true
+  },
+  "candidate": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.3.0",
+    "package_files": 31,
+    "package_inventory_sha256": "c7dabae9d565a0065850dc9e7d1e53673fb434b7694f4fc7780a7a874f3f7d44",
+    "python_version": "3.12.14",
+    "version": "1.3.0"
+  },
+  "benchmark_files_sha256": {
+    "driver": "fa30d3398cbc371b8d135ab7636e8c7e1d839b2f54bd55b62b3f822e001c1a4c",
+    "identity_helper": "282ab2466418662a89ad76bf8b2638dde8339a486ab11f2ed21754c4589ed82f"
+  },
+  "owned_private_fixture_sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f",
+  "fixture_inputs": [
+    -2,
+    0,
+    1,
+    11
+  ],
+  "fixture_outputs": [
+    -55,
+    19,
+    56,
+    426
+  ],
+  "public_client_sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee",
+  "sides": {
+    "accidental_copy": {
+      "inventory": [
+        {
+          "path": "client.mjs",
+          "size": 515,
+          "sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee"
+        },
+        {
+          "path": "package.json",
+          "size": 84,
+          "sha256": "e7041e05f8ed36a7ff07f46172882c1cd1899f628a84a9dd343991e93472a122"
+        },
+        {
+          "path": "renamed-pricing.mjs",
+          "size": 117,
+          "sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f"
+        }
+      ],
+      "exact_private_file_copies": 1,
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_680f66dad74a272277b6f4cad66ed1f6a990e6937826eac166eeb1e5ea74649a",
+        "evidence_stdout_sha256": "e472b01c198ef944e118722a0bcbeca25ba768370e175099b29866633f61a5ff",
+        "evidence_stdout_bytes": 153748,
+        "graph_id": "jag_bba3384094b2a9496b46526a655cdc8b112b8e701bdfef006208544cf0ee0253",
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 2,
+        "private_source_nodes": 1
+      },
+      "configured_check": {
+        "exit_code": 3,
+        "ok": false,
+        "private_inputs_checked": 1,
+        "private_copy_findings": 1,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "renamed-pricing.mjs",
+            "rule_index": 0
+          }
+        ]
+      },
+      "baseline_without_private_reference": {
+        "exit_code": 0,
+        "ok": true
+      }
+    },
+    "public_only": {
+      "inventory": [
+        {
+          "path": "client.mjs",
+          "size": 515,
+          "sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee"
+        },
+        {
+          "path": "package.json",
+          "size": 84,
+          "sha256": "e7041e05f8ed36a7ff07f46172882c1cd1899f628a84a9dd343991e93472a122"
+        }
+      ],
+      "exact_private_file_copies": 0,
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_69a58ba59834208b68371b9b7b14108c648a5ead7c6995a469ba143845ec2b29",
+        "evidence_stdout_sha256": "5ca297b966c1fe6fbd1a5cc5756a5430ee112997aacbcd9b0b5ca375a7e303ff",
+        "evidence_stdout_bytes": 120692,
+        "graph_id": "jag_5fee4147fc30247cb14da08df00ec88b5f6ae64b89d08f84f9bd0ce105002252",
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_source_nodes": 0
+      },
+      "configured_check": {
+        "exit_code": 0,
+        "ok": true,
+        "private_inputs_checked": 1,
+        "private_copy_findings": 0,
+        "findings": []
+      },
+      "baseline_without_private_reference": {
+        "exit_code": 0,
+        "ok": true
+      }
+    },
+    "private_restored": {
+      "inventory": [
+        {
+          "path": "client.mjs",
+          "size": 515,
+          "sha256": "45df8f87d335e8f8217bd772f7f0f173c0e9a638e98f1f753e780f17c6463bee"
+        },
+        {
+          "path": "package.json",
+          "size": 84,
+          "sha256": "e7041e05f8ed36a7ff07f46172882c1cd1899f628a84a9dd343991e93472a122"
+        },
+        {
+          "path": "renamed-pricing.mjs",
+          "size": 117,
+          "sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f"
+        }
+      ],
+      "exact_private_file_copies": 1,
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_6f22bcbde316784934079e432eebaff2281c3e458583809ca1e0efd1f4a4170b",
+        "evidence_stdout_sha256": "e5eac685c8b10558c4fd860f5291021623c73325c8989df300fbc81fe458cbd1",
+        "evidence_stdout_bytes": 153752,
+        "graph_id": "jag_bba3384094b2a9496b46526a655cdc8b112b8e701bdfef006208544cf0ee0253",
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 2,
+        "private_source_nodes": 1
+      },
+      "configured_check": {
+        "exit_code": 3,
+        "ok": false,
+        "private_inputs_checked": 1,
+        "private_copy_findings": 1,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "renamed-pricing.mjs",
+            "rule_index": 0
+          }
+        ]
+      },
+      "baseline_without_private_reference": {
+        "exit_code": 0,
+        "ok": true
+      }
+    }
+  },
+  "publication": {
+    "prepared": true,
+    "private_inputs_checked": 1
+  },
+  "updated_private_input": {
+    "stale_manual_digest_passed": true,
+    "configured_check": {
+      "exit_code": 3,
+      "ok": false,
+      "private_inputs_checked": 1,
+      "private_copy_findings": 1,
+      "findings": [
+        {
+          "code": "private_input_exposure",
+          "path": "renamed.data",
+          "rule_index": 0
+        }
+      ]
+    }
+  },
+  "scope": "Exact declared private files remain outside the public client, with the production configured publication gate.",
+  "limitations": [
+    "REA successfully analyzes the public JavaScript. Missing private source nodes mean those exact bytes were not supplied, not that equivalent behavior is impossible to infer.",
+    "The existing manual forbid_file_sha256 rule can already block a known exact copy; live references additionally track changed private inputs and publication-time identity.",
+    "Only exact whole-file copies are matched. Transformed, compiled, concatenated, encoded and partial copies are outside this rule.",
+    "This benchmark does not execute authentication, patch or replay controls. The reusable service example uses run_authorized_operation; the existing native patch control separately tests a real client patch against a separate service."
+  ]
+}

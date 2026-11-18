@@ -28,6 +28,12 @@ _MAX_TOTAL_NAME_BYTES = 1024 * 1024
 # https://kernel.org/doc/html/latest/bpf/btf.html
 _TYPE_METADATA_NAMES = frozenset({b".ctf", b".SUNW_ctf", b".BTF", b".BTF.ext",
                                   b".BTF.base", b".gdb_index"})
+# Native code and private compiler IR may coexist after strip removed symbols.
+# Exact names follow LLVM's native bitcode wrapper and FatLTO formats; do not
+# classify arbitrary .llvm.* runtime/ABI sections as removable build metadata.
+# https://llvm.org/docs/BitCodeFormat.html#native-object-file-wrapper-format
+# https://llvm.org/docs/FatLTO.html
+_COMPILER_METADATA_NAMES = frozenset({b".llvmbc", b".llvmcmd", b".llvm.lto"})
 _MACHINES = {
     0: "none",
     3: "x86",
@@ -139,6 +145,8 @@ def audit_elf_stream(stream: BinaryIO, file_size: int) -> dict:
             "type": "executable" if image_type == 2 else "shared",
             "machine": _MACHINES.get(machine, f"unknown-0x{machine:04x}"),
             "evidence": {"debug_sections_present": False, "symbol_table_present": False},
+            "compiler_metadata_present": False,
+            "compiler_metadata_sections": [],
             "sections": [],
             "section_table_present": False,
             "section_names_available": False,
@@ -199,6 +207,7 @@ def audit_elf_stream(stream: BinaryIO, file_size: int) -> dict:
         notes.append("文件未提供 section 名称表；无法通过 section 名称判断调试信息是否已移除。")
 
     section_names = []
+    compiler_sections = []
     debug_present = False
     total_name_bytes = 0
     cache: dict[int, bytes] = {0: b""}
@@ -219,6 +228,8 @@ def audit_elf_stream(stream: BinaryIO, file_size: int) -> dict:
         if total_name_bytes > _MAX_TOTAL_NAME_BYTES:
             raise ValueError("ELF section 名称总长度超过审计输出上限")
         section_names.append(name.decode("utf-8", errors="replace"))
+        if name in _COMPILER_METADATA_NAMES:
+            compiler_sections.append(name.decode("ascii"))
         if section[1] != 0 and (
             name.startswith((b".debug_", b".zdebug_", b".stab"))
             or name in (b".debug", b".zdebug", b".gnu_debugdata")
@@ -236,6 +247,8 @@ def audit_elf_stream(stream: BinaryIO, file_size: int) -> dict:
             "symbol_table_present": any(section[1] == 2 for section in sections),
         },
         "sections": section_names,
+        "compiler_metadata_present": bool(compiler_sections),
+        "compiler_metadata_sections": compiler_sections,
         "section_table_present": True,
         "section_names_available": bool(names_index and names_data),
         "notes": notes,

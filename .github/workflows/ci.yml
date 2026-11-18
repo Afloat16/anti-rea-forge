@@ -78,9 +78,24 @@ jobs:
           RELEASEGUARD_AMICE_PLUGIN: ${{ runner.temp }}/amice.so
           RELEASEGUARD_REQUIRE_NATIVE_OBFUSCATION: '1'
           RELEASEGUARD_REQUIRE_NATIVE_VIRTUALIZATION: '1'
+          RELEASEGUARD_REQUIRE_LLVM_METADATA: '1'
         run: |
           python -m unittest tests.test_native_obfuscation tests.test_native_obfuscation_cli tests.test_native_virtualization tests.test_native_virtualization_cli tests.test_native_vm_integers tests.test_native_code_obfuscation tests.test_native_code_seal tests.test_native_seal_emission tests.test_native_loader_lifetime tests.test_native_code_controls tests.test_sealed_code_controls tests.test_ghidra_function_probe -v
+          python -m unittest tests.test_native_compiler_metadata tests.test_elf_compiler_metadata -v
           python -m unittest discover -s benchmarks/ida_function -p 'test_*.py' -v
+      - name: Require real embedded IR recovery against the verified v1.2.0 release
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" https://github.com/Afloat16/anti-rea-forge/releases/download/v1.2.0/open_release_guard-1.2.0-py3-none-any.whl
+          echo 'b16280c1f81cb6cec5a028102edeefdaf8b62e9300da3e87acb1878b3f0ab75b' "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" | sha256sum --check --status
+          python -m venv "$RUNNER_TEMP/baseline-1.2"
+          "$RUNNER_TEMP/baseline-1.2/bin/python" -m pip install "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl"
+          python benchmarks/llvm_metadata_recovery.py --llvm-bin /usr/lib/llvm-18/bin --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.2/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" --work "$RUNNER_TEMP/llvm-metadata-corpus" --out "$RUNNER_TEMP/llvm-metadata-recovery.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          data = json.loads((Path(os.environ["RUNNER_TEMP"]) / "llvm-metadata-recovery.json").read_bytes())
+          print("RECOVERY_EVIDENCE llvm-metadata-recovery " + json.dumps(data, separators=(",", ":")))
+          PY
       - name: Compare all generated native functions and their in-process costs
         run: |
           RG_PLUGIN="$RUNNER_TEMP/obfuscator-build/libLLVMObfuscator.so"
@@ -112,6 +127,7 @@ jobs:
             ${{ runner.temp }}/sealed-code-corpus/envelope.json
             ${{ runner.temp }}/sealed-code-analysis
             ${{ runner.temp }}/sealed-code-result.json
+            ${{ runner.temp }}/llvm-metadata-recovery.json
           retention-days: 14
           if-no-files-found: error
 
@@ -175,7 +191,7 @@ jobs:
     name: Real REA recovery and structured key controls / Linux
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
@@ -225,6 +241,12 @@ jobs:
           echo '5040a0f33c6b5a640302af4983556abdcab1918e845f4bac4010ec2fa2233086' "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" | sha256sum --check --status
           python -m venv "$RUNNER_TEMP/baseline-1.1"
           "$RUNNER_TEMP/baseline-1.1/bin/python" -m pip install "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl"
+      - name: Install the verified public v1.2.0 baseline for current disclosure regressions
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" https://github.com/Afloat16/anti-rea-forge/releases/download/v1.2.0/open_release_guard-1.2.0-py3-none-any.whl
+          echo 'b16280c1f81cb6cec5a028102edeefdaf8b62e9300da3e87acb1878b3f0ab75b' "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" | sha256sum --check --status
+          python -m venv "$RUNNER_TEMP/baseline-1.2"
+          "$RUNNER_TEMP/baseline-1.2/bin/python" -m pip install "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl"
       - name: Require five Wasm programs and the real v1.1 linker disclosure control
         run: |
           node benchmarks/wasm_corpus_recovery.mjs --wabt-bin "$RUNNER_TEMP/wabt-1.0.42/bin" --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" --out "$RUNNER_TEMP/wasm-corpus-recovery.json"
@@ -235,6 +257,16 @@ jobs:
           node benchmarks/source_map_corpus_recovery.mjs --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit 675287517c98c702ee88ad036c5e3b8dd4bcc7a7 --out "$RUNNER_TEMP/source-map-corpus-recovery-source.json"
       - name: Require real recovery and positive rejection of nineteen consumer-compatible key forms
         run: python benchmarks/secret_representation_recovery.py --baseline-python "$RUNNER_TEMP/baseline-1.1/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.1.0-py3-none-any.whl" --out "$RUNNER_TEMP/secret-representation-recovery.json"
+      - name: Require PYC key recovery controls on the published and pinned source REA distributions
+        run: |
+          node benchmarks/python_key_recovery.mjs --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.2/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" --out "$RUNNER_TEMP/python-key-recovery.json"
+          node benchmarks/python_key_recovery.mjs --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.2/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit 675287517c98c702ee88ad036c5e3b8dd4bcc7a7 --out "$RUNNER_TEMP/python-key-recovery-source.json"
+      - name: Require private service, republishing and live-reference controls on both REA distributions
+        run: |
+          node benchmarks/private_input_controls.mjs --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.2/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" --out "$RUNNER_TEMP/private-input-controls.json"
+          node benchmarks/private_input_controls.mjs --python "$(command -v python)" --baseline-python "$RUNNER_TEMP/baseline-1.2/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit 675287517c98c702ee88ad036c5e3b8dd4bcc7a7 --out "$RUNNER_TEMP/private-input-controls-source.json"
+      - name: Require Node and cryptography recovery of encoded private PEM regressions
+        run: python benchmarks/encoded_pem_recovery.py --python "$(command -v python)" --node "$(command -v node)" --baseline-python "$RUNNER_TEMP/baseline-1.2/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.2.0-py3-none-any.whl" --out "$RUNNER_TEMP/encoded-pem-recovery.json"
       - name: Run the verified Craft Anything CLI on the same fixture
         run: |
           curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/craft.tar.gz" https://github.com/storytold/craft-anything/releases/download/v0.5.0/craft-anything-0.5.0-linux-x86_64.tar.gz
@@ -244,7 +276,7 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          for name in ("source-map-recovery", "craft-source-map", "wasm-recovery", "structured-secret-recovery", "wasm-recovery-source", "source-map-recovery-source", "wasm-corpus-recovery", "wasm-corpus-recovery-source", "source-map-corpus-recovery", "source-map-corpus-recovery-source", "secret-representation-recovery"):
+          for name in ("source-map-recovery", "craft-source-map", "wasm-recovery", "structured-secret-recovery", "wasm-recovery-source", "source-map-recovery-source", "wasm-corpus-recovery", "wasm-corpus-recovery-source", "source-map-corpus-recovery", "source-map-corpus-recovery-source", "secret-representation-recovery", "python-key-recovery", "python-key-recovery-source", "private-input-controls", "private-input-controls-source", "encoded-pem-recovery"):
               data = json.loads((Path(os.environ["RUNNER_TEMP"]) / (name + ".json")).read_bytes())
               print("RECOVERY_EVIDENCE " + name + " " + json.dumps(data, separators=(",", ":")))
           PY
@@ -264,6 +296,11 @@ jobs:
             ${{ runner.temp }}/source-map-corpus-recovery.json
             ${{ runner.temp }}/source-map-corpus-recovery-source.json
             ${{ runner.temp }}/secret-representation-recovery.json
+            ${{ runner.temp }}/python-key-recovery.json
+            ${{ runner.temp }}/python-key-recovery-source.json
+            ${{ runner.temp }}/private-input-controls.json
+            ${{ runner.temp }}/private-input-controls-source.json
+            ${{ runner.temp }}/encoded-pem-recovery.json
           retention-days: 14
           if-no-files-found: error
 

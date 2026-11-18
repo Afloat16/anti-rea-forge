@@ -4,7 +4,9 @@
 markers in decoded strings, exact configured asset keys in common string forms
 and contiguous byte-array windows, and supported private JWK material.  Bounded
 hex/Base64 strings whose decoded prefix identifies a private DER structure are
-checked by the same DER reader. It does not
+checked by the same DER reader. Wrapped private PEM markers are recognized
+through a bounded streaming hint scan, including after leading text. DER and
+PEM candidates share per-document count and decoded-byte budgets. It does not
 execute JavaScript, evaluate expressions, or discover arbitrary application
 secrets.  A finding contains only a fixed code/representation/kind or the index
 of an operator-supplied key; no value, digest, JSON property name or path escapes.
@@ -29,7 +31,7 @@ from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, ed448, rsa, x25519, x448
 
-from .core import GuardError
+from .core import MAX_DOCUMENT_BYTES, GuardError
 
 MAX_JSON_SECRET_NODES = 100_000
 MAX_JSON_SECRET_DEPTH = 64
@@ -42,11 +44,21 @@ _ASCII_FOLDING = str.maketrans("", "", " \t\r\n\v\f")
 _MAX_JWK_FIELD_TEXT_BYTES = 32 * 1024
 _MAX_ASSET_KEY_TEXT_CHARS = 32 * 1024
 _MAX_ENCODED_DER_TEXT_CHARS = 256 * 1024
+_PEM_HINT_CHARS = 32 * 1024
 PEM_PRIVATE_KEY_MARKERS = (
     "-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----",
     "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN EC PRIVATE KEY-----",
     "-----BEGIN DSA PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----",
 )
+_PEM_HEX_HINTS = tuple(marker.encode("ascii").hex() for marker in PEM_PRIVATE_KEY_MARKERS)
+# Keep only sextets wholly inside a marker, for every possible byte alignment.
+# A hint is not a finding: a bounded full decode must confirm the actual marker.
+_PEM_BASE64_HINTS = tuple(
+    base64.b64encode(bytes(shift) + marker.encode("ascii"))[
+        (8 * shift + 5) // 6:(8 * (shift + len(marker))) // 6]
+    for marker in PEM_PRIVATE_KEY_MARKERS for shift in range(3)
+)
+_PEM_HINT_OVERLAP = max(map(len, (*_PEM_HEX_HINTS, *_PEM_BASE64_HINTS))) - 1
 _OKP_LENGTHS = {"Ed25519": 32, "X25519": 32, "Ed448": 57, "X448": 56}
 _EC_CURVES = {"P-256": (32, ec.SECP256R1), "P-384": (48, ec.SECP384R1),
               "P-521": (66, ec.SECP521R1)}
@@ -257,6 +269,51 @@ def _encoded_der(value: str) -> tuple[str, bytes] | None:
     return encoding, data
 
 
+def _encoded_pem(value: str) -> tuple[str, bytes] | None:
+    """Find one outer hex/Base64 wrapper without decoding unrelated payloads.
+
+    PEM readers can accept leading notes, so a prefix-only probe is insufficient.
+    Scan hints across the whole JSON-bounded string with constant-size tails.
+    Large unrelated data remains allowed; a recognized candidate outside the
+    smaller decode budget fails explicitly. No nested encoding is evaluated.
+    """
+    if len(value) > MAX_DOCUMENT_BYTES:
+        raise GuardError("Encoded PEM inspection exceeds the JSON text limit")
+    hex_tail, b64_tail = "", b""
+    hex_candidate = b64_candidate = b64_terminated = False
+    for offset in range(0, len(value), _PEM_HINT_CHARS):
+        chunk = value[offset:offset + _PEM_HINT_CHARS]
+        if not hex_candidate:
+            window = hex_tail + chunk.translate(_ASCII_FOLDING).lower()
+            hex_candidate = any(hint in window for hint in _PEM_HEX_HINTS)
+            hex_tail = window[-_PEM_HINT_OVERLAP:]
+        if not b64_candidate and not b64_terminated:
+            normalized, b64_terminated = _consumer_base64_parts(chunk)
+            window = b64_tail + normalized.replace(b"-", b"+").replace(b"_", b"/")
+            b64_candidate = any(hint in window for hint in _PEM_BASE64_HINTS)
+            b64_tail = window[-_PEM_HINT_OVERLAP:]
+        if hex_candidate or b64_candidate:
+            break
+    if not (hex_candidate or b64_candidate):
+        return None
+    if len(value) > _MAX_ENCODED_DER_TEXT_CHARS:
+        raise GuardError("Encoded private PEM exceeds its raw text limit")
+    encoding = "hex" if hex_candidate else "base64"
+    encoded = value.translate(_ASCII_FOLDING) if hex_candidate else _consumer_base64_text(value)
+    maximum = MAX_DER_PRIVATE_KEY_BYTES * 2 if hex_candidate else (MAX_DER_PRIVATE_KEY_BYTES * 4 + 2) // 3 + 2
+    if len(encoded) > maximum:
+        raise GuardError("Encoded private PEM exceeds its decoded byte limit")
+    try:
+        data = binascii.unhexlify(encoded) if hex_candidate else _consumer_base64_bytes(encoded)
+    except (ValueError, binascii.Error):
+        raise GuardError("Recognized private PEM has an invalid outer encoding") from None
+    if len(data) > MAX_DER_PRIVATE_KEY_BYTES:
+        raise GuardError("Encoded private PEM exceeds its decoded byte limit")
+    # Charge every actual decode to the shared budget, even when the hint was
+    # an alignment coincidence. The caller confirms markers before reporting.
+    return encoding, data
+
+
 def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
                       check_private_keys: bool = True) -> list[dict[str, Any]]:
     """Inspect a bounded parsed JSON tree and return non-secret finding records.
@@ -280,7 +337,7 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
 
     pending = [(document, 0)]
     visited = 0
-    der_candidates = decoded_der_bytes = 0
+    encoded_candidates = decoded_private_bytes = 0
     while pending:
         value, depth = pending.pop()
         visited += 1
@@ -340,13 +397,24 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
                     add("asset_key_exposure", index, representation="json-decoded-string", rule_index=index)
             if check_private_keys:
                 encoded = _encoded_der(value)
+                kind = "der"
+                if encoded is None:
+                    encoded = _encoded_pem(value)
+                    kind = "pem"
                 if encoded is not None:
                     encoding, data = encoded
-                    der_candidates += 1
-                    decoded_der_bytes += len(data)
-                    if (der_candidates > MAX_JSON_DER_CANDIDATES
-                            or decoded_der_bytes > MAX_JSON_DER_DECODED_BYTES):
-                        raise GuardError("Encoded private DER exceeds the JSON decode budget")
+                    encoded_candidates += 1
+                    decoded_private_bytes += len(data)
+                    if (encoded_candidates > MAX_JSON_DER_CANDIDATES
+                            or decoded_private_bytes > MAX_JSON_DER_DECODED_BYTES):
+                        raise GuardError("Encoded private material exceeds the JSON decode budget")
+                    if kind == "pem":
+                        for index, marker in enumerate(PEM_PRIVATE_KEY_MARKERS):
+                            if marker.encode("ascii") in data:
+                                representation = "json-" + encoding + "-pem"
+                                add("private_key_marker", (representation, index),
+                                    representation=representation, rule_index=index)
+                        continue
                     for finding in scan_der_private_key(io.BytesIO(data), len(data)):
                         details = {key: item for key, item in finding.items() if key != "code"}
                         details["representation"] = "json-" + encoding + "-" + details["representation"]

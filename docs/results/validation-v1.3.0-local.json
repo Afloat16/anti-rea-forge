@@ -1,0 +1,148 @@
+{
+  "schema": "anti-rea-forge.local-validation.v1",
+  "version": "1.3.0",
+  "validation_date": "2026-11-18",
+  "host": "Linux x86_64",
+  "python": "3.12.14",
+  "node": "24.22.1",
+  "base_commit": "93ce43975cc62425702fa3ffedcf31cd5a297d6f",
+  "candidate_was_uncommitted": true,
+  "new_python_test_methods": 67,
+  "python_suite": {
+    "command": "RELEASEGUARD_CMAKE=/trusted/cmake RELEASEGUARD_LLVM_BIN=/trusted/llvm-19/bin RELEASEGUARD_REQUIRE_LLVM_METADATA=1 python -m unittest discover -s tests -v",
+    "tests_run": 1001,
+    "passed": 990,
+    "skipped": 11,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 79.896,
+    "log_sha256": "571cab4a5b5e88a194b9b6374ba3dde63673c65ae1984aeddf5b4e6ad50a6bc5",
+    "skip_records": [
+      "test_real_javac_class_and_jar_do_not_collide_with_macho_magic (test_macho.RealJavaCompatibilityTests.test_real_javac_class_and_jar_do_not_collide_with_macho_magic) ... skipped 'javac is required for the real Java class/JAR control'",
+      "setUpClass (test_macho_compiled.RealDarwinMetadataTests) ... skipped 'Apple clang/strip/lipo controls require macOS'",
+      "setUpClass (test_native_code_controls.NativeCodeControlsLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN'",
+      "setUpClass (test_native_code_obfuscation.SealedNativeObfuscationLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_native_obfuscation.NativeObfuscationLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN for LLVM 18 builds'",
+      "setUpClass (test_native_obfuscation_cli.NativeObfuscationLLVMCLI) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN for LLVM 18 CLI builds'",
+      "setUpClass (test_native_virtualization.NativeVirtualizationLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_native_virtualization_cli.NativeVirtualizationRealCLI) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_native_vm_integers.NativeVMIntegerExecution) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_sealed_code_controls.SealedControlsLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN'",
+      "setUpClass (test_standalone_metadata_compiled.RealMsvcPdbTests) ... skipped 'Real MSVC PDB generation requires Windows'"
+    ]
+  },
+  "sdk": {
+    "tests": 67,
+    "passed": 67,
+    "skipped": 0,
+    "log_sha256": "ee2116020bb1238856bbb1fd0834f9129b2bc025d137233209fc70c656619621"
+  },
+  "sdk_real_cli": {
+    "tests": 11,
+    "passed": 11,
+    "skipped": 0,
+    "log_sha256": "122d40a8f555d7b8b772c8443b08ddec5e061e0c5092037d89049044543e3d96"
+  },
+  "installed_artifacts": {
+    "schema": "anti-rea-forge.installation.v1",
+    "ok": true,
+    "version": "1.3.0",
+    "source_commit": "93ce43975cc62425702fa3ffedcf31cd5a297d6f",
+    "source_dirty": true,
+    "platform": "Linux",
+    "python": "3.12.14",
+    "node": "v24.22.1",
+    "python_installations": [
+      {
+        "artifact": "open_release_guard-1.3.0-py3-none-any.whl",
+        "version": "1.3.0",
+        "isolated_import": true,
+        "clean_release_accepted": true,
+        "renamed_source_map_blocked": true,
+        "native_resources_present": 5,
+        "asset_roundtrip_bytes": 4096,
+        "leaked_key_blocked": true,
+        "structured_key_blocked": true,
+        "wasm_split_verified": true,
+        "consumer_key_encodings_blocked": true,
+        "incomplete_source_map_blocked": true,
+        "relocatable_wasm_blocked": true,
+        "private_input_clean_accepted": true,
+        "private_input_copy_blocked": true,
+        "pyc_integer_key_blocked": true,
+        "encoded_pem_blocked": true,
+        "standalone_llvm_unverifiable": true
+      },
+      {
+        "artifact": "open_release_guard-1.3.0.tar.gz",
+        "version": "1.3.0",
+        "isolated_import": true,
+        "clean_release_accepted": true,
+        "renamed_source_map_blocked": true,
+        "native_resources_present": 5,
+        "asset_roundtrip_bytes": 4096,
+        "leaked_key_blocked": true,
+        "structured_key_blocked": true,
+        "wasm_split_verified": true,
+        "consumer_key_encodings_blocked": true,
+        "incomplete_source_map_blocked": true,
+        "relocatable_wasm_blocked": true,
+        "private_input_clean_accepted": true,
+        "private_input_copy_blocked": true,
+        "pyc_integer_key_blocked": true,
+        "encoded_pem_blocked": true,
+        "standalone_llvm_unverifiable": true
+      }
+    ],
+    "javascript_installation": {
+      "installed_sdk": true,
+      "clean_release_accepted": true,
+      "source_map_blocked": true,
+      "private_input_clean_accepted": true,
+      "private_input_copy_blocked": true
+    },
+    "artifacts": [
+      {
+        "name": "open_release_guard-1.3.0-py3-none-any.whl",
+        "bytes": 153718,
+        "sha256": "dde53e262b06e017aac332e915ce0fa7a0def3211fbedaf2dccc2091ca6b16dd"
+      },
+      {
+        "name": "open_release_guard-1.3.0.tar.gz",
+        "bytes": 343193,
+        "sha256": "94afd06b0609ff29b4c064c183fb945aeb77ac6fbed64fb97b37f794303d57b4"
+      },
+      {
+        "name": "anti-rea-forge-releaseguard-1.3.0.tgz",
+        "bytes": 20461,
+        "sha256": "df3e115a28909dc437636541fa3911961fd14c108fe3ddb1a54f8a5abd785025"
+      }
+    ],
+    "scope": "Fresh wheel and source installs plus packed SDK behavior; no resistance score."
+  },
+  "tested_source_sha256": {
+    ".github/workflows/ci.yml": "06f059d506d5ac2f5a37bc7a468a5e69322d97327939a1525992fe4a446f3d71",
+    "benchmarks/encoded_pem_recovery.py": "ecfcdccfab5bf66a6330277aef42f88da21401c3b6dc5f32dfe8229ea3059d71",
+    "benchmarks/llvm_metadata_recovery.py": "95707f21ac36d9001126df056c8b160bbb85c1cb1ff01651afe0722c85995188",
+    "benchmarks/private_input_controls.mjs": "fa30d3398cbc371b8d135ab7636e8c7e1d839b2f54bd55b62b3f822e001c1a4c",
+    "benchmarks/python_key_recovery.mjs": "3801ea67fff719fc21dfc900dcf8749d850bd8b8ca84d7bbfcbbbc635bb4aaa2",
+    "benchmarks/python_key_recovery.py": "282ab2466418662a89ad76bf8b2638dde8339a486ab11f2ed21754c4589ed82f",
+    "packages/releaseguard/index.d.ts": "de6cd1305a1f2181989d39677e14f79179f0b629e78ed57f21567ea0bd09eb36",
+    "packages/releaseguard/src/client.js": "b24126d247ad6cc32e4858a064442a806c90ae2e7e416944243ee008cc970762",
+    "src/releaseguard/__init__.py": "e330de39e16f203ad2815efb78efe158d138d430edd49d34dfcbb5fcb7a66bb1",
+    "src/releaseguard/cli.py": "991ca6af40ac52583ee0f97c7e103b9f4a9095087f1e1092c34973c2cbfac381",
+    "src/releaseguard/distribution.py": "6733921bfca82fe655728b61bcb57c22c8d7f0cd30f2075badf059f5a1900159",
+    "src/releaseguard/elf.py": "aea7b2a98679304aa05c016c472fc91211a061c5764873db79147b204a70997a",
+    "src/releaseguard/encoded_asset_keys.py": "8cfd5963b4e67d9f88b89a3657c8f66783ec9aff0fa5f3b4596538c61ef4ca9c",
+    "src/releaseguard/macho.py": "06fb084ec6efe695977b17ffbca7b1c1c0402203418f70f1f2dac69364b3109f",
+    "src/releaseguard/native.py": "03fe3143856502e6e17906199dddb1396adf2fa0d4182d02425775cb53b30ba5",
+    "src/releaseguard/pe.py": "64f75f446af6a9f90825561143fb25403891b1208b1485fc860624240ddbacb2",
+    "src/releaseguard/private_inputs.py": "3258e990246be57262b4ff39e818c8625ffe208eb1f4513313cfe15a21c718d5",
+    "src/releaseguard/project.py": "5cabc5250b51f24b704a1d741ca8bf443d589e42f394956de76775ab4435f532",
+    "src/releaseguard/split_elf.py": "ff0b27d561f76d9971086da19e869f9563c99b339416bbabd9a084d465ad5445",
+    "src/releaseguard/structured_secrets.py": "21ff0a442c34c04fcf7428ff8074da41840c5320fa06d19cab26b770e891b3b9",
+    "tools/check_release_artifacts.py": "c3f47b934db819c329962b25b1f7afe3f14869be6e1c55edfbde3bb77c426fa9",
+    "tools/publish_release.py": "b51e7ffdb4d9ab16db022d536626bb480acad5a33b96598bc6ee48dae8a44499"
+  },
+  "scope": "Local uncommitted candidate validation, not publication approval. LLVM metadata tests ran with real Clang/llvm-dis 19.1.7. Platform/tool-dependent skips are not successes; exact-main CI independently requires all 13 jobs and LLVM 18 controls. Local artifact hashes identify the tested snapshots; final clean CI artifacts and release evidence supersede them."
+}
