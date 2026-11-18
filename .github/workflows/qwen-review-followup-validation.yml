@@ -19,11 +19,11 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - pr: '17579'
-            sha: '5c9bc81f9600875599552c739feb8ee1294e64bf'
+          - pr: '17581'
+            sha: '473b06fcc8d156af6fd111e2d6dadcbb7e5a1a51'
             package: 'sdk-typescript'
-            tests: 'test/unit/AcpHttpTransport.test.ts test/unit/acpTransportUtils.test.ts'
-            files: 'packages/sdk-typescript/test/unit/AcpHttpTransport.test.ts'
+            tests: 'test/unit/Query.test.ts'
+            files: 'packages/sdk-typescript/test/unit/Query.test.ts'
     env:
       CI: 'true'
       QWEN_SKIP_PREPARE: '1'
@@ -57,11 +57,11 @@ jobs:
       - name: SDK focused tests
         if: matrix.package == 'sdk-typescript'
         working-directory: packages/sdk-typescript
-        run: corepack pnpm exec vitest run ${{ matrix.tests }}
+        run: corepack pnpm exec vitest run ${{ matrix.tests }} --retry=0
       - name: CLI focused tests with normal prerequisite guard
         if: matrix.package == 'cli'
         working-directory: packages/cli
-        run: corepack pnpm exec vitest run ${{ matrix.tests }}
+        run: corepack pnpm exec vitest run ${{ matrix.tests }} --retry=0
       - name: Verify review regression witnesses
         working-directory: packages/${{ matrix.package }}
         env:
@@ -92,6 +92,17 @@ jobs:
                 ),
                 '    } catch (error) {\n      /**\n       * Timeout or error',
                 '    } catch (error) {\n      if (timeoutId) clearTimeout(timeoutId);\n      /**\n       * Timeout or error',
+              ),
+            }, {
+              label: 'default permission deadline skipped without explicit timeout',
+              file: 'src/query/Query.ts',
+              tests: ['test/unit/Query.test.ts'],
+              failed: 2,
+              passed: 75,
+              mutate: (source) => replaceOnce(
+                source,
+                "        timeoutId = setTimeout(\n          () => reject(new Error('Permission callback timeout')),\n          canUseToolTimeout,\n        );",
+                "        if (this.options.timeout?.canUseTool !== undefined) {\n          timeoutId = setTimeout(\n            () => reject(new Error('Permission callback timeout')),\n            canUseToolTimeout,\n          );\n        }",
               ),
             }],
             '17579': [{
@@ -153,7 +164,7 @@ jobs:
             const original = readFileSync(probe.file, 'utf8');
             try {
               writeFileSync(probe.file, probe.mutate(original));
-              const result = spawnSync('corepack', ['pnpm', 'exec', 'vitest', 'run', ...probe.tests], {
+              const result = spawnSync('corepack', ['pnpm', 'exec', 'vitest', 'run', ...probe.tests, '--retry=0'], {
                 encoding: 'utf8',
                 timeout: 240000,
                 maxBuffer: 32 * 1024 * 1024,
