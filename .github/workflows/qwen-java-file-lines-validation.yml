@@ -1,0 +1,147 @@
+name: Qwen Java file newline validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-java-file-lines-20261118'
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    name: 'ACP client ${{ matrix.os }} Java ${{ matrix.java }}'
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: '${{ matrix.os }}'
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - os: ubuntu-latest
+            java: '11'
+          - os: ubuntu-latest
+            java: '17'
+          - os: ubuntu-latest
+            java: '21'
+          - os: macos-latest
+            java: '21'
+          - os: windows-latest
+            java: '21'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout exact retained PR head
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '7b92b2ac44a3c195eeb6d3a03714676414c75813'
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify source identity
+        run: |
+          test "$(git rev-parse HEAD)" = '7b92b2ac44a3c195eeb6d3a03714676414c75813'
+          test "$(git rev-parse HEAD^)" = '5fc5a98ecc08d2e89f29cbea57934928224977b5'
+          git show -s --format='%H %T %P'
+      - name: Set up Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
+        with:
+          distribution: temurin
+          java-version: '${{ matrix.java }}'
+          cache: maven
+          cache-dependency-path: packages/sdk-java/client/pom.xml
+      - name: Set up report parser
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+      - name: Normal complete ACP client Maven test suite
+        run: |
+          mvn --version
+          mvn --batch-mode --no-transfer-progress -f packages/sdk-java/client/pom.xml clean test
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import xml.etree.ElementTree as ET
+          reports = sorted(Path('packages/sdk-java/client/target/surefire-reports').glob('TEST-*.xml'))
+          assert reports, 'No Surefire reports'
+          totals = {key: 0 for key in ('tests', 'failures', 'errors', 'skipped')}
+          for path in reports:
+              suite = ET.parse(path).getroot()
+              for key in totals:
+                  totals[key] += int(suite.attrib.get(key, 0))
+          assert totals['tests'] > 0 and totals['failures'] == totals['errors'] == 0, totals
+          target = Path('packages/sdk-java/client/target/surefire-reports/TEST-com.alibaba.acp.sdk.session.event.consumer.FileEventSimpleConsumerTest.xml')
+          suite = ET.parse(target).getroot()
+          assert int(suite.attrib['tests']) == 8 and int(suite.attrib['failures']) == int(suite.attrib['errors']) == 0
+          print('Complete client suite:', json.dumps(totals), 'newline regressions: 8 passed')
+          PY
+      - name: Exact-parent negative control and restored regression suite
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import xml.etree.ElementTree as ET
+
+          source = Path('packages/sdk-java/client/src/main/java/com/alibaba/acp/sdk/session/event/consumer/FileEventSimpleConsumer.java')
+          original = source.read_bytes()
+          parent = subprocess.check_output(['git', 'show', '5fc5a98ecc08d2e89f29cbea57934928224977b5:' + source.as_posix()])
+          assert parent != original
+          maven = shutil.which('mvn')
+          assert maven, 'Maven executable missing'
+          command = [maven, '--batch-mode', '--no-transfer-progress', '-f', 'packages/sdk-java/client/pom.xml', '-Dtest=FileEventSimpleConsumerTest', 'clean', 'test']
+          report = Path('packages/sdk-java/client/target/surefire-reports/TEST-com.alibaba.acp.sdk.session.event.consumer.FileEventSimpleConsumerTest.xml')
+          try:
+              source.write_bytes(parent)
+              result = subprocess.run(command, timeout=300)
+              assert result.returncode == 1, 'The unchanged parent must reject newline assertions'
+              suite = ET.parse(report).getroot()
+              assert int(suite.attrib['tests']) == 8 and int(suite.attrib['errors']) == 0, suite.attrib
+              failed = {case.attrib['name'] for case in suite.iter('testcase') if case.find('failure') is not None}
+              expected = {'returnsTextNewlinesForWholeFileReads', 'returnsOnlyTheRequestedLineRange', 'keepsBlankLinesWhenNormalizingCrLfInput', 'preservesTheConfiguredCharset'}
+              assert failed == expected, failed
+              assert int(suite.attrib['skipped']) == 0
+              print('Exact-parent negative control: 4 assertion failures, 4 unchanged controls pass:', sorted(failed))
+          finally:
+              source.write_bytes(original)
+          assert source.read_bytes() == original
+          subprocess.run(command, timeout=300, check=True)
+          suite = ET.parse(report).getroot()
+          assert int(suite.attrib['tests']) == 8 and int(suite.attrib['failures']) == int(suite.attrib['errors']) == int(suite.attrib['skipped']) == 0
+          print('Restored exact candidate: 8 regressions passed')
+          PY
+          git diff --exit-code
+  workspace:
+    name: Normal workspace build, bundle and typecheck
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: 'true'
+      QWEN_SKIP_PREPARE: '1'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+    steps:
+      - name: Checkout exact retained PR head
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '7b92b2ac44a3c195eeb6d3a03714676414c75813'
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify source identity
+        run: test "$(git rev-parse HEAD)" = '7b92b2ac44a3c195eeb6d3a03714676414c75813'
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Install frozen dependencies
+        run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: Normal build, development bundle and typecheck
+        run: |
+          npm run build
+          DEV=true npm run bundle
+          npm run typecheck
+          git diff --exit-code
