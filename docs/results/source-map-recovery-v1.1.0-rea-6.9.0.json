@@ -1,0 +1,237 @@
+{
+  "schema": "releaseguard/source-map-recovery/v1",
+  "ok": true,
+  "mode": "rea-cli-and-trace-mapping",
+  "rea_cli_executed": true,
+  "recorded_at": "2026-11-18T04:44:27.244Z",
+  "node": "v24.22.1",
+  "host": "linux/x64",
+  "private_restoration_control": true,
+  "dependency_lock_sha256": "caa0d17241b447eb4036edb4e9852265e67c5733d89247c5f79559779e071422",
+  "tools": {
+    "terser": {
+      "version": "5.44.1",
+      "npm_integrity": "sha512-t/R3R/n0MSwnnazuPpPNVO60LX0SKL45pyl9YlvxIdkH0Of7D5qM2EVe+yASRIlY5pZ73nclYJfNANGWPwFDZw=="
+    },
+    "@jridgewell/trace-mapping": {
+      "version": "0.3.31",
+      "npm_integrity": "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="
+    },
+    "rea-agents": {
+      "distribution": "npm",
+      "version": "6.9.0",
+      "npm_integrity": "sha512-KqDn1UR5BMqHoQ3MGAnPuWiSKwgdFaz1L/uUNgrKt+1W8kPtgYP8AWEOXIF1lDIOBVyPuYIIst2iamo1Wf3r8g==",
+      "recorded_registry_provenance": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/rea-agents@6.9.0",
+        "recorded_date": "2026-11-18",
+        "declared_source_commit": "d74549e495c58eb4a560279fd9f05508401ea0a0",
+        "subject_sha512": "2aa0e7d5447904ca87a10dcc1809cfb968922b081d15acf52ffb94360acab7ed56f243ed8183fc01610e5c817594320e055c8fb98208b2dda26a6a3559fdebf2",
+        "signature_chain_independently_verified": false
+      }
+    }
+  },
+  "original_sha256": "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5",
+  "sides": {
+    "baseline": {
+      "inventory": [
+        {
+          "path": "app.js",
+          "size": 38,
+          "sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8"
+        },
+        {
+          "path": "app.js.map",
+          "size": 377,
+          "sha256": "0b84e1698955dbdde34d8017e362aa1bca5e726e036353bdba1fd3987d20b979"
+        },
+        {
+          "path": "package.json",
+          "size": 80,
+          "sha256": "0d0723506b0a29cb81b1ff5a4dcfcb005b39a661b5c7d15f306ee9c570e6b93c"
+        }
+      ],
+      "trace_mapping": [
+        {
+          "map": "app.js.map",
+          "source": "pricing-original.js",
+          "content_sha256": "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5",
+          "exact_text": true,
+          "marker_present": true,
+          "position": {
+            "source": "pricing-original.js",
+            "line": 2,
+            "column": 16,
+            "name": "quote"
+          }
+        }
+      ],
+      "fixture_outputs": [
+        -11,
+        3,
+        10,
+        80
+      ],
+      "rea": {
+        "exit_code": 0,
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_b19c7660389dac2a9063e7ca7a09bb4a426dd11ad49b2dbae446c3b7400fb386",
+        "evidence_stdout_sha256": "a1b43218d94afb83078aa56178ae830f81075a304dfd26c9c7314824b4ca3fd2",
+        "evidence_stdout_bytes": 57038,
+        "graph_id": "jag_88f175fbfa136f8c7ded92fda3122688c153da3766683a9f1984a184876b90e9",
+        "graph_nodes": 9,
+        "complete": true,
+        "truncated": false,
+        "inventoried_relevant_files": 3,
+        "parsed_javascript_files": 1,
+        "skipped_javascript_files": 0,
+        "parse_failures": 0,
+        "parsed_bundle_sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8",
+        "map_nodes": 1,
+        "embedded_original_content_sha256": [
+          "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5"
+        ]
+      }
+    },
+    "public": {
+      "inventory": [
+        {
+          "path": "app.js",
+          "size": 38,
+          "sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8"
+        },
+        {
+          "path": "package.json",
+          "size": 80,
+          "sha256": "0d0723506b0a29cb81b1ff5a4dcfcb005b39a661b5c7d15f306ee9c570e6b93c"
+        }
+      ],
+      "trace_mapping": [],
+      "fixture_outputs": [
+        -11,
+        3,
+        10,
+        80
+      ],
+      "rea": {
+        "exit_code": 0,
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_ea73317c33cd90fe590aaf8ea182570207b99bc5345406bd9f98e083689fada5",
+        "evidence_stdout_sha256": "746cd47de2d9584a26b24364292d61d491cb32a31109302bb9777af250ad0615",
+        "evidence_stdout_bytes": 51561,
+        "graph_id": "jag_b571cbc77115b741c1df542f804a7861696bbce80f8275416260943f2214d093",
+        "graph_nodes": 7,
+        "complete": true,
+        "truncated": false,
+        "inventoried_relevant_files": 2,
+        "parsed_javascript_files": 1,
+        "skipped_javascript_files": 0,
+        "parse_failures": 0,
+        "parsed_bundle_sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8",
+        "map_nodes": 0,
+        "embedded_original_content_sha256": []
+      }
+    },
+    "private": {
+      "inventory": [
+        {
+          "path": "app.js.map",
+          "size": 377,
+          "sha256": "0b84e1698955dbdde34d8017e362aa1bca5e726e036353bdba1fd3987d20b979"
+        }
+      ],
+      "trace_mapping": [
+        {
+          "map": "app.js.map",
+          "source": "pricing-original.js",
+          "content_sha256": "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5",
+          "exact_text": true,
+          "marker_present": true,
+          "position": {
+            "source": "pricing-original.js",
+            "line": 2,
+            "column": 16,
+            "name": "quote"
+          }
+        }
+      ]
+    },
+    "private_restored": {
+      "inventory": [
+        {
+          "path": "app.js",
+          "size": 38,
+          "sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8"
+        },
+        {
+          "path": "app.js.map",
+          "size": 377,
+          "sha256": "0b84e1698955dbdde34d8017e362aa1bca5e726e036353bdba1fd3987d20b979"
+        },
+        {
+          "path": "package.json",
+          "size": 80,
+          "sha256": "0d0723506b0a29cb81b1ff5a4dcfcb005b39a661b5c7d15f306ee9c570e6b93c"
+        }
+      ],
+      "trace_mapping": [
+        {
+          "map": "app.js.map",
+          "source": "pricing-original.js",
+          "content_sha256": "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5",
+          "exact_text": true,
+          "marker_present": true,
+          "position": {
+            "source": "pricing-original.js",
+            "line": 2,
+            "column": 16,
+            "name": "quote"
+          }
+        }
+      ],
+      "fixture_outputs": [
+        -11,
+        3,
+        10,
+        80
+      ],
+      "rea": {
+        "exit_code": 0,
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_98c86adff546decfdbdbd50da147f9c5b39585ca18980b82eb3320219bf17b86",
+        "evidence_stdout_sha256": "a04783e32a5143eb1d324c4e15186e2ef20a5e054b75325c55126c40e9991b53",
+        "evidence_stdout_bytes": 57070,
+        "graph_id": "jag_88f175fbfa136f8c7ded92fda3122688c153da3766683a9f1984a184876b90e9",
+        "graph_nodes": 9,
+        "complete": true,
+        "truncated": false,
+        "inventoried_relevant_files": 3,
+        "parsed_javascript_files": 1,
+        "skipped_javascript_files": 0,
+        "parse_failures": 0,
+        "parsed_bundle_sha256": "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8",
+        "map_nodes": 1,
+        "embedded_original_content_sha256": [
+          "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5"
+        ]
+      }
+    }
+  },
+  "repacked_js_control": {
+    "input": "repacked.mjs",
+    "sha256": "7ff2d69cd66b3d1bc012d2e228b4df7bd2aa405e64bfa365d8500b4d4f5a2410",
+    "original_marker_present": true,
+    "bare_sources_content_key": true,
+    "exit_code": 3,
+    "finding": "sources_content_literal",
+    "public_output_absent": true,
+    "private_output_absent": true
+  },
+  "scope": "Exact embedded original source recovery through a shipped external v3 map, on this fixture only.",
+  "limitations": [
+    "REA's CLI reports the embedded original's digest, which this probe compares to the known source; trace-mapping returns the actual text.",
+    "Generated JavaScript remains analyzable. No claim about recovering equivalent logic, an AI session, remote CDN/header exposure, or unrelated formats."
+  ]
+}

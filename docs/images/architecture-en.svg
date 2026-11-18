@@ -14,12 +14,12 @@
 <text x="72" y="259" font-size="23" fill="#f2f6ff" font-weight="700" >Separate &amp; inspect</text>
 <text x="72" y="300" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">PRIVATE INPUTS</text>
 <text x="72" y="327" font-size="16" fill="#c7d4e7" font-weight="400" >Source, symbols and selected data</text>
-<text x="72" y="351" font-size="16" fill="#c7d4e7" font-weight="400" >External keys stay outside the build output</text>
+<text x="72" y="351" font-size="16" fill="#c7d4e7" font-weight="400" >Keys stay outside build outputs</text>
 <text x="72" y="388" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">BUILD TRANSFORMS</text>
-<text x="72" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >Split maps and private debug sections</text>
+<text x="72" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >Split maps, ELF and Wasm debug data</text>
 <text x="72" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >Seal selected assets or VM instructions</text>
 <text x="72" y="476" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">RELEASE GATE</text>
-<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >Bounded format + disclosure checks</text>
+<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >Bounded format + JSON/DER key checks</text>
 <text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >Full inventory, key checks, final recheck</text>
 <path d="M423 387h26" fill="none" stroke="#76d9cb" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="456" y="178" font-size="16" fill="#8db8ff" font-weight="700" letter-spacing="1">02  PUBLIC DISTRIBUTION</text>
@@ -53,11 +53,11 @@
 <rect x="48" y="614" width="1184" height="103" rx="16" fill="#102b31" stroke="#32615f"/>
 <text x="72" y="646" font-size="15" fill="#76d9cb" font-weight="700" letter-spacing="1">TRUSTED ISSUER / PRIVATE STORAGE</text>
 <circle cx="76" cy="678" r="4" fill="#76d9cb"/>
-<text x="90" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >Private source maps + symbols</text>
+<text x="90" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >Maps + ELF / Wasm originals</text>
 <circle cx="480" cy="678" r="4" fill="#76d9cb"/>
-<text x="494" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >External keys + signing authority</text>
+<text x="494" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >External keys + signing</text>
 <circle cx="884" cy="678" r="4" fill="#76d9cb"/>
-<text x="898" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >Authenticated subject + replay state</text>
+<text x="898" y="685" font-size="18" fill="#e1f3ef" font-weight="400" >Identity + replay state</text>
 <text x="48" y="755" font-size="16" fill="#aebfd6" font-weight="400" >Trust boundary: a public client, target-supplied notice or patched local check cannot grant server authority.</text>
 </g>
 </svg>

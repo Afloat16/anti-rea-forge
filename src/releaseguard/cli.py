@@ -127,6 +127,11 @@ def parser() -> argparse.ArgumentParser:
     elf.add_argument("--private", required=True, type=Path, help="New private symbol directory outside the release")
     elf.add_argument("--private-name", action="append", default=[], help="Exact ASCII name to check for residual disclosure (repeatable)")
 
+    wasm = commands.add_parser("split-wasm-debug", help="Remove supported private WebAssembly metadata and retain the original privately")
+    wasm.add_argument("--input", required=True, type=Path, help="Immutable core WebAssembly module, before signing or packaging")
+    wasm.add_argument("--public", required=True, type=Path, help="New public .wasm file in an existing trusted directory")
+    wasm.add_argument("--private", required=True, type=Path, help="New private original file outside the public directory")
+
     project = commands.add_parser("project-init", help="Create editable build-only configuration outside your release")
     project.add_argument("--root", type=Path, required=True, help="Release directory; it may be built later")
     project.add_argument("--product", required=True)
@@ -279,6 +284,10 @@ def _run(args: argparse.Namespace) -> tuple[dict, int]:
     if args.command == "split-elf-debug":
         from .split_elf import split_elf_debug
         result = split_elf_debug(args.artifact, args.public, args.private, private_names=args.private_name)
+        return result, 0 if result["ok"] else 3
+    if args.command == "split-wasm-debug":
+        from .split_wasm import split_wasm
+        result = split_wasm(args.input, args.public, args.private)
         return result, 0 if result["ok"] else 3
     if args.command == "split-source-maps":
         from .split_maps import split_source_maps

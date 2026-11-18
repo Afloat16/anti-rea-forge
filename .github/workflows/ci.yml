@@ -172,10 +172,10 @@ jobs:
           retention-days: 14
 
   source-map-recovery:
-    name: Real source-map recovery controls / Linux
+    name: Real REA recovery and structured key controls / Linux
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
@@ -193,6 +193,32 @@ jobs:
           npm ci --prefix benchmarks/recovery-tools --omit=optional --ignore-scripts --no-audit --no-fund
       - name: Analyze ordinary and public builds with the published REA CLI
         run: node benchmarks/source_map_recovery.mjs --work "$RUNNER_TEMP/recovery-fixture" --python "$(command -v python)" --out "$RUNNER_TEMP/source-map-recovery.json"
+      - name: Verify official WABT tools and run the paired REA Wasm recovery control
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/wabt.tar.gz" https://github.com/WebAssembly/wabt/releases/download/1.0.42/wabt-1.0.42-linux-x64.tar.gz
+          echo '84895407a6bbb80e918f33b16b2fb2206021c150b6bc9ff6f761263a745ab131' "$RUNNER_TEMP/wabt.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/wabt.tar.gz" -C "$RUNNER_TEMP"
+          node benchmarks/wasm_recovery.mjs --wabt-bin "$RUNNER_TEMP/wabt-1.0.42/bin" --python "$(command -v python)" --out "$RUNNER_TEMP/wasm-recovery.json"
+      - name: Build the exact reviewed REA source without dependency lifecycle scripts
+        run: |
+          git init "$RUNNER_TEMP/rea-source"
+          git -C "$RUNNER_TEMP/rea-source" remote add origin https://github.com/morluto/rea.git
+          git -C "$RUNNER_TEMP/rea-source" fetch --depth 1 origin c338e54c33213ca8dd157d30fbc922b65a04c49b
+          git -C "$RUNNER_TEMP/rea-source" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/rea-source" rev-parse HEAD)" = c338e54c33213ca8dd157d30fbc922b65a04c49b
+          npm ci --prefix "$RUNNER_TEMP/rea-source" --ignore-scripts --no-audit --no-fund
+          npm --prefix "$RUNNER_TEMP/rea-source" --ignore-scripts run compile
+      - name: Repeat both recovery controls against the pinned current source build
+        run: |
+          node benchmarks/wasm_recovery.mjs --wabt-bin "$RUNNER_TEMP/wabt-1.0.42/bin" --python "$(command -v python)" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit c338e54c33213ca8dd157d30fbc922b65a04c49b --out "$RUNNER_TEMP/wasm-recovery-source.json"
+          node benchmarks/source_map_recovery.mjs --python "$(command -v python)" --rea-source "$RUNNER_TEMP/rea-source" --rea-source-commit c338e54c33213ca8dd157d30fbc922b65a04c49b --out "$RUNNER_TEMP/source-map-recovery-source.json"
+      - name: Compare recoverable key disclosures with the verified public v1.0.0 wheel
+        run: |
+          curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/open_release_guard-1.0.0-py3-none-any.whl" https://github.com/Afloat16/anti-rea-forge/releases/download/v1.0.0/open_release_guard-1.0.0-py3-none-any.whl
+          echo 'd49b525b889bfd930f0c242a2afdb4240d06f5471a7e1b0c308241a9ef44e970' "$RUNNER_TEMP/open_release_guard-1.0.0-py3-none-any.whl" | sha256sum --check --status
+          python -m venv "$RUNNER_TEMP/baseline-1.0"
+          "$RUNNER_TEMP/baseline-1.0/bin/python" -m pip install "$RUNNER_TEMP/open_release_guard-1.0.0-py3-none-any.whl"
+          python benchmarks/structured_secret_recovery.py --baseline-python "$RUNNER_TEMP/baseline-1.0/bin/python" --baseline-wheel "$RUNNER_TEMP/open_release_guard-1.0.0-py3-none-any.whl" --out "$RUNNER_TEMP/structured-secret-recovery.json"
       - name: Run the verified Craft Anything CLI on the same fixture
         run: |
           curl --fail --location --retry 2 --silent --show-error -o "$RUNNER_TEMP/craft.tar.gz" https://github.com/storytold/craft-anything/releases/download/v0.5.0/craft-anything-0.5.0-linux-x86_64.tar.gz
@@ -202,7 +228,7 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          for name in ("source-map-recovery", "craft-source-map"):
+          for name in ("source-map-recovery", "craft-source-map", "wasm-recovery", "structured-secret-recovery", "wasm-recovery-source", "source-map-recovery-source"):
               data = json.loads((Path(os.environ["RUNNER_TEMP"]) / (name + ".json")).read_bytes())
               print("RECOVERY_EVIDENCE " + name + " " + json.dumps(data, separators=(",", ":")))
           PY
@@ -213,6 +239,10 @@ jobs:
           path: |
             ${{ runner.temp }}/source-map-recovery.json
             ${{ runner.temp }}/craft-source-map.json
+            ${{ runner.temp }}/wasm-recovery.json
+            ${{ runner.temp }}/structured-secret-recovery.json
+            ${{ runner.temp }}/wasm-recovery-source.json
+            ${{ runner.temp }}/source-map-recovery-source.json
           retention-days: 14
           if-no-files-found: error
 
@@ -305,7 +335,9 @@ jobs:
         run: npm exec --yes --package=typescript@7.0.2 -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 packages/releaseguard/test/types-smoke.ts
 
       - name: Exercise portable checks without a native toolchain
-        run: python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_project_asset_keys tests.test_asar tests.test_asar_unpacked tests.test_container_boundaries tests.test_ar_boundaries tests.test_standalone_metadata tests.test_elf_type_metadata tests.test_source_map_encodings tests.test_opaque_compression tests.test_pe_section_metadata tests.test_release_disclosures tests.test_release_snapshot_consistency tests.test_macho tests.test_analysis tests.test_analysis_cli tests.test_bounded_document_inputs tests.test_capability_completion tests.test_split_maps tests.test_split_maps_cli -v
+        run: |
+          python -m unittest tests.test_distribution tests.test_distribution_cli tests.test_project tests.test_project_asset_keys tests.test_asar tests.test_asar_unpacked tests.test_container_boundaries tests.test_ar_boundaries tests.test_standalone_metadata tests.test_elf_type_metadata tests.test_source_map_encodings tests.test_opaque_compression tests.test_pe_section_metadata tests.test_release_disclosures tests.test_release_snapshot_consistency tests.test_macho tests.test_analysis tests.test_analysis_cli tests.test_bounded_document_inputs tests.test_capability_completion tests.test_split_maps tests.test_split_maps_cli -v
+          python -m unittest tests.test_wasm tests.test_split_wasm tests.test_wasm_distribution tests.test_structured_secrets tests.test_structured_secret_roots -v
 
       - name: Require real Mach-O metadata controls on macOS
         if: runner.os == 'macOS'

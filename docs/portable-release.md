@@ -3,13 +3,14 @@
 Anti-REA Forge provides a **Python release scanner usable from any build system** and
 a **JavaScript ESM bridge with TypeScript declarations**. The scanner reads a staging
 directory without requiring an EXE, DLL or ELF entry file. The current scanner checks
-debug metadata and static symbols in every recognized ELF/PE/Mach-O payload, including
+debug metadata and static symbols in every recognized ELF/PE/Mach-O/Wasm payload, including
 inspected ZIP and ASAR members. The native `gate` additionally provides
 artifact-specific policies and mitigation checks.
 
 本版用 Python 统一维护扫描规则与安全判定，通过 JavaScript/TypeScript 接入 Node.js
 构建流程；C++ 只保留在原生内存和构建组件中。贡献一条规则不需要 C++ 编译器。
-选择依据与固定 REA 6.8.0 源码见[本轮审阅](rea-source-review-2026-11-04.zh-CN.md)。
+当前 REA 6.9.0 与固定源码实测见 [v1.1 防线与覆盖范围](rea-defense-v1.1.0.zh-CN.md)；
+早期设计依据见 [6.8.0 源码审阅](rea-source-review-2026-11-04.zh-CN.md)。
 
 ## Quick start
 
@@ -104,10 +105,10 @@ invalid types, ambiguous paths and invalid resource limits are errors.
 | `forbid_path_components` | `[".git", ".svn", ".hg", ".env"]` | Exact path components, compared case-insensitively; no globs |
 | `forbid_file_sha256` | `[]` | Reject exact known file digests, including expanded ZIP members |
 | `allowed_release_files` | Omitted | Optional nonempty exact list of physical files relative to the release root; reject missing or extra files |
-| `check_private_keys` | `true` | Detect supported PEM private-key begin markers in the five encodings |
+| `check_private_keys` | `true` | Detect supported PEM markers, decoded JSON/JWK private material and bounded standalone unencrypted DER private keys |
 | `check_source_maps` | `true` | Detect markers in five encodings and bounded v3 JSON source-map structures, including escaped keys and indexed maps |
 | `check_native_tokens` | `true` | Detect complete public-format native bearer tokens in five encodings |
-| `check_native_metadata` | `true` | Inspect recognized ELF/PE/Mach-O for private debug metadata/static symbols; unverifiable recognized metadata produces a finding |
+| `check_native_metadata` | `true` | Inspect recognized ELF/PE/Mach-O and core Wasm for supported private debug metadata/static symbols; unverifiable recognized metadata produces a finding |
 | `scan_zip_archives` | `true` | Inspect recognized ZIP content recursively; disabling inspection creates a finding for each detected ZIP |
 | `scan_asar_archives` | `true` | Inspect canonical ASAR plus verified unpacked siblings, including renamed archives; disabling inspection creates a finding |
 | `max_file_bytes` | `67108864` (64 MiB) | Limit each physical file and each expanded member; maximum 512 MiB |

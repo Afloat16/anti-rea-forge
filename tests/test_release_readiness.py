@@ -44,6 +44,7 @@ class ReleaseReadinessTests(unittest.TestCase):
                        "python_installations": [{"artifact": name, "version": self.version,
                            "isolated_import": True, "clean_release_accepted": True,
                            "renamed_source_map_blocked": True, "leaked_key_blocked": True,
+                           "structured_key_blocked": True, "wasm_split_verified": True,
                            "native_resources_present": 5, "asset_roundtrip_bytes": 4096}
                            for name in names[:2]],
                        "javascript_installation": {"installed_sdk": True,
@@ -92,6 +93,8 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_installation_failures_cannot_be_hidden_by_report_ok(self):
         for section, index, field in (("python_installations", 0, "leaked_key_blocked"),
                                        ("python_installations", 1, "isolated_import"),
+                                       ("python_installations", 0, "structured_key_blocked"),
+                                       ("python_installations", 1, "wasm_split_verified"),
                                        ("javascript_installation", None, "source_map_blocked")):
             changed = copy.deepcopy(self.report)
             target = changed[section] if index is None else changed[section][index]

@@ -32,6 +32,8 @@ from .native_token import NATIVE_TOKEN_HEX_DIGITS, NATIVE_TOKEN_PREFIX
 from .pe import audit_pe_stream
 from .macho import MACHO_MAGICS, audit_macho_stream
 from .sealed import assert_asset_keys_unchanged, snapshot_asset_keys
+from .structured_secrets import scan_der_private_key, scan_json_secrets
+from .wasm import audit_wasm_stream
 
 _CHUNK_BYTES = 1024 * 1024
 _MAX_BYTES = 512 * 1024 * 1024
@@ -83,10 +85,12 @@ def _native_token_rules():
 _TOKEN_RULES = tuple(_native_token_rules())
 
 
-def _json_container_offset(stream: BinaryIO, size: int) -> int | None:
-    """Recognize JSON containers and encoded XSSI prefixes with bounded reads.
+def _json_container_offset(stream: BinaryIO, size: int, *, allow_strings: bool = False) -> int | None:
+    """Recognize JSON containers/selected string roots with bounded reads.
 
-    Source maps can be wrapped in arrays as well as objects. Detect UTF-16/32
+    Source maps can be wrapped in arrays as well as objects. A key may be the
+    whole JSON string document, so secret inspection also admits quoted roots.
+    Detect UTF-16/32
     using a BOM or the initial ASCII code-unit pattern, as JSON byte readers do.
     The XSSI newline must be aligned to that encoding; a byte inside another
     character is not a delimiter. A negative result means the 4 KiB XSSI header
@@ -134,7 +138,8 @@ def _json_container_offset(stream: BinaryIO, size: int) -> int | None:
         # hiding an earlier opening brace; json.loads validates the full bytes.
         start = probe.decode(encoding, errors="replace").lstrip(" \t\r\n")
         if start:
-            return offset if start.startswith(("{", "[")) else None
+            roots = ("{", "[", '"') if allow_strings else ("{", "[")
+            return offset if start.startswith(roots) else None
         probe = stream.read(min(4096, size - stream.tell()))
         if not probe:
             return None
@@ -260,6 +265,8 @@ class _Scanner:
         self.archives = 0
         self.archive_scan_completed = True
         self.source_map_scan_completed = True
+        self.structured_secret_scan_completed = True
+        self.asset_keys = asset_keys
         self.native_files_checked = 0
         self.native_metadata_scan_completed = True
         self.payload_locations: set[tuple[str, ...]] = set()
@@ -354,8 +361,22 @@ class _Scanner:
         index = self.digests.get(hexdigest)
         if index is not None:
             self.add("forbidden_file_digest", path, members, rule_index=index)
-        if self.policy["check_source_maps"]:
-            self.source_maps(stream, size, path, members)
+        if self.policy["check_source_maps"] or self.policy["check_private_keys"] or self.asset_keys:
+            self.structured_json(stream, size, path, members)
+        if self.policy["check_private_keys"]:
+            try:
+                key_findings = scan_der_private_key(stream, size)
+            except GuardError:
+                self.structured_secret_scan_completed = False
+                self.add("structured_secret_unverifiable", path, members,
+                         reason="invalid_or_unsupported_der")
+            else:
+                for finding in key_findings:
+                    details = dict(finding)
+                    code = details.pop("code")
+                    if code == "structured_secret_unverifiable":
+                        self.structured_secret_scan_completed = False
+                    self.add(code, path, members, **details)
         if self.policy["check_native_metadata"]:
             self.native_metadata(stream, size, path, members)
         if sidecar is not None:
@@ -364,16 +385,22 @@ class _Scanner:
         self.payload_locations.add(location)
         return {"size": total, "sha256": hexdigest}
 
-    def source_maps(self, stream: BinaryIO, size: int, path: str,
-                    members: tuple[str, ...] = ()) -> None:
-        """Inspect bounded JSON data, including escaped keys and indexed maps."""
-        offset = _json_container_offset(stream, size)
+    def structured_json(self, stream: BinaryIO, size: int, path: str,
+                        members: tuple[str, ...] = ()) -> None:
+        """Decode bounded JSON once for source-map and structured-key checks."""
+        inspect_maps = self.policy["check_source_maps"]
+        inspect_keys = self.policy["check_private_keys"] or bool(self.asset_keys)
+        offset = _json_container_offset(stream, size, allow_strings=inspect_keys)
         if offset is None:
             return
 
         def unverifiable(reason: str) -> None:
-            self.source_map_scan_completed = False
-            self.add("source_map_unverifiable", path, members, reason=reason)
+            if inspect_maps:
+                self.source_map_scan_completed = False
+                self.add("source_map_unverifiable", path, members, reason=reason)
+            if inspect_keys:
+                self.structured_secret_scan_completed = False
+                self.add("structured_secret_unverifiable", path, members, reason=reason)
 
         if offset < 0:
             unverifiable("json_prefix_limit")
@@ -417,7 +444,7 @@ class _Scanner:
                 # JSON has one number type. Decimal/exponent spellings such as
                 # 3.0 and 3e0 are the same version to ordinary map consumers.
                 version = value.get("version")
-                if type(version) in (int, float) and version == 3:
+                if inspect_maps and type(version) in (int, float) and version == 3:
                     if isinstance(value.get("sections"), list):
                         kinds.add("indexed")
                     elif isinstance(value.get("sources"), list) and isinstance(value.get("mappings"), str):
@@ -433,6 +460,21 @@ class _Scanner:
                 pending.extend((item, depth + 1) for item in value if isinstance(item, (dict, list)))
         for kind in sorted(kinds):
             self.add("source_map_structure", path, members, kind=kind)
+        if inspect_keys:
+            try:
+                key_findings = scan_json_secrets(document, asset_keys=self.asset_keys,
+                                                check_private_keys=self.policy["check_private_keys"])
+            except GuardError:
+                self.structured_secret_scan_completed = False
+                self.add("structured_secret_unverifiable", path, members,
+                         reason="json_secret_structure_limit")
+            else:
+                for finding in key_findings:
+                    details = dict(finding)
+                    code = details.pop("code")
+                    if code == "structured_secret_unverifiable":
+                        self.structured_secret_scan_completed = False
+                    self.add(code, path, members, **details)
 
     def native_metadata(self, stream: BinaryIO, size: int, path: str,
                         members: tuple[str, ...] = ()) -> None:
@@ -455,6 +497,8 @@ class _Scanner:
             format_name, reader = "pe", audit_pe_stream
         elif prefix in MACHO_MAGICS:
             format_name, reader = "macho", audit_macho_stream
+        elif prefix == b"\0asm":
+            format_name, reader = "wasm", audit_wasm_stream
         else:
             return
 
@@ -842,6 +886,9 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "asar_unpacked_members_checked": len(scanner.checked_asar_sidecars),
             "literal_rules": len(policy["forbid_literals"]), "encodings": list(_ENCODINGS),
             "private_key_markers_checked": policy["check_private_keys"],
+            "structured_secrets_checked": policy["check_private_keys"] or bool(asset_keys),
+            "der_private_keys_checked": policy["check_private_keys"],
+            "structured_secret_scan_completed": scanner.structured_secret_scan_completed,
             "source_map_markers_checked": policy["check_source_maps"],
             "source_map_structures_checked": policy["check_source_maps"],
             "source_map_scan_completed": scanner.source_map_scan_completed,
@@ -854,9 +901,9 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
         },
         "notes": [
             "Static exposure checks only; passing does not measure REA or cracking resistance.",
-            "PEM and source-map markers are heuristics. Bounded JSON inspection also recognizes v3 source maps; arbitrary JS and encoded data can remain undetected.",
-            "JSON-like payloads exceeding 8 MiB or structural limits fail source-map inspection when enabled.",
-            "ELF/PE/Mach-O checks report debug metadata and private/static symbols, including inside inspected archives. Standalone MSF7/MSF2 and raw CLI metadata are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports and runtime metadata remain observable; other native formats are not inspected.",
+            "Marker checks are heuristics. Bounded JSON inspection also recognizes v3 source maps, decoded PEM and known asset-key representations, and supported private JWK structures. Bounded DER recognition checks supported private-key encodings; arbitrary JS, unknown encodings and custom key wrapping can remain undetected.",
+            "JSON-like payloads exceeding 8 MiB or structural limits fail each enabled structured inspection.",
+            "ELF/PE/Mach-O and core WebAssembly checks report supported debug metadata and private/static symbols, including inside inspected archives. WebAssembly inspection validates the section envelope, not all instruction semantics. Standalone MSF7/MSF2 and raw CLI metadata are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports, instructions and runtime metadata remain observable; other native formats are not inspected.",
             "Native-token findings identify the public token format, not proof of validity. Reports retain file paths and archive member names.",
             "Stored/deflated ZIP and canonical ASAR containers are inspected; unpacked ASAR files must match exact siblings in the same disk/ZIP/ASAR namespace. Missing, mismatched or unindexed sidecars fail inspection. Recognized ar/thin-ar static libraries are unsupported; external thin members are never opened. ZIP64, links, path aliases, prefixed/concatenated archives and unindexed packed bytes remain unsupported.",
             "Canonical V7 TAR headers are recognized by structure/checksum and rejected as unsupported. Brotli .br files are rejected by suffix; arbitrary renamed Brotli streams have no recognized magic and may remain undetected.",

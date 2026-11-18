@@ -1,10 +1,10 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publish": true,
   "required_jobs": [
     "LLVM 18 native function transformations / Linux",
     "Ghidra native assets, tokens, symbols and patched clients / Linux",
-    "Real source-map recovery controls / Linux",
+    "Real REA recovery and structured key controls / Linux",
     "Native release exposure and official ASAR packages / Linux",
     "JavaScript / ubuntu-latest / Node 22",
     "JavaScript / windows-latest / Node 24",

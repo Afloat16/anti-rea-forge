@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { selectReaRuntime } from "./rea_runtime.mjs";
 
 const SOURCE_NAME = "pricing-original.js";
 const MARKER = "releaseguard_source_only_canary_4bd216a5531e";
@@ -26,12 +27,13 @@ const ORIGINAL = [
 ].join("\n");
 const EXPECTED_SOURCE = "950aba3d70fb67f10427f86534c8dac4b17fb1d8450522f3bffdb02849664cb5";
 const EXPECTED_JS = "79a5c99baec4a8a063db6d51dc9f521f7776ace46d4f8bb1cc68c4702ca7a1e8";
-const PINNED = { "rea-agents": "6.8.0", "terser": "5.44.1", "@jridgewell/trace-mapping": "0.3.31" };
+const PINNED = { "terser": "5.44.1", "@jridgewell/trace-mapping": "0.3.31" };
 const sha = (data) => createHash("sha256").update(data).digest("hex");
 const json = async (file) => JSON.parse(await readFile(file, "utf8"));
 const { values: args } = parseArgs({ options: {
   tools: { type: "string" }, python: { type: "string", default: "python" },
   out: { type: "string" }, work: { type: "string" }, "consumer-only": { type: "boolean" },
+  "rea-source": { type: "string" }, "rea-source-commit": { type: "string" },
 } });
 const defaultTools = join(dirname(fileURLToPath(import.meta.url)), "recovery-tools");
 const tools = resolve(args.tools ?? defaultTools);
@@ -48,7 +50,9 @@ for (const [name, expected] of Object.entries(PINNED)) {
 }
 const { minify } = localRequire("terser");
 const mapping = localRequire("@jridgewell/trace-mapping");
-const reaEntry = join(tools, "node_modules/rea-agents/scripts/rea.mjs");
+const reaRuntime = await selectReaRuntime({ tools, source: args["rea-source"], sourceCommit: args["rea-source-commit"] });
+const reaEntry = reaRuntime.entry;
+toolsUsed["rea-agents"] = reaRuntime.record;
 
 function run(program, argv, cwd, expectedExit = 0) {
   const p = spawnSync(program, argv, { cwd, encoding: "utf8", timeout: 120_000,
@@ -161,6 +165,7 @@ if (args.work) await mkdir(work); // must not merge with or overwrite an existin
 try {
   assert.equal(sha(ORIGINAL), EXPECTED_SOURCE);
   const baseline = join(work, "baseline"), publicDir = join(work, "public"), privateDir = join(work, "private");
+  const restored = join(work, "private-restored");
   const evidenceDir = join(work, "evidence");
   await mkdir(baseline);
   await mkdir(evidenceDir);
@@ -180,13 +185,18 @@ try {
   const published = await inventory(publicDir), archived = await inventory(privateDir);
   assert.deepEqual(published, before.filter(f => f.path !== "app.js.map"));
   assert.deepEqual(archived, before.filter(f => f.path === "app.js.map"));
+  await cp(publicDir, restored, { recursive: true, force: false, errorOnExist: true });
+  for (const { path } of archived) await cp(join(privateDir, path), join(restored, path),
+    { force: false, errorOnExist: true });
+  const reintroduced = await inventory(restored);
+  assert.deepEqual(reintroduced, before, "Restored private map must recreate the original release inventory");
   for (const { path } of published) {
     const bytes = await readFile(join(publicDir, path));
     assert(!bytes.includes(Buffer.from(MARKER)) && !bytes.includes(Buffer.from(ORIGINAL)));
   }
   const results = {};
   for (const [name, dir, files] of [["baseline", baseline, before], ["public", publicDir, published],
-    ["private", privateDir, archived]]) {
+    ["private", privateDir, archived], ["private_restored", restored, reintroduced]]) {
     const trace = await recover(dir, files);
     if (name === "public") assert.deepEqual(trace, []);
     else {
@@ -202,13 +212,16 @@ try {
       assert.deepEqual(values, [-11, 3, 10, 80]);
       results[name].fixture_outputs = values;
       if (!args["consumer-only"]) results[name].rea = await examineWithRea(
-        dir, files, name === "baseline" ? 1 : 0, evidenceDir, name);
+        dir, files, name === "public" ? 0 : 1, evidenceDir, name);
     }
   }
+  await reaRuntime.verifyUnchanged();
   const report = { schema: "releaseguard/source-map-recovery/v1", ok: true,
-    mode: args["consumer-only"] ? "trace-mapping-only" : "rea-cli-and-trace-mapping",
+    mode: args["consumer-only"] ? "trace-mapping-only"
+      : args["rea-source"] ? "rea-source-cli-and-trace-mapping" : "rea-cli-and-trace-mapping",
     rea_cli_executed: !args["consumer-only"],
     recorded_at: new Date().toISOString(), node: process.version, host: process.platform + "/" + process.arch,
+    private_restoration_control: true,
     dependency_lock_sha256: sha(await readFile(join(tools, "package-lock.json"))), tools: toolsUsed,
     original_sha256: EXPECTED_SOURCE, sides: results,
     repacked_js_control: await rejectRepackedMap(work, baseline, built.map),
