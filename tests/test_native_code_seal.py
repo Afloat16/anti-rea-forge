@@ -156,7 +156,9 @@ def with_definition_identifiers(source):
     # These identifier/label spellings and quoted/comment text are legal data,
     # not extra function definitions. A custom metadata attachment is inert.
     source = 'source_filename = "define text"\n' + source
-    source = source.replace("%x", "%define").replace("entry:", "define:")
+    # LLVM arguments and blocks share a local symbol table. Keep define: in
+    # the runtime and %define in the separate wrapper to avoid a name collision.
+    source = source.replace("%x", "%define").replace("entry:", "define:", 1)
     source = source.replace("define i32 @rg_compute(i32 %define) {",
                             "define i32 @rg_compute(i32 %define) !define !99 {")
     return source + '\ndeclare i64 @define(i64)\n!99 = !{}\n; define private i64 @comment() {\n'
