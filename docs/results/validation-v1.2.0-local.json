@@ -1,0 +1,110 @@
+{
+  "schema": "anti-rea-forge.local-validation.v1",
+  "version": "1.2.0",
+  "validation_date": "2026-11-18",
+  "host": "Linux x86_64",
+  "python": "3.12.14",
+  "node": "24.22.1",
+  "base_commit": "41ccd2d43fbcb1a40d6b6c1f6c8dc1f30d3be950",
+  "candidate_was_uncommitted": true,
+  "python_suite": {
+    "command": "RELEASEGUARD_CMAKE=/trusted/cmake python -m unittest discover -s tests -q",
+    "tests_run": 913,
+    "passed": 900,
+    "skipped": 13,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 63.881,
+    "log_sha256": "9eff197a490ad929366c400f4d7e0b975b868c90ee4b5014b2402da5d14c82cd"
+  },
+  "sdk": {
+    "tests": 65,
+    "passed": 65,
+    "skipped": 0,
+    "log_sha256": "5320c634023ba932c91436bde2833198218a85ea83a0f5514fc23e3fc191601a"
+  },
+  "sdk_real_cli": {
+    "tests": 10,
+    "passed": 10,
+    "skipped": 0,
+    "log_sha256": "af871f06ce85b0a82bc9743e5956cafafdfbc5b12624d5afada8600260c6b11e"
+  },
+  "installed_artifacts": {
+    "schema": "anti-rea-forge.installation.v1",
+    "ok": true,
+    "version": "1.2.0",
+    "source_commit": "41ccd2d43fbcb1a40d6b6c1f6c8dc1f30d3be950",
+    "source_dirty": true,
+    "platform": "Linux",
+    "python": "3.12.14",
+    "node": "v24.22.1",
+    "python_installations": [
+      {
+        "artifact": "open_release_guard-1.2.0-py3-none-any.whl",
+        "version": "1.2.0",
+        "isolated_import": true,
+        "clean_release_accepted": true,
+        "renamed_source_map_blocked": true,
+        "native_resources_present": 5,
+        "asset_roundtrip_bytes": 4096,
+        "leaked_key_blocked": true,
+        "structured_key_blocked": true,
+        "wasm_split_verified": true,
+        "consumer_key_encodings_blocked": true,
+        "incomplete_source_map_blocked": true,
+        "relocatable_wasm_blocked": true
+      },
+      {
+        "artifact": "open_release_guard-1.2.0.tar.gz",
+        "version": "1.2.0",
+        "isolated_import": true,
+        "clean_release_accepted": true,
+        "renamed_source_map_blocked": true,
+        "native_resources_present": 5,
+        "asset_roundtrip_bytes": 4096,
+        "leaked_key_blocked": true,
+        "structured_key_blocked": true,
+        "wasm_split_verified": true,
+        "consumer_key_encodings_blocked": true,
+        "incomplete_source_map_blocked": true,
+        "relocatable_wasm_blocked": true
+      }
+    ],
+    "javascript_installation": {
+      "installed_sdk": true,
+      "clean_release_accepted": true,
+      "source_map_blocked": true
+    },
+    "artifacts": [
+      {
+        "name": "open_release_guard-1.2.0-py3-none-any.whl",
+        "bytes": 143706,
+        "sha256": "cf41f77ce5c5045a5969c72e136e3bb7213b40833262f0b3782575edb125b6b6"
+      },
+      {
+        "name": "open_release_guard-1.2.0.tar.gz",
+        "bytes": 318118,
+        "sha256": "056f6a5df34002e9fcbd271bfb23129284b0f9c46fc1840e5fdb5f076370c4f0"
+      },
+      {
+        "name": "anti-rea-forge-releaseguard-1.2.0.tgz",
+        "bytes": 20352,
+        "sha256": "0cd98e533d55e6f86cb68852ebff094d3305e97722c1cd3fea582134f35262fc"
+      }
+    ],
+    "scope": "Fresh wheel and source installs plus packed SDK behavior; no resistance score."
+  },
+  "tested_source_sha256": {
+    "src/releaseguard/distribution.py": "6854993bc6d9aab06b630d24ca8b32337ccda494e59161213708a4ade715dac4",
+    "src/releaseguard/structured_secrets.py": "7dcb7abf9605682fa6a1cc825c2ea6177e2bcbec31da58036e67d11586b2ec70",
+    "src/releaseguard/wasm.py": "87b7dea2669a27bdce5d93cecb9fb97d65d5e4ca344438f9c61fbceccc20ad3a",
+    "src/releaseguard/split_wasm.py": "5976ebadb2d4b541601458fceeb13bef107d7c4d27bd28bbef5f54e547cddcbc",
+    "tools/check_release_artifacts.py": "cd61380bff702f754f3f237dcc7be4363c55eda849d8a14c1ca1eb2bcda1eff3",
+    "tools/publish_release.py": "e42da15c60feac0e4822bf5b370395ca0c709c88c8f4479c45cedff127a5f2c8",
+    "benchmarks/secret_representation_recovery.py": "242f3dc6fb8a0f04227ae67cc57417f2cf09bfb8e884f4ab8a05a9980ef51a16",
+    "benchmarks/source_map_corpus_recovery.mjs": "be8681bb344afdf2f2723ba0ec21c6760c2a8958ba3b0a11c1319bf4b8785735",
+    "benchmarks/wasm_corpus_recovery.mjs": "b329ffc8d2b0b84e90b5b1703c7d985cfbfdc2c69ccb068d2f3f0089369850ce",
+    "benchmarks/wasm_corpus_fixtures.mjs": "f9a125899a557583a022d2c570f54ac2a420e44293f4609d2eab8f518dcb8926"
+  },
+  "scope": "Local candidate validation, not publication approval. Local tool-dependent skips are not successes. The publisher requires clean artifacts and all 13 specified jobs at the exact main commit; final release evidence supersedes local archive hashes."
+}

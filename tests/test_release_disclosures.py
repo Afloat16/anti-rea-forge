@@ -72,7 +72,10 @@ class ReleaseDisclosureTests(unittest.TestCase):
         for version in (b"true", b"false"):
             with self.subTest(version=version):
                 self.put(source_map().replace(b'ion":3,', b'ion":' + version + b','))
-                self.assertTrue(self.scan()["ok"])
+                report = self.scan()
+                self.assertFalse(report["ok"])
+                self.assertFalse(any(row["code"] == "source_map_structure" for row in report["findings"]))
+                self.assertTrue(any(row["code"] == "source_map_marker" for row in report["findings"]))
 
     def test_nonfinite_json_numbers_are_unverifiable(self):
         for version in (b"NaN", b"Infinity", b"-Infinity", b"1e999", b"-1e999"):

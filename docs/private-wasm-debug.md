@@ -14,7 +14,8 @@ a debug URL.
 | `.debug_*`, `.zdebug_*` | Removed | Conventional DWARF/debug payloads; contents are not individually decoded |
 | `sourceMappingURL`, `external_debug_info` | Removed | Pointers to separately hosted debug information |
 | Standard sections: imports, exports, code, data, etc. | Exact original bytes and order | Keep the executable module content intact |
-| Other custom sections, including `producers`, `linking`, relocation data and application data | Exact original bytes and order | They may be required by a consumer; no confidentiality claim is made for them |
+| `linking`, `reloc.*` | Input rejected before output creation | Linker symbols can survive name removal; finish final linking instead of deleting data a linker may require |
+| Other custom sections, including `producers` and application data | Exact original bytes and order | They may be required by a consumer; no confidentiality claim is made for them |
 
 The splitter compares every retained section before publication, reads back both
 outputs, and verifies the original input identity again. Outputs must be new
@@ -50,6 +51,14 @@ performed by the scanner; its report explicitly describes a section-envelope
 check. No external Wasm tool or Node installation is needed for production
 inspection or splitting.
 
+Since 1.2, recognized `linking` or `reloc.*` sections cause
+`native_metadata_unverifiable` with reason
+`linker_metadata_requires_final_link`. The completion flag is false: the scanner
+recognizes the section names but does not parse their symbol or relocation
+tables. The splitter refuses the input without creating either output. Some
+such modules are executable, including the regression fixture; this is a
+conservative release profile, not a claim that every relocatable module is invalid.
+
 ## Exact supported profile
 
 The parser accepts the core-v1 magic/version and bounded standard/custom section
@@ -63,10 +72,42 @@ custom names; splitting additionally limits the whole module to 64 MiB.
 Applications that inspect custom sections can observe their removal. Retaining
 the executable sections does not prove all application-level behavior unchanged;
 run the actual application's functional and interoperability checks. The owned
-fixture below exercises a numerical export and does not cover all Wasm proposals
-or all embeddings.
+corpus below exercises several runtime features and does not cover all Wasm
+proposals or all embeddings.
 
-## Real REA control
+## Expanded real REA control in 1.2
+
+The [corpus](../benchmarks/wasm_corpus_recovery.mjs) contains five different owned
+programs: multiple helpers, imported calls/index shifts, memory/data/global
+state, table/indirect calls, and branches/loops. Both published REA 6.9.0 and the
+clean source build at `675287517c98c702ee88ad036c5e3b8dd4bcc7a7` run all three
+sides with the same verified WABT 1.0.42 binaries.
+
+| Observation | Original | Public | Private restored |
+| --- | --- | --- | --- |
+| Known private identifiers recovered in WAT and objdump details | 26 | 0 | 26 |
+| Numerical checks, including a stateful sequence | 43 | Same 43 results | Same 43 results |
+| Runtime traps / host memory-growth rejections | 2 / 1 | Same 2 / 1 | Same 2 / 1 |
+| Standard section bytes and public custom notice | Original | Identical | Identical |
+
+Each side must have valid WABT validation, complete typed interfaces, the exact
+input hash, and all three provider executable identities. Partial analysis,
+tool failure or missing input cannot establish absence. The 43 checks are not
+independent attacks or applications; a separate JavaScript oracle verifies the
+intended behavior. WAT instructions remain readable on every side.
+
+A sixth, explicitly separate control compiles a producer-valid relocatable
+module. The actual installed v1.1.0 splitter removes `name`, and its gate allows
+the result, yet REA still recovers **one private helper** through `linking`.
+Version 1.2 rejects this release and refuses the split. Because no new public
+output exists, its recovery measurement is **not applicable**, never recorded as
+zero recovery. The prior wheel hash and installed package bytes are verified.
+
+[npm report](results/wasm-corpus-v1.2.0-rea-6.9.0.json) ·
+[source-build report](results/wasm-corpus-v1.2.0-rea-source.json) ·
+[full 1.2 assessment](rea-defense-v1.2.0.zh-CN.md)
+
+## Historical single-module control in 1.1
 
 The [reproducible control](../benchmarks/wasm_recovery.mjs) compiles one owned WAT
 fixture with the verified official WABT 1.0.42 release. The published REA 6.9.0 CLI

@@ -57,8 +57,8 @@ there as usual. Keep your private maps out of that signed public release.
   mistake: bundling the map as a JavaScript object can leave all source text in
   a normal module, even after removing the external file. The check is deliberately
   conservative: a library or documentation that merely mentions this property
-  can also be rejected. Inspect the reported path; ordinary `scan-release`
-  policies have not changed. Computed property names, transformed source and
+  can also be rejected. Inspect the reported path. Ordinary `scan-release`
+  additionally checks decoded JSON keys as described below. Computed property names, transformed source and
   arbitrary encodings are outside this check.
 - Operates **before compression**. Recognized archives/disabled archive
   inspection and precompressed assets covered by the policy block publication.
@@ -67,6 +67,14 @@ there as usual. Keep your private maps out of that signed public release.
   bounded input and fixed checks. Keep the inputs and ancestor directories
   trusted for the duration of the build. Protect private maps with appropriate
   filesystem permissions or ACLs; they may contain the full source.
+
+Since 1.2, a decoded JSON key named `sourcesContent` is treated like its literal
+spelling even when `mappings`, `version` or `sources` is absent or invalid. The
+original text may still be recoverable from such a document. This conservative
+disclosure marker is separate from a structurally valid v3-map finding; it is
+reported as `source_map_marker` with `representation: "json-decoded-key"` when
+the raw-key/valid-map checks have not already rejected it. Wide encodings,
+recognized XSSI headers and inspected archive members receive the same check.
 
 The current profile allows 64 MiB per input file, 256 MiB total and 8 MiB for
 a JSON-like file inspected as a possible map. It rejects unsupported inputs
@@ -129,7 +137,30 @@ specific shipped artifact**. Generated logic remains available to the user;
 the experiment does not establish resistance to behavioral reconstruction,
 native decompilation, runtime observation or a complete AI agent session.
 
-### Reproduce both tool runs on Linux
+### Expanded 1.2 corpus
+
+Four owned Terser builds cover multiple originals, multiple bundles and local
+imports, Unicode names/content with escaped JSON keys, and a map with one
+unavailable (`null`) original. There are five bundles and ten source declarations;
+only nine declarations contain recoverable text. Published REA 6.9.0 and the clean
+source build `675287517c98c702ee88ad036c5e3b8dd4bcc7a7` both report **9 → 0 → 9**
+exact originals across original, public and private-restored directories.
+Trace-mapping independently returns the actual text and source positions. All
+public JavaScript bytes are unchanged, and 16 functional inputs per side agree.
+
+The [corpus script](../benchmarks/source_map_corpus_recovery.mjs) also records
+three separate controls: a nested indexed map exposes two originals but is
+explicitly rejected by the flat-map splitter; two escaped maps with missing or
+numeric `mappings` expose their original text despite REA's **partial** graph.
+The latter pass the actual v1.1.0 gate and are rejected by 1.2. Partial graphs
+establish positive recovery here; only complete, untruncated graphs can support
+absence in the three-sided comparisons. An absent output and an originally
+missing source are never counted as protected content.
+
+[npm corpus evidence](results/source-map-corpus-v1.2.0-rea-6.9.0.json) ·
+[source-build corpus evidence](results/source-map-corpus-v1.2.0-rea-source.json)
+
+### Reproduce tool runs on Linux
 
 Use an installed Release Guard Python environment and Node 24.22.1 (the CI
 version). The npm dependencies below are for experiments only. From this checkout:
@@ -137,6 +168,7 @@ version). The npm dependencies below are for experiments only. From this checkou
 ```sh
 npm ci --prefix benchmarks/recovery-tools --omit=optional --ignore-scripts --no-audit --no-fund
 node benchmarks/source_map_recovery.mjs --work ./map-fixture --python "$(command -v python)" --out ./rea-result.json
+node benchmarks/source_map_corpus_recovery.mjs --python "$(command -v python)" --out ./rea-corpus-result.json
 ```
 
 Use fresh work/report paths. This builds the synthetic fixture, invokes the

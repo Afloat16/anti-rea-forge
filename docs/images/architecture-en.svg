@@ -19,8 +19,8 @@
 <text x="72" y="415" font-size="16" fill="#c7d4e7" font-weight="400" >Split maps, ELF and Wasm debug data</text>
 <text x="72" y="439" font-size="16" fill="#c7d4e7" font-weight="400" >Seal selected assets or VM instructions</text>
 <text x="72" y="476" font-size="14" fill="#76d9cb" font-weight="700" letter-spacing="0.8">RELEASE GATE</text>
-<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >Bounded format + JSON/DER key checks</text>
-<text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >Full inventory, key checks, final recheck</text>
+<text x="72" y="503" font-size="16" fill="#c7d4e7" font-weight="400" >Decode keys and embedded source maps</text>
+<text x="72" y="527" font-size="16" fill="#c7d4e7" font-weight="400" >Require final Wasm linking before release</text>
 <path d="M423 387h26" fill="none" stroke="#76d9cb" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="456" y="178" font-size="16" fill="#8db8ff" font-weight="700" letter-spacing="1">02  PUBLIC DISTRIBUTION</text>
 <rect x="456" y="196" width="368" height="366" rx="18" fill="#142237" stroke="#31435e"/>

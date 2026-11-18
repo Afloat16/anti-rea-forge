@@ -61,9 +61,11 @@ def split_wasm(artifact: Path | str, public: Path | str, private: Path | str) ->
         raise GuardError("Split ordinary Wasm build artifacts before applying privileges")
     original, identity, mode = _read(source, 64 << 20)
     try:
-        _, sections = _inspect_wasm_stream(io.BytesIO(original), len(original))
+        before, sections = _inspect_wasm_stream(io.BytesIO(original), len(original))
     except ValueError as exc:
         raise GuardError(str(exc)) from exc
+    if before["evidence"]["linker_metadata_present"]:
+        raise GuardError("Wasm linker metadata requires a final linked module before debug separation")
     private_sections = [section for section in sections if section.private_kind is not None]
     if not private_sections:
         raise GuardError("Wasm input has no recognized private debug sections to separate")

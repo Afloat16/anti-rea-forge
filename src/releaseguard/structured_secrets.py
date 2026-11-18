@@ -2,7 +2,9 @@
 
 ``scan_json_secrets`` consumes an already parsed JSON value.  It recognizes PEM
 markers in decoded strings, exact configured asset keys in common string forms
-and 32-byte integer arrays, and structurally valid private JWKs.  It does not
+and contiguous byte-array windows, and supported private JWK material.  Bounded
+hex/Base64 strings whose decoded prefix identifies a private DER structure are
+checked by the same DER reader. It does not
 execute JavaScript, evaluate expressions, or discover arbitrary application
 secrets.  A finding contains only a fixed code/representation/kind or the index
 of an operator-supplied key; no value, digest, JSON property name or path escapes.
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import io
 import re
 from typing import Any, BinaryIO
 
@@ -31,8 +34,14 @@ from .core import GuardError
 MAX_JSON_SECRET_NODES = 100_000
 MAX_JSON_SECRET_DEPTH = 64
 MAX_DER_PRIVATE_KEY_BYTES = 64 * 1024
+MAX_JSON_DER_CANDIDATES = 64
+MAX_JSON_DER_DECODED_BYTES = 256 * 1024
 _DER_PREFIX_BYTES = 128
-_BASE64URL = re.compile(r"[A-Za-z0-9_-]+={0,2}\Z")
+_BASE64_NOISE = re.compile(rb"[^A-Za-z0-9+/_-]")
+_ASCII_FOLDING = str.maketrans("", "", " \t\r\n\v\f")
+_MAX_JWK_FIELD_TEXT_BYTES = 32 * 1024
+_MAX_ASSET_KEY_TEXT_CHARS = 32 * 1024
+_MAX_ENCODED_DER_TEXT_CHARS = 256 * 1024
 PEM_PRIVATE_KEY_MARKERS = (
     "-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----",
     "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN EC PRIVATE KEY-----",
@@ -43,22 +52,69 @@ _EC_CURVES = {"P-256": (32, ec.SECP256R1), "P-384": (48, ec.SECP384R1),
               "P-521": (66, ec.SECP521R1)}
 
 
-def _jwk_bytes(value: Any, minimum: int, maximum: int, *, integer: bool = False) -> bytes | None:
-    """Decode base64url with optional canonical padding and an allocation bound.
+def _consumer_base64_parts(value: str) -> tuple[bytes, bool]:
+    """Normalize Node's bounded Base64 consumer representation, not JWK syntax.
 
-    JWK's standard spelling omits padding. Ordinary key importers also accept
-    padded private material, which must not become a disclosure bypass.
+    Node uses the low eight bits of each UTF-16 code unit, ignores nonalphabet
+    bytes, and stops at the first padding byte. Encoding with surrogatepass
+    models non-BMP and lone-surrogate JSON strings without executing JavaScript.
+    Callers must bound the raw string before using this allocating helper.
     """
-    if (type(value) is not str or not minimum * 4 // 3 <= len(value) <= (maximum * 4 + 2) // 3 + 2
-            or _BASE64URL.fullmatch(value) is None):
+    units = value.encode("utf-16-le", errors="surrogatepass")[::2]
+    head, padding, _ = units.partition(b"=")
+    return _BASE64_NOISE.sub(b"", head), bool(padding)
+
+
+def _consumer_base64_text(value: str) -> bytes:
+    return _consumer_base64_parts(value)[0]
+
+
+def _consumer_base64_bytes(encoded: bytes) -> bytes:
+    # A dangling single sextet contributes no complete byte in Node's decoder.
+    if len(encoded) % 4 == 1:
+        encoded = encoded[:-1]
+    return base64.b64decode(encoded + b"=" * (-len(encoded) % 4), altchars=b"-_", validate=True)
+
+
+def _asset_key_bytes(value: str) -> bytes | None:
+    """Decode a whole 32-byte consumer key, or explicitly stop at its budget.
+
+    Forty-four significant Base64 characters already produce at least 33
+    bytes, so such ordinary long strings cannot be an exact 32-byte key. If
+    the bounded prefix has fewer characters and no terminating padding, more
+    ignored bytes may conceal a real key; that is incomplete inspection.
+    """
+    encoded, terminated = _consumer_base64_parts(value[:_MAX_ASSET_KEY_TEXT_CHARS])
+    if len(encoded) >= 44:
+        return None
+    if len(value) > _MAX_ASSET_KEY_TEXT_CHARS and not terminated:
+        raise GuardError("Known-key Base64 exceeds its raw inspection limit")
+    decoded = _consumer_base64_bytes(encoded)
+    return decoded if len(decoded) == 32 else None
+
+
+def _jwk_bytes(value: Any, minimum: int, maximum: int, *, integer: bool = False) -> bytes | None:
+    """Decode the bounded Base64 forms accepted by ordinary key consumers.
+
+    JWK specifies unpadded Base64url, but Node's real key importer also accepts
+    the classic alphabet, ignored bytes, padding and nonzero unused pad bits.
+    This is disclosure recognition, not validation of a canonical JWK document.
+    """
+    if type(value) is not str or len(value) > _MAX_JWK_FIELD_TEXT_BYTES:
+        return None
+    encoded = _consumer_base64_text(value)
+    # Leading zero bytes are ordinary integer aliases in RSA consumers. The
+    # overall field bound remains in force before stripping those zero bytes.
+    encoded_limit = 8192 if integer else maximum
+    if not minimum * 4 // 3 <= len(encoded) <= (encoded_limit * 4 + 2) // 3 + 2:
         return None
     try:
-        decoded = base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
+        decoded = _consumer_base64_bytes(encoded)
     except (ValueError, binascii.Error):
         return None
-    encoded = base64.urlsafe_b64encode(decoded).decode("ascii")
-    if (not minimum <= len(decoded) <= maximum or value not in (encoded, encoded.rstrip("="))
-            or (integer and decoded[0] == 0)):
+    if integer:
+        decoded = decoded.lstrip(b"\0")
+    if not minimum <= len(decoded) <= maximum:
         return None
     return decoded
 
@@ -73,13 +129,16 @@ def _private_jwk_kind(value: dict[str, Any]) -> str | None:
     raise instead of being mistaken for a public JWK.
     """
     kind = value.get("kty")
+    private_fields = ()
     if type(kind) is str and kind in {"oct", "OKP", "EC", "RSA"}:
         private_fields = ("k",) if kind == "oct" else ("d", "p", "q") if kind == "RSA" else ("d",)
-        if any(type(value.get(field)) is str and len(value[field]) > (8192 * 4 + 2) // 3 + 2
+        if any(type(value.get(field)) is str and (
+                len(value[field]) > _MAX_JWK_FIELD_TEXT_BYTES
+                or len(_consumer_base64_text(value[field])) > (8192 * 4 + 2) // 3 + 2)
                for field in private_fields):
             raise GuardError("Private JWK exceeds its field byte limit")
-    if kind == "oct":
-        return "oct" if _jwk_bytes(value.get("k"), 1, 8192) is not None else None
+    if kind == "oct" and _jwk_bytes(value.get("k"), 1, 8192) is not None:
+        return "oct"
     if kind == "OKP":
         length = _OKP_LENGTHS.get(value.get("crv")) if type(value.get("crv")) is str else None
         if length and _jwk_bytes(value.get("d"), length, length) is not None:
@@ -95,16 +154,18 @@ def _private_jwk_kind(value: dict[str, Any]) -> str | None:
                     # scalar. Public coordinates cannot hide the private value.
                     ec.derive_private_key(int.from_bytes(private, "big"), curve())
                 except (ValueError, UnsupportedAlgorithm):
-                    return None
-                return "EC"
+                    pass
+                else:
+                    return "EC"
     elif kind == "RSA":
         if any(field in value for field in ("d", "p", "q")) and any(
-            type(value.get(field)) is str and len(value[field]) > (maximum * 4 + 2) // 3 + 2
+            type(value.get(field)) is str and (len(value[field]) > _MAX_JWK_FIELD_TEXT_BYTES
+                or len(_consumer_base64_text(value[field])) > (maximum * 4 + 2) // 3 + 2)
             for field, maximum in (("n", 2048), ("e", 8), ("d", 2048), ("p", 2048), ("q", 2048))
         ):
             raise GuardError("Private RSA JWK exceeds its field byte limit")
         # Both factors are sufficient private material even when public n/e or
-        # private d are omitted. Recognize the bounded, canonical integer pair
+        # private d are omitted. Recognize the bounded, decoded integer pair
         # without prime testing, multiplication or private-key reconstruction.
         # Incorrect public metadata must not hide independently disclosed p/q.
         p = _jwk_bytes(value.get("p"), 32, 2048, integer=True)
@@ -125,6 +186,8 @@ def _private_jwk_kind(value: dict[str, Any]) -> str | None:
                         prime = int.from_bytes(factor, "big")
                         if 1 < prime < n and n % prime == 0:
                             return "RSA"
+    if any(type(value.get(field)) is str and value[field] for field in private_fields):
+        raise GuardError("Declared private JWK material could not be completely inspected")
     return None
 
 
@@ -140,6 +203,58 @@ def _asset_patterns(keys: tuple[bytes, ...]) -> tuple[tuple[str, ...], ...]:
             pass
         patterns.append(tuple(sorted(forms)))
     return tuple(patterns)
+
+
+def _encoded_der(value: str) -> tuple[str, bytes] | None:
+    """Admit only whole hex/Base64 strings with a private ASN.1 prefix.
+
+    Probe text, decoding and full candidates have separate limits. Large
+    unrelated strings are never handed to a cryptographic parser. A private
+    candidate or undecidable ignored prefix exceeding the text budget fails
+    explicitly, so padding cannot postpone inspection beyond the raw bound.
+    """
+    sample = value[:_MAX_ENCODED_DER_TEXT_CHARS]
+    compact = sample.translate(_ASCII_FOLDING)
+    candidates = []
+    if compact[:2].lower() == "30":
+        probe_text = compact[:_DER_PREFIX_BYTES * 2]
+        try:
+            probe = binascii.unhexlify(probe_text[:len(probe_text) // 2 * 2])
+        except (ValueError, binascii.Error):
+            pass
+        else:
+            if _der_prefix_kind(probe) is not None:
+                candidates.append("hex")
+    encoded = _consumer_base64_text(sample)
+    if encoded.startswith(b"M"):
+        probe_text = encoded[:((_DER_PREFIX_BYTES + 2) // 3) * 4]
+        try:
+            probe = _consumer_base64_bytes(probe_text)
+        except (ValueError, binascii.Error):
+            pass
+        else:
+            if _der_prefix_kind(probe[:_DER_PREFIX_BYTES]) is not None:
+                candidates.append("base64")
+    if not candidates:
+        if len(value) > _MAX_ENCODED_DER_TEXT_CHARS and len(encoded) < ((_DER_PREFIX_BYTES + 2) // 3) * 4:
+            raise GuardError("Encoded key text exceeds its raw inspection limit")
+        return None
+    if len(value) > _MAX_ENCODED_DER_TEXT_CHARS:
+        raise GuardError("Encoded private DER exceeds its raw text limit")
+    encoding = candidates[0]
+    maximum = MAX_DER_PRIVATE_KEY_BYTES * 2 if encoding == "hex" else (MAX_DER_PRIVATE_KEY_BYTES * 4 + 2) // 3 + 2
+    if len(compact if encoding == "hex" else encoded) > maximum:
+        raise GuardError("Encoded private DER exceeds its decoded byte limit")
+    try:
+        if encoding == "hex":
+            data = binascii.unhexlify(compact)
+        else:
+            data = _consumer_base64_bytes(encoded)
+    except (ValueError, binascii.Error):
+        raise GuardError("Recognized private DER has an invalid outer encoding") from None
+    if len(data) > MAX_DER_PRIVATE_KEY_BYTES:
+        raise GuardError("Encoded private DER exceeds its decoded byte limit")
+    return encoding, data
 
 
 def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
@@ -165,6 +280,7 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
 
     pending = [(document, 0)]
     visited = 0
+    der_candidates = decoded_der_bytes = 0
     while pending:
         value, depth = pending.pop()
         visited += 1
@@ -187,22 +303,55 @@ def scan_json_secrets(document: Any, *, asset_keys: tuple[bytes, ...] = (),
             pending.extend((key, depth + 1) for key in value)
             pending.extend((item, depth + 1) for item in value.values())
         elif type(value) is list:
-            if len(value) == 32 and all(type(item) is int and 0 <= item <= 255 for item in value):
-                raw = bytes(value)
-                for index, key in enumerate(asset_keys):
-                    if raw == key:
-                        add("asset_key_exposure", index, representation="json-byte-array", rule_index=index)
             if visited + len(value) > MAX_JSON_SECRET_NODES:
                 raise GuardError("Structured secret JSON exceeds its node or depth limit")
+            if asset_keys:
+                # JSON has one number type: 1, 1.0 and 1e0 describe the same
+                # byte. Recognize contiguous integer-valued uint8 runs without
+                # coercing strings/bools, wrapping negatives or truncating floats.
+                run = bytearray()
+
+                def inspect_run() -> None:
+                    if len(run) >= 32:
+                        for index, key in enumerate(asset_keys):
+                            if key in run:
+                                add("asset_key_exposure", index, representation="json-byte-array", rule_index=index)
+                    run.clear()
+
+                for item in value:
+                    if (type(item) in (int, float) and 0 <= item <= 255
+                            and (type(item) is int or item.is_integer())):
+                        run.append(int(item))
+                    else:
+                        inspect_run()
+                inspect_run()
             pending.extend((item, depth + 1) for item in value)
         elif type(value) is str:
             if check_private_keys:
                 for index, marker in enumerate(PEM_PRIVATE_KEY_MARKERS):
                     if marker in value:
                         add("private_key_marker", index, representation="json-decoded-string", rule_index=index)
+            compact = value.translate(_ASCII_FOLDING) if asset_keys else value
+            folded_hex = compact.lower() if asset_keys else ""
+            decoded_key = _asset_key_bytes(value) if asset_keys else None
             for index, forms in enumerate(patterns):
-                if any(form in value for form in forms):
+                if (any(form in value or form in compact for form in forms)
+                        or asset_keys[index].hex() in folded_hex or decoded_key == asset_keys[index]):
                     add("asset_key_exposure", index, representation="json-decoded-string", rule_index=index)
+            if check_private_keys:
+                encoded = _encoded_der(value)
+                if encoded is not None:
+                    encoding, data = encoded
+                    der_candidates += 1
+                    decoded_der_bytes += len(data)
+                    if (der_candidates > MAX_JSON_DER_CANDIDATES
+                            or decoded_der_bytes > MAX_JSON_DER_DECODED_BYTES):
+                        raise GuardError("Encoded private DER exceeds the JSON decode budget")
+                    for finding in scan_der_private_key(io.BytesIO(data), len(data)):
+                        details = {key: item for key, item in finding.items() if key != "code"}
+                        details["representation"] = "json-" + encoding + "-" + details["representation"]
+                        add(finding["code"], (details["representation"], details.get("kind"), details.get("reason")),
+                            **details)
         elif value is not None and type(value) not in (bool, int, float):
             raise GuardError("Structured secret scan requires parsed JSON data")
     return findings

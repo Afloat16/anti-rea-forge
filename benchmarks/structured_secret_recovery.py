@@ -19,6 +19,7 @@ import sys
 import tempfile
 
 import cryptography
+from releaseguard import __version__
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -78,7 +79,7 @@ def main() -> None:
             "Baseline must be the SHA-256-verified public v1.0.0 wheel")
     before_version, after_version = version(args.baseline_python), version(args.python)
     require(before_version == "1.0.0", "Expected baseline release 1.0.0")
-    require(after_version == "1.1.0", "Expected candidate release 1.1.0")
+    require(after_version == __version__, "Expected the installed candidate core version")
     issuer = Ed25519PrivateKey.from_private_bytes(ISSUER)
     public = issuer.public_key()
     pem = issuer.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,

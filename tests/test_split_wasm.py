@@ -69,10 +69,20 @@ class SplitWasmTests(unittest.TestCase):
 
     def test_unknown_runtime_customs_are_kept_byte_for_byte(self):
         suffix = b"".join(custom(name, b"owned payload") for name in (
-            "linking", "reloc.CODE", "dylink.0", "producers", "target_features", "build_id", "other"))
+            "dylink.0", "producers", "target_features", "build_id", "other"))
         self.source.write_bytes(owned_module() + suffix)
         self.split()
         self.assertTrue(self.public.read_bytes().endswith(suffix))
+
+    def test_linker_metadata_requires_final_link_before_any_output(self):
+        for name in ("linking", "reloc.Code", "reloc.CODE", "reloc.DATA"):
+            with self.subTest(name=name):
+                self.source.write_bytes(owned_module() + custom(name, b"owned linker payload"))
+                before = self.source.read_bytes()
+                with self.assertRaisesRegex(GuardError, "final linked module"):
+                    self.split()
+                self.assertEqual(self.source.read_bytes(), before)
+                self.assert_no_outputs()
 
     def test_existing_outputs_and_inputs_are_never_overwritten(self):
         for destination in (self.public, self.private):

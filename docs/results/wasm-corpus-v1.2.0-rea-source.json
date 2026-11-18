@@ -1,0 +1,1541 @@
+{
+  "schema": "releaseguard/wasm-corpus-recovery/v1",
+  "ok": true,
+  "recorded_at": "2026-11-18T06:02:16.450Z",
+  "node": "v24.22.1",
+  "host": "linux/x64",
+  "candidate_releaseguard_version": "1.2.0",
+  "rea_cli_executed": true,
+  "mode": "rea-source-cli-and-wabt",
+  "dependency_lock_sha256": "caa0d17241b447eb4036edb4e9852265e67c5733d89247c5f79559779e071422",
+  "tools": {
+    "rea-agents": {
+      "distribution": "source-build",
+      "version_field": "6.9.0",
+      "source_repository": "https://github.com/morluto/rea",
+      "source_commit": "675287517c98c702ee88ad036c5e3b8dd4bcc7a7",
+      "source_tree": "a1e4211a76f9fd712b92a553d609531c5d9c773d",
+      "tracked_source_clean": true,
+      "source_package_lock_sha256": "9007a84043338a39ef2d766cb1323846813d43ce040e2cf09ddcaa4f5939a0bf",
+      "installed_lock_sha256": "0cbddc686839c688658455dad6fab84a6040007c59f9c51b1d510cb4ee82da8f",
+      "build_script": "node scripts/clean-build-output.mjs && node scripts/run-typescript.mjs -p tsconfig.build.json && node scripts/record-catalog-digests.mjs && node scripts/record-mcp-catalog.mjs && node scripts/record-cli-commands.mjs && node scripts/bundle-runtime.mjs",
+      "installed_build_tools": {
+        "tsrs": {
+          "version": "0.18.0-ts7.1.0-dev.20260929",
+          "npm_integrity": "sha512-9T0b4Uam/yMFIK16GUx0fUrJqYZnJ/gvSmV9JB8NTyDePvwCI45WFWxyEV/UMV3KfdNRJG/PBsm3fSIB9WmWsA=="
+        },
+        "typescript": {
+          "version": "7.0.2",
+          "npm_integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="
+        },
+        "rolldown": {
+          "version": "1.2.12",
+          "npm_integrity": "sha512-8wafseiaG80xmXSfqidUNqZcylTlhmPZZt+za2m+js2sFZ8dTNlhIOV2WcbIPx2hgwPBJpEUGFAMZ9bgBBLTSQ=="
+        }
+      },
+      "launcher_sha256": "e73f40ef2f63092ed5c6f2c480c89d79f8d85c2e3fd73c1bb8781ccb29ec4e5b",
+      "compiled_runtime": {
+        "files": 3454,
+        "bytes": 62317909,
+        "inventory_sha256": "9a7c608f982c648b2dd032c3c14397c5f1154f8d9fdd9c1ff88bef963f458414"
+      }
+    },
+    "wabt": {
+      "version": "1.0.42",
+      "source_commit": "ff0ef7e0009402740c805a9744c09b05be063e48",
+      "release_asset": "https://github.com/WebAssembly/wabt/releases/download/1.0.42/wabt-1.0.42-linux-x64.tar.gz",
+      "release_asset_sha256": "84895407a6bbb80e918f33b16b2fb2206021c150b6bc9ff6f761263a745ab131",
+      "executable_sha256": {
+        "wasm-validate": "6b722ed0df68204cfc7a8effdf1fc2ddeac2d184bd211cdf7fdfa5f9d49d3eb5",
+        "wasm-objdump": "dad264def1a3b7755859c5bf48227f01259a95fa82b7c38358b12b9e70b27a41",
+        "wasm2wat": "4322d652f650c1ee117b549c9722f42fc93eb4676ff046d60ba033b5639697a5",
+        "wat2wasm": "9e9ec8f737c890553951defcb1ee7f82de99fcafa32bef54990de27413794e7f"
+      }
+    },
+    "baseline_releaseguard": {
+      "version": "1.1.0",
+      "verified_package_files": 29,
+      "package_inventory_sha256": "84e669de3842d1097d6e1d21d7d5c1cd5fcd0df752fa01c4d278c0a57dfad940",
+      "official_wheel_sha256": "5040a0f33c6b5a640302af4983556abdcab1918e845f4bac4010ec2fa2233086"
+    }
+  },
+  "fixture_oracle_source_sha256": "f9a125899a557583a022d2c570f54ac2a420e44293f4609d2eab8f518dcb8926",
+  "summary": {
+    "different_programs": 5,
+    "measured_sides_per_program": 3,
+    "known_private_identifiers": 26,
+    "recovered_private_identifiers": {
+      "baseline": 26,
+      "public": 0,
+      "private_restored": 26
+    },
+    "numerical_cases": 43,
+    "runtime_trap_cases": 2,
+    "host_rejection_cases": 1,
+    "rea_inspections_completed": 16,
+    "provider_errors_or_partial_results_counted_as_success": 0,
+    "linker_regression_outcome": "blocked-before-publication"
+  },
+  "fixtures": [
+    {
+      "id": "helper-chain",
+      "features": [
+        "multiple functions",
+        "internal helper calls",
+        "i32 overflow"
+      ],
+      "source_sha256": "bcebfd8a39caaf367946b896f91af8f06f008c5c39f073245d7755755099b297",
+      "expected_private_identifiers": 5,
+      "expected_typed_interface": [
+        {
+          "direction": "export",
+          "module": null,
+          "name": "calculate",
+          "kind": "func",
+          "index": 2,
+          "signature": {
+            "kind": "func",
+            "params": [
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          },
+          "issue": null
+        }
+      ],
+      "exact_private_backup": true,
+      "executable_sections_unchanged": true,
+      "retained_public_custom_section": "public-notice",
+      "sides": {
+        "baseline": {
+          "sha256": "8760c7a7008fd609f9282f4d5d055ef114456f40351f2b81fcb6e733f7c80002",
+          "bytes": 283,
+          "core_sections_sha256": "be41df965b54da978d5e49f0e38ed1fe1e696795de5d657c1258a33f82c6de91",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 8,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -32768,
+                -1,
+                0,
+                1,
+                37,
+                32767,
+                2147483647
+              ],
+              "results": [
+                -2147483599,
+                -98255,
+                -34,
+                49,
+                48,
+                76,
+                98270,
+                2147483614
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "8760c7a7008fd609f9282f4d5d055ef114456f40351f2b81fcb6e733f7c80002",
+            "artifact_bytes": 283,
+            "evidence_id": "ev_364a9eed7f6563211aae203f3622251ef540696a9be54de5ca27a4b0e5850554",
+            "evidence_stdout_sha256": "8e52cd6aa311cec06445abd9b5ce9a558fa4405ccdcbc8cc4ccc1183ed5d93ae",
+            "evidence_stdout_bytes": 8041,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 6,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 5,
+              "details": 5,
+              "complete_evidence": 5
+            },
+            "wat_sha256": "4595c34adb3515622d7a20548905e4dd41241c827b136ee029b49484b76fa625",
+            "wat_bytes": 857,
+            "checked_opcodes_visible": [
+              "i32.mul",
+              "i32.xor",
+              "call"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "public": {
+          "sha256": "1ab0fb4ca3c47d377f5ae736460c5939777c7f81fadd1db4ade29967f7e545c9",
+          "bytes": 148,
+          "core_sections_sha256": "be41df965b54da978d5e49f0e38ed1fe1e696795de5d657c1258a33f82c6de91",
+          "gate_ok": true,
+          "findings": [],
+          "behavior": {
+            "numerical_cases": 8,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -32768,
+                -1,
+                0,
+                1,
+                37,
+                32767,
+                2147483647
+              ],
+              "results": [
+                -2147483599,
+                -98255,
+                -34,
+                49,
+                48,
+                76,
+                98270,
+                2147483614
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "1ab0fb4ca3c47d377f5ae736460c5939777c7f81fadd1db4ade29967f7e545c9",
+            "artifact_bytes": 148,
+            "evidence_id": "ev_87209db552b0bad7d9e66d7efdd8f1a7e9a06deb89f96dd1e917868d94b2293d",
+            "evidence_stdout_sha256": "2119066e33a81481cee7abe632e44bb4e5bc2818d4190ea3b311407043963d2f",
+            "evidence_stdout_bytes": 7024,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 5,
+            "debug_name_metadata": "not-present",
+            "private_identifiers_recovered": {
+              "wat": 0,
+              "details": 0,
+              "complete_evidence": 0
+            },
+            "wat_sha256": "b6e7caec041362db3a0ad434587e20c5b1df05ff1dbf3a487bf0e90ce0eb4068",
+            "wat_bytes": 485,
+            "checked_opcodes_visible": [
+              "i32.mul",
+              "i32.xor",
+              "call"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "private_restored": {
+          "sha256": "8760c7a7008fd609f9282f4d5d055ef114456f40351f2b81fcb6e733f7c80002",
+          "bytes": 283,
+          "core_sections_sha256": "be41df965b54da978d5e49f0e38ed1fe1e696795de5d657c1258a33f82c6de91",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 8,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -32768,
+                -1,
+                0,
+                1,
+                37,
+                32767,
+                2147483647
+              ],
+              "results": [
+                -2147483599,
+                -98255,
+                -34,
+                49,
+                48,
+                76,
+                98270,
+                2147483614
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "8760c7a7008fd609f9282f4d5d055ef114456f40351f2b81fcb6e733f7c80002",
+            "artifact_bytes": 283,
+            "evidence_id": "ev_c64ce5828bf79e7966e0239bdf33d7f1260f2efb0fefb9eed5c213adfd18a3fb",
+            "evidence_stdout_sha256": "4df1af7d295c3d8c3276389a66dc409c8cf43ae8d502f14c6b04db26fddb8184",
+            "evidence_stdout_bytes": 8089,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 6,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 5,
+              "details": 5,
+              "complete_evidence": 5
+            },
+            "wat_sha256": "4595c34adb3515622d7a20548905e4dd41241c827b136ee029b49484b76fa625",
+            "wat_bytes": 857,
+            "checked_opcodes_visible": [
+              "i32.mul",
+              "i32.xor",
+              "call"
+            ],
+            "custom_section_warnings": []
+          }
+        }
+      }
+    },
+    {
+      "id": "import-index",
+      "features": [
+        "host function import",
+        "shifted function indices",
+        "host arguments"
+      ],
+      "source_sha256": "fcc7fe1956ab07e8a9d9ecfbd8bd195e7ceb5489603edfd562e52ced3d694b98",
+      "expected_private_identifiers": 4,
+      "expected_typed_interface": [
+        {
+          "direction": "import",
+          "module": "host",
+          "name": "adjust",
+          "kind": "func",
+          "index": 0,
+          "signature": {
+            "kind": "func",
+            "params": [
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          },
+          "issue": null
+        },
+        {
+          "direction": "export",
+          "module": null,
+          "name": "run",
+          "kind": "func",
+          "index": 1,
+          "signature": {
+            "kind": "func",
+            "params": [
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          },
+          "issue": null
+        }
+      ],
+      "exact_private_backup": true,
+      "executable_sections_unchanged": true,
+      "retained_public_custom_section": "public-notice",
+      "sides": {
+        "baseline": {
+          "sha256": "07738f71c261c0b2a3055e2ec45d5bf54bf2ce2d3fb54a0ec84ca5126a3d4121",
+          "bytes": 255,
+          "core_sections_sha256": "24e1797ea852b45ed9423cd329c2ec6622d3a5e2a1e399348d5eb3bce627272e",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 8,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -32768,
+                -1,
+                0,
+                1,
+                37,
+                32767,
+                2147483647
+              ],
+              "results": [
+                8,
+                -327672,
+                -2,
+                8,
+                18,
+                378,
+                327678,
+                -2
+              ],
+              "host_arguments": [
+                0,
+                -65536,
+                -2,
+                0,
+                2,
+                74,
+                65534,
+                -2
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "07738f71c261c0b2a3055e2ec45d5bf54bf2ce2d3fb54a0ec84ca5126a3d4121",
+            "artifact_bytes": 255,
+            "evidence_id": "ev_681904d8c7941e85f30036099d44bfcc8eaed4c6e873c1161ee5fe69eadfee70",
+            "evidence_stdout_sha256": "cfecb4c47d6733ecd0434136219ba41e6df04dd1ad1b5b47e7f241a42aac3110",
+            "evidence_stdout_bytes": 8150,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 7,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 4,
+              "details": 4,
+              "complete_evidence": 4
+            },
+            "wat_sha256": "3cc1841c43e0cba78f72082ee1ce19f76ee312f7a3ab48fd385800be67131854",
+            "wat_bytes": 670,
+            "checked_opcodes_visible": [
+              "i32.mul",
+              "call"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "public": {
+          "sha256": "032798aa5df8c883f9a2c2a89877f051a2ae986e042eaabe5e4b455d057d3d76",
+          "bytes": 142,
+          "core_sections_sha256": "24e1797ea852b45ed9423cd329c2ec6622d3a5e2a1e399348d5eb3bce627272e",
+          "gate_ok": true,
+          "findings": [],
+          "behavior": {
+            "numerical_cases": 8,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -32768,
+                -1,
+                0,
+                1,
+                37,
+                32767,
+                2147483647
+              ],
+              "results": [
+                8,
+                -327672,
+                -2,
+                8,
+                18,
+                378,
+                327678,
+                -2
+              ],
+              "host_arguments": [
+                0,
+                -65536,
+                -2,
+                0,
+                2,
+                74,
+                65534,
+                -2
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "032798aa5df8c883f9a2c2a89877f051a2ae986e042eaabe5e4b455d057d3d76",
+            "artifact_bytes": 142,
+            "evidence_id": "ev_0bd05d9c735ade584a7751f40b3c5541328a8e4c65bf24208ae08bc1e1f41a1d",
+            "evidence_stdout_sha256": "8f0eec551fe3c915187528fb903f41959a4fa46c414add39214f88fc41bedb16",
+            "evidence_stdout_bytes": 7252,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 6,
+            "debug_name_metadata": "not-present",
+            "private_identifiers_recovered": {
+              "wat": 0,
+              "details": 0,
+              "complete_evidence": 0
+            },
+            "wat_sha256": "ff9bc7688c3553a5d16a805d64e01e2f56dce357b0a17bccffae7604557fa24f",
+            "wat_bytes": 358,
+            "checked_opcodes_visible": [
+              "i32.mul",
+              "call"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "private_restored": {
+          "sha256": "07738f71c261c0b2a3055e2ec45d5bf54bf2ce2d3fb54a0ec84ca5126a3d4121",
+          "bytes": 255,
+          "core_sections_sha256": "24e1797ea852b45ed9423cd329c2ec6622d3a5e2a1e399348d5eb3bce627272e",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 8,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -32768,
+                -1,
+                0,
+                1,
+                37,
+                32767,
+                2147483647
+              ],
+              "results": [
+                8,
+                -327672,
+                -2,
+                8,
+                18,
+                378,
+                327678,
+                -2
+              ],
+              "host_arguments": [
+                0,
+                -65536,
+                -2,
+                0,
+                2,
+                74,
+                65534,
+                -2
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "07738f71c261c0b2a3055e2ec45d5bf54bf2ce2d3fb54a0ec84ca5126a3d4121",
+            "artifact_bytes": 255,
+            "evidence_id": "ev_9d59b2885283577771c76fa94b77313dbc99d989e3cd2df58a8c899e1d98abba",
+            "evidence_stdout_sha256": "1ea3d0e64300b4c842c931180669038c2c89abeccc96b66f1809fdcc5140af88",
+            "evidence_stdout_bytes": 8198,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 7,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 4,
+              "details": 4,
+              "complete_evidence": 4
+            },
+            "wat_sha256": "3cc1841c43e0cba78f72082ee1ce19f76ee312f7a3ab48fd385800be67131854",
+            "wat_bytes": 670,
+            "checked_opcodes_visible": [
+              "i32.mul",
+              "call"
+            ],
+            "custom_section_warnings": []
+          }
+        }
+      }
+    },
+    {
+      "id": "memory-state",
+      "features": [
+        "memory and data segment",
+        "mutable global",
+        "stateful stores",
+        "memory growth"
+      ],
+      "source_sha256": "005f3916c0140a574b7375c42049813557f987f3c49188e45ee8c7a2efa352e0",
+      "expected_private_identifiers": 6,
+      "expected_typed_interface": [
+        {
+          "direction": "export",
+          "module": null,
+          "name": "memory",
+          "kind": "memory",
+          "index": 0,
+          "signature": {
+            "kind": "memory",
+            "page_size": "65536",
+            "address_type": "i32",
+            "minimum": "1",
+            "maximum": "2",
+            "shared": false
+          },
+          "issue": null
+        },
+        {
+          "direction": "export",
+          "module": null,
+          "name": "accumulate",
+          "kind": "func",
+          "index": 0,
+          "signature": {
+            "kind": "func",
+            "params": [
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          },
+          "issue": null
+        }
+      ],
+      "exact_private_backup": true,
+      "executable_sections_unchanged": true,
+      "retained_public_custom_section": "public-notice",
+      "sides": {
+        "baseline": {
+          "sha256": "c6ab105574381cfd03143850ad05f7eb44488ccb99b90ab721c16c29927549d1",
+          "bytes": 355,
+          "core_sections_sha256": "d2a9aed071df0450eab5c974e534fb4227095a0fb489c7b2d200268e5ae59ff0",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 6,
+            "trap_cases": 0,
+            "host_rejection_cases": 1,
+            "observations": {
+              "inputs": [
+                -4,
+                0,
+                1,
+                7,
+                2147483647,
+                -2147483648
+              ],
+              "results": [
+                6,
+                5,
+                5,
+                12,
+                -2147483630,
+                -2147483624
+              ],
+              "memory_cells": [
+                6,
+                5,
+                5,
+                12,
+                -2147483630,
+                -2147483624
+              ],
+              "old_pages": 1,
+              "grown_pages": 2
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "c6ab105574381cfd03143850ad05f7eb44488ccb99b90ab721c16c29927549d1",
+            "artifact_bytes": 355,
+            "evidence_id": "ev_cb563f6972fff7501a4f7bcbe435457c4a3281d71afd8809a42cae6d76d0489d",
+            "evidence_stdout_sha256": "1ac84e8a2b529aa1247beaeca347ae20baabc624b43ab83a888320f194fda16c",
+            "evidence_stdout_bytes": 9301,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 9,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 6,
+              "details": 6,
+              "complete_evidence": 6
+            },
+            "wat_sha256": "41e2b1114ff53aeffabaa369d22d655d05b22ba0ff94660b68fff00eb6fc3292",
+            "wat_bytes": 1148,
+            "checked_opcodes_visible": [
+              "i32.load",
+              "i32.store",
+              "global.set"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "public": {
+          "sha256": "2c4baf5b37bfd4c7ebbc902f8785b7c966b87e6fc87dcd507ac185e68ff24fe9",
+          "bytes": 185,
+          "core_sections_sha256": "d2a9aed071df0450eab5c974e534fb4227095a0fb489c7b2d200268e5ae59ff0",
+          "gate_ok": true,
+          "findings": [],
+          "behavior": {
+            "numerical_cases": 6,
+            "trap_cases": 0,
+            "host_rejection_cases": 1,
+            "observations": {
+              "inputs": [
+                -4,
+                0,
+                1,
+                7,
+                2147483647,
+                -2147483648
+              ],
+              "results": [
+                6,
+                5,
+                5,
+                12,
+                -2147483630,
+                -2147483624
+              ],
+              "memory_cells": [
+                6,
+                5,
+                5,
+                12,
+                -2147483630,
+                -2147483624
+              ],
+              "old_pages": 1,
+              "grown_pages": 2
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "2c4baf5b37bfd4c7ebbc902f8785b7c966b87e6fc87dcd507ac185e68ff24fe9",
+            "artifact_bytes": 185,
+            "evidence_id": "ev_f630d2ff929229cecf5a5e724b2052b751a9fc5406f25167f1e3b04f968ad1b8",
+            "evidence_stdout_sha256": "976a653ddbf00f40885009dc6e44ea41cf21230aef8ac1425f8faf9b2122eac8",
+            "evidence_stdout_bytes": 8026,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 8,
+            "debug_name_metadata": "not-present",
+            "private_identifiers_recovered": {
+              "wat": 0,
+              "details": 0,
+              "complete_evidence": 0
+            },
+            "wat_sha256": "ad46c6599618e534ebf92158a178e1bd9e8c3f8a79e13bb4235f7c33c4c55e32",
+            "wat_bytes": 584,
+            "checked_opcodes_visible": [
+              "i32.load",
+              "i32.store",
+              "global.set"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "private_restored": {
+          "sha256": "c6ab105574381cfd03143850ad05f7eb44488ccb99b90ab721c16c29927549d1",
+          "bytes": 355,
+          "core_sections_sha256": "d2a9aed071df0450eab5c974e534fb4227095a0fb489c7b2d200268e5ae59ff0",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 6,
+            "trap_cases": 0,
+            "host_rejection_cases": 1,
+            "observations": {
+              "inputs": [
+                -4,
+                0,
+                1,
+                7,
+                2147483647,
+                -2147483648
+              ],
+              "results": [
+                6,
+                5,
+                5,
+                12,
+                -2147483630,
+                -2147483624
+              ],
+              "memory_cells": [
+                6,
+                5,
+                5,
+                12,
+                -2147483630,
+                -2147483624
+              ],
+              "old_pages": 1,
+              "grown_pages": 2
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "c6ab105574381cfd03143850ad05f7eb44488ccb99b90ab721c16c29927549d1",
+            "artifact_bytes": 355,
+            "evidence_id": "ev_e4ebdcc141d707ee31b6d4a05de11fd8c366799845152a015cea80148227767c",
+            "evidence_stdout_sha256": "20d6e03fc0025d48542206274bd0c11a2cb3ee4da0a10ca724be5496a773b5ff",
+            "evidence_stdout_bytes": 9349,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 9,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 6,
+              "details": 6,
+              "complete_evidence": 6
+            },
+            "wat_sha256": "41e2b1114ff53aeffabaa369d22d655d05b22ba0ff94660b68fff00eb6fc3292",
+            "wat_bytes": 1148,
+            "checked_opcodes_visible": [
+              "i32.load",
+              "i32.store",
+              "global.set"
+            ],
+            "custom_section_warnings": []
+          }
+        }
+      }
+    },
+    {
+      "id": "table-dispatch",
+      "features": [
+        "function table",
+        "element segment",
+        "indirect call",
+        "table mutation and traps"
+      ],
+      "source_sha256": "98f70fc3057c853c512dfa3dc47b262455e8bdaa3f1a926fb4eac95fc7c0e1a6",
+      "expected_private_identifiers": 6,
+      "expected_typed_interface": [
+        {
+          "direction": "export",
+          "module": null,
+          "name": "table",
+          "kind": "table",
+          "index": 0,
+          "signature": {
+            "kind": "table",
+            "element": "funcref",
+            "address_type": "i32",
+            "minimum": "2",
+            "maximum": "2",
+            "shared": false
+          },
+          "issue": null
+        },
+        {
+          "direction": "export",
+          "module": null,
+          "name": "dispatch",
+          "kind": "func",
+          "index": 2,
+          "signature": {
+            "kind": "func",
+            "params": [
+              "i32",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          },
+          "issue": null
+        }
+      ],
+      "exact_private_backup": true,
+      "executable_sections_unchanged": true,
+      "retained_public_custom_section": "public-notice",
+      "sides": {
+        "baseline": {
+          "sha256": "d8971389a89299be5afceab8618caa1023898c195751f95ce06561e4fababc3c",
+          "bytes": 349,
+          "core_sections_sha256": "8d815e3ec688e2734c034a61ef8a22cdd03f26ad1982661c1b2813516aac29f8",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 11,
+            "trap_cases": 2,
+            "host_rejection_cases": 0,
+            "observations": {
+              "calls": [
+                {
+                  "selector": 0,
+                  "values": [
+                    -2147483648,
+                    -1,
+                    0,
+                    1,
+                    2147483647
+                  ],
+                  "results": [
+                    -2147483641,
+                    6,
+                    7,
+                    8,
+                    -2147483642
+                  ]
+                },
+                {
+                  "selector": 1,
+                  "values": [
+                    -2147483648,
+                    -1,
+                    0,
+                    1,
+                    2147483647
+                  ],
+                  "results": [
+                    -2147483648,
+                    -3,
+                    0,
+                    3,
+                    2147483645
+                  ]
+                }
+              ],
+              "mutated_table_result": 51
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "d8971389a89299be5afceab8618caa1023898c195751f95ce06561e4fababc3c",
+            "artifact_bytes": 349,
+            "evidence_id": "ev_70c17b18bc3d387f35181e398afbfb1c5c1be96aa8d6bf775ba12348e2c10320",
+            "evidence_stdout_sha256": "ba8d1d0ecf8def5657aabfc9492cf3deb4f2e18caa97f93219027bdb44c220cc",
+            "evidence_stdout_bytes": 9246,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 8,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 6,
+              "details": 6,
+              "complete_evidence": 6
+            },
+            "wat_sha256": "face385cc7b98beec157563284f2c95a2581acea0e9902d3318ce65bf0045311",
+            "wat_bytes": 1134,
+            "checked_opcodes_visible": [
+              "call_indirect",
+              "i32.mul",
+              "i32.add"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "public": {
+          "sha256": "5ee0e37e88221d687f01bbfce65e042026b4b19e803cdebde79ccd50acf130bb",
+          "bytes": 176,
+          "core_sections_sha256": "8d815e3ec688e2734c034a61ef8a22cdd03f26ad1982661c1b2813516aac29f8",
+          "gate_ok": true,
+          "findings": [],
+          "behavior": {
+            "numerical_cases": 11,
+            "trap_cases": 2,
+            "host_rejection_cases": 0,
+            "observations": {
+              "calls": [
+                {
+                  "selector": 0,
+                  "values": [
+                    -2147483648,
+                    -1,
+                    0,
+                    1,
+                    2147483647
+                  ],
+                  "results": [
+                    -2147483641,
+                    6,
+                    7,
+                    8,
+                    -2147483642
+                  ]
+                },
+                {
+                  "selector": 1,
+                  "values": [
+                    -2147483648,
+                    -1,
+                    0,
+                    1,
+                    2147483647
+                  ],
+                  "results": [
+                    -2147483648,
+                    -3,
+                    0,
+                    3,
+                    2147483645
+                  ]
+                }
+              ],
+              "mutated_table_result": 51
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "5ee0e37e88221d687f01bbfce65e042026b4b19e803cdebde79ccd50acf130bb",
+            "artifact_bytes": 176,
+            "evidence_id": "ev_e35ea340146bc63341fef3a27e6174aa5ce84cc16fcfa65f481cc5be1e283f40",
+            "evidence_stdout_sha256": "77c2dd8a8db5343f599320a1a523f1d73348a4752e4519e9a1ebb7a0fe7aef23",
+            "evidence_stdout_bytes": 7962,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 7,
+            "debug_name_metadata": "not-present",
+            "private_identifiers_recovered": {
+              "wat": 0,
+              "details": 0,
+              "complete_evidence": 0
+            },
+            "wat_sha256": "6df3b7d01ab3041d787cfe317ed566a8648f8478897799b2b429d839cfb657dd",
+            "wat_bytes": 626,
+            "checked_opcodes_visible": [
+              "call_indirect",
+              "i32.mul",
+              "i32.add"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "private_restored": {
+          "sha256": "d8971389a89299be5afceab8618caa1023898c195751f95ce06561e4fababc3c",
+          "bytes": 349,
+          "core_sections_sha256": "8d815e3ec688e2734c034a61ef8a22cdd03f26ad1982661c1b2813516aac29f8",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 11,
+            "trap_cases": 2,
+            "host_rejection_cases": 0,
+            "observations": {
+              "calls": [
+                {
+                  "selector": 0,
+                  "values": [
+                    -2147483648,
+                    -1,
+                    0,
+                    1,
+                    2147483647
+                  ],
+                  "results": [
+                    -2147483641,
+                    6,
+                    7,
+                    8,
+                    -2147483642
+                  ]
+                },
+                {
+                  "selector": 1,
+                  "values": [
+                    -2147483648,
+                    -1,
+                    0,
+                    1,
+                    2147483647
+                  ],
+                  "results": [
+                    -2147483648,
+                    -3,
+                    0,
+                    3,
+                    2147483645
+                  ]
+                }
+              ],
+              "mutated_table_result": 51
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "d8971389a89299be5afceab8618caa1023898c195751f95ce06561e4fababc3c",
+            "artifact_bytes": 349,
+            "evidence_id": "ev_616f3a839bc9278ff329818e2378c4fb0cb130d731e3bd49ae82abc9aca74488",
+            "evidence_stdout_sha256": "5bd666658078d2b5ee2c28b7d796b850e056b397ebeb5ab1d41a590a3cc33494",
+            "evidence_stdout_bytes": 9294,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 8,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 6,
+              "details": 6,
+              "complete_evidence": 6
+            },
+            "wat_sha256": "face385cc7b98beec157563284f2c95a2581acea0e9902d3318ce65bf0045311",
+            "wat_bytes": 1134,
+            "checked_opcodes_visible": [
+              "call_indirect",
+              "i32.mul",
+              "i32.add"
+            ],
+            "custom_section_warnings": []
+          }
+        }
+      }
+    },
+    {
+      "id": "bounded-loop",
+      "features": [
+        "conditional returns",
+        "loop and branches",
+        "local state",
+        "input limits"
+      ],
+      "source_sha256": "b485ff0e4f5727602e555828c6f740c8f4c1a88bd87ae9929f32e055c75f8b45",
+      "expected_private_identifiers": 5,
+      "expected_typed_interface": [
+        {
+          "direction": "export",
+          "module": null,
+          "name": "sum",
+          "kind": "func",
+          "index": 0,
+          "signature": {
+            "kind": "func",
+            "params": [
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          },
+          "issue": null
+        }
+      ],
+      "exact_private_backup": true,
+      "executable_sections_unchanged": true,
+      "retained_public_custom_section": "public-notice",
+      "sides": {
+        "baseline": {
+          "sha256": "e601a8c5db739b722cf79109407c13e111e091ac0f0278538098f29012c8c0da",
+          "bytes": 291,
+          "core_sections_sha256": "ad0335dc361871a0d345013ccc803ccf0be8347d86a8f377ac6dcf62daaf04e5",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 10,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -1,
+                0,
+                1,
+                2,
+                3,
+                31,
+                1000,
+                1001,
+                2147483647
+              ],
+              "results": [
+                -1,
+                -1,
+                0,
+                1,
+                3,
+                6,
+                496,
+                500500,
+                -2,
+                -2
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "e601a8c5db739b722cf79109407c13e111e091ac0f0278538098f29012c8c0da",
+            "artifact_bytes": 291,
+            "evidence_id": "ev_24938a8e5276d56bd6298a99678ec2a4557323175452a141f0ef017423063c57",
+            "evidence_stdout_sha256": "ff34eaf373881ba45c4be3578318e6daa2da18daf13269d66f998223aba7f7c5",
+            "evidence_stdout_bytes": 8278,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 6,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 5,
+              "details": 5,
+              "complete_evidence": 5
+            },
+            "wat_sha256": "8f4abc562590d271804b49f26a63c52e248bbefddd96dc6a7155d436b2be095c",
+            "wat_bytes": 1284,
+            "checked_opcodes_visible": [
+              "loop",
+              "br_if",
+              "i32.ge_u",
+              "return"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "public": {
+          "sha256": "4ee31e15f03ffd409da5f13c3d0ff14d2e0d7d3ee9acdeaef41d4024acfa3dac",
+          "bytes": 171,
+          "core_sections_sha256": "ad0335dc361871a0d345013ccc803ccf0be8347d86a8f377ac6dcf62daaf04e5",
+          "gate_ok": true,
+          "findings": [],
+          "behavior": {
+            "numerical_cases": 10,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -1,
+                0,
+                1,
+                2,
+                3,
+                31,
+                1000,
+                1001,
+                2147483647
+              ],
+              "results": [
+                -1,
+                -1,
+                0,
+                1,
+                3,
+                6,
+                496,
+                500500,
+                -2,
+                -2
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "4ee31e15f03ffd409da5f13c3d0ff14d2e0d7d3ee9acdeaef41d4024acfa3dac",
+            "artifact_bytes": 171,
+            "evidence_id": "ev_31d4ed1c8b60d36b5a17a6623822febca84c532bf73692f6ae8707cf6c15b49a",
+            "evidence_stdout_sha256": "8f62163d7afab001894c89fdf70321fe2f84788911058b9e3fea5a1aa01cd552",
+            "evidence_stdout_bytes": 7242,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 5,
+            "debug_name_metadata": "not-present",
+            "private_identifiers_recovered": {
+              "wat": 0,
+              "details": 0,
+              "complete_evidence": 0
+            },
+            "wat_sha256": "85e73a73d57a403796a2344b6259e227ea6dee75811dbd161f0408e1ea78be1e",
+            "wat_bytes": 800,
+            "checked_opcodes_visible": [
+              "loop",
+              "br_if",
+              "i32.ge_u",
+              "return"
+            ],
+            "custom_section_warnings": []
+          }
+        },
+        "private_restored": {
+          "sha256": "e601a8c5db739b722cf79109407c13e111e091ac0f0278538098f29012c8c0da",
+          "bytes": 291,
+          "core_sections_sha256": "ad0335dc361871a0d345013ccc803ccf0be8347d86a8f377ac6dcf62daaf04e5",
+          "gate_ok": false,
+          "findings": [
+            {
+              "code": "native_debug_metadata",
+              "path": "module.wasm",
+              "format": "wasm"
+            },
+            {
+              "code": "native_symbol_table",
+              "path": "module.wasm",
+              "format": "wasm"
+            }
+          ],
+          "behavior": {
+            "numerical_cases": 10,
+            "trap_cases": 0,
+            "host_rejection_cases": 0,
+            "observations": {
+              "inputs": [
+                -2147483648,
+                -1,
+                0,
+                1,
+                2,
+                3,
+                31,
+                1000,
+                1001,
+                2147483647
+              ],
+              "results": [
+                -1,
+                -1,
+                0,
+                1,
+                3,
+                6,
+                496,
+                500500,
+                -2,
+                -2
+              ]
+            }
+          },
+          "rea": {
+            "exit_code": 0,
+            "operation": "inspect_wasm_artifact",
+            "provider": "wabt-artifact",
+            "artifact_sha256": "e601a8c5db739b722cf79109407c13e111e091ac0f0278538098f29012c8c0da",
+            "artifact_bytes": 291,
+            "evidence_id": "ev_72d69ae0941fc8c44aa378f410147fcaf2a0374aeeab59ec18d9fb9bdfe27b7c",
+            "evidence_stdout_sha256": "0842697bb4c8e1c48a62815936f1d4c35ded3436c98628c403a0cc5669176fe7",
+            "evidence_stdout_bytes": 8326,
+            "validation": "valid",
+            "interface_state": "complete",
+            "decoded_sections": 6,
+            "debug_name_metadata": "complete",
+            "private_identifiers_recovered": {
+              "wat": 5,
+              "details": 5,
+              "complete_evidence": 5
+            },
+            "wat_sha256": "8f4abc562590d271804b49f26a63c52e248bbefddd96dc6a7155d436b2be095c",
+            "wat_bytes": 1284,
+            "checked_opcodes_visible": [
+              "loop",
+              "br_if",
+              "i32.ge_u",
+              "return"
+            ],
+            "custom_section_warnings": []
+          }
+        }
+      }
+    }
+  ],
+  "linker_regression": {
+    "id": "relocatable-linker-leak",
+    "source_sha256": "2adfb5a724d3faba37aebb8f9f0eb74d7da1ad2b7376040b5264e9e4c345044c",
+    "producer_flags": [
+      "--relocatable",
+      "--debug-names"
+    ],
+    "expected_private_identifiers": 1,
+    "original_sha256": "d7a5004a5a45881316bc1b863bf62ac46fb6419bc8326a811957f0dd473d50a4",
+    "original_bytes": 184,
+    "legacy_1_1": {
+      "actual_installed_release_executed": true,
+      "split_ok": true,
+      "gate_ok": true,
+      "original_private_backup_exact": true,
+      "public_sha256": "6265dcddcc64affe23c1ba702b16a3c29e74841f384896108788298065c27f73",
+      "public_bytes": 120,
+      "debug_name_section_removed": true,
+      "behavior": {
+        "numerical_cases": 8,
+        "trap_cases": 0,
+        "host_rejection_cases": 0,
+        "observations": {
+          "inputs": [
+            -2147483648,
+            -32768,
+            -1,
+            0,
+            1,
+            37,
+            32767,
+            2147483647
+          ],
+          "results": [
+            -2147483645,
+            -229373,
+            -4,
+            3,
+            10,
+            262,
+            229372,
+            2147483644
+          ]
+        }
+      },
+      "rea": {
+        "exit_code": 0,
+        "operation": "inspect_wasm_artifact",
+        "provider": "wabt-artifact",
+        "artifact_sha256": "6265dcddcc64affe23c1ba702b16a3c29e74841f384896108788298065c27f73",
+        "artifact_bytes": 120,
+        "evidence_id": "ev_8cff75890497677c1c8afc6eb1e974a76ef11e6cb600675f30330aae051f0f9f",
+        "evidence_stdout_sha256": "9c8747cc8f100108ce845f79b65c81f0a5a814e13689e0686a2d8133ca2c721d",
+        "evidence_stdout_bytes": 7567,
+        "validation": "valid",
+        "interface_state": "complete",
+        "decoded_sections": 6,
+        "debug_name_metadata": "not-present",
+        "private_identifiers_recovered": {
+          "wat": 1,
+          "details": 1,
+          "complete_evidence": 1
+        },
+        "wat_sha256": "b4503f1960fffe17b55bf9953d3188538509852bc8bd0f8c344ef5bd1483c37f",
+        "wat_bytes": 448,
+        "checked_opcodes_visible": [
+          "call",
+          "i32.mul",
+          "i32.add"
+        ],
+        "custom_section_warnings": []
+      }
+    },
+    "current": {
+      "gate_ok": false,
+      "findings": [
+        {
+          "code": "native_metadata_unverifiable",
+          "path": "module.wasm",
+          "format": "wasm",
+          "reason": "linker_metadata_requires_final_link"
+        }
+      ],
+      "native_metadata_scan_completed": false,
+      "split_exit_code": 2,
+      "split_error": "Wasm linker metadata requires a final linked module before debug separation",
+      "no_output_files_created": true,
+      "recovery_measurement": "not-applicable-no-public-artifact",
+      "outcome": "blocked-before-publication"
+    },
+    "limitation": "Recognizes linker section envelopes and requires final linking; it does not parse linker symbol/relocation tables or prove a linked program unrecoverable."
+  },
+  "scope": "Five project-authored core Wasm programs with separate name-recovery and behavior oracles, plus one actual v1.1 linker-disclosure regression control.",
+  "limitations": [
+    "WAT instructions, data and public interfaces remain decoded. This does not hide algorithms, runtime secrets or prevent independent reimplementation.",
+    "Numerical/trap/host-rejection cases are counted once per fixture, not multiplied by three artifact sides or by two REA distributions. Stateful sequences use independent JS oracles but their steps are not statistically independent samples.",
+    "These authored programs and 26 named identifiers are not an ecosystem-wide success rate, independent attack campaigns or an unrestricted agent evaluation.",
+    "The separate linker control is a producer-valid relocatable module. The current policy refuses it until final linking; no nonexistent new public artifact is scored as zero recovery.",
+    "Complete private originals remain recoverable and must stay outside public distribution.",
+    "This runs the exact tracked-clean source commit and compiled runtime recorded in tools; it is separate from the npm distribution."
+  ]
+}

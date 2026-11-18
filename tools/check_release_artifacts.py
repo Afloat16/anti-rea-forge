@@ -125,6 +125,20 @@ def installation(artifact: Path, version: str, work: Path) -> tuple[Path, dict]:
             and any(item["code"] == "asset_key_exposure" for item in structured["findings"]),
             "Encoded key was not inspected and rejected")
     (release / "encoded-key.json").unlink()
+    (release / "consumer-key.json").write_text(
+        json.dumps({"data": [999, *[float(value) for value in key.read_bytes()], -1]}), encoding="ascii")
+    consumer = cli(python, work, "scan-release", "--root", str(release),
+                   "--policy", str(policy), "--asset-key-file", str(key), expected=3)
+    require(consumer["checks"]["structured_secret_scan_completed"] is True
+            and any(item["code"] == "asset_key_exposure" for item in consumer["findings"]),
+            "Consumer-compatible key bytes were not rejected")
+    (release / "consumer-key.json").unlink()
+    (release / "incomplete-map.json").write_text(
+        '{"version":3,"sources":["owned.ts"],"sourcesCont\\u0065nt":["owned source"]}', encoding="ascii")
+    incomplete = cli(python, work, "scan-release", "--root", str(release), "--policy", str(policy), expected=3)
+    require(any(item["code"] == "source_map_marker" and item.get("representation") == "json-decoded-key"
+                for item in incomplete["findings"]), "Incomplete source map was not rejected")
+    (release / "incomplete-map.json").unlink()
     wasm_header = b"\0asm\1\0\0\0"
     wasm_input = work / "owned.wasm"
     wasm_bytes = wasm_header + b"\0\5\4name"
@@ -143,11 +157,19 @@ def installation(artifact: Path, version: str, work: Path) -> tuple[Path, dict]:
     require(public_check["ok"] is True and any(item["code"] == "native_debug_metadata"
             and item["format"] == "wasm" for item in private_check["findings"]),
             "Installed Wasm metadata scan failed its paired control")
+    (release / "unlinked.wasm").write_bytes(wasm_header + b"\0\x09\x07linking\x02")
+    unlinked = cli(python, work, "scan-release", "--root", str(release), "--policy", str(policy), expected=3)
+    require(unlinked["checks"]["native_metadata_scan_completed"] is False
+            and any(item.get("reason") == "linker_metadata_requires_final_link" for item in unlinked["findings"]),
+            "Unexamined Wasm linker metadata was not rejected")
+    (release / "unlinked.wasm").unlink()
     return python, {"artifact": artifact.name, "version": version,
                     "isolated_import": True, "clean_release_accepted": True,
                     "renamed_source_map_blocked": True, "native_resources_present": len(resources),
                     "asset_roundtrip_bytes": len(payload.read_bytes()), "leaked_key_blocked": True,
-                    "structured_key_blocked": True, "wasm_split_verified": True}
+                    "structured_key_blocked": True, "wasm_split_verified": True,
+                    "consumer_key_encodings_blocked": True, "incomplete_source_map_blocked": True,
+                    "relocatable_wasm_blocked": True}
 
 
 def main() -> int:
