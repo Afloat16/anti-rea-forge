@@ -697,7 +697,19 @@ extern "C" void rg_clear() { ''' + namespace + '''::clear_native_code(); }
         original.write_text(with_definition_identifiers(source))
         self.run_tool([self.llvm / "opt", "-S", "-passes=verify", "-verify-each", original,
                        "-o", verified])
-        bundle = seal_virtualized_ir(verified.read_text(), coverage, self.key, **CONTEXT)
+        canonical = verified.read_text()
+        descriptor = re.search(r"^@descriptors = ([^\n]*)$", canonical, re.MULTILINE)
+        self.assertIsNotNone(descriptor)
+        # opt prints large i64 constants as signed decimals. Production records
+        # coverage after opt; prove unchanged bytes before rebinding this fixture's
+        # textual observation to that same canonical representation.
+        words = [int(value) for value in re.findall(r"\bi64 (-?[0-9]+)\b", descriptor[1])]
+        self.assertEqual(len(words), len(WORDS))
+        self.assertEqual(b"".join(struct.pack("<Q", value & ((1 << 64) - 1))
+                                  for value in words), DESCRIPTORS)
+        coverage[0]["vm_coverage"]["descriptor_globals"][0]["ir_sha256"] = hashlib.sha256(
+            descriptor[1].encode("utf-8")).hexdigest()
+        bundle = seal_virtualized_ir(canonical, coverage, self.key, **CONTEXT)
         loaded, _ = self.build("definition-identifiers", bundle)
         self.addCleanup(loaded.rg_clear)
         self.assertEqual(loaded.rg_compute(123), 0)
