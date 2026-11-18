@@ -9,106 +9,116 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: 'PR ${{ matrix.pr }} at ${{ matrix.sha }}'
+  python-sdk:
+    name: 'Python SDK ${{ matrix.python }} stdout shutdown'
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12']
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: '80d12cd242a153e727096a2d01d63559b351b3e9'
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify source identity
+        env:
+          EXPECTED_SHA: '80d12cd242a153e727096a2d01d63559b351b3e9'
+          EXPECTED_PARENT: 'ea860cf1392cf9f14e74500e81ef209f3876262b'
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_PARENT"
+          git show -s --format='%H %T %P'
+          git diff --stat HEAD^
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '${{ matrix.python }}'
+      - name: Install SDK with normal development dependencies
+        run: python -m pip install -e 'packages/sdk-python[dev]'
+      - name: Python SDK lint, format and type checks
+        run: |
+          python -m ruff check --config packages/sdk-python/pyproject.toml packages/sdk-python
+          python -m ruff format --check --config packages/sdk-python/pyproject.toml packages/sdk-python
+          python -m mypy --config-file packages/sdk-python/pyproject.toml packages/sdk-python/src
+      - name: Complete Python SDK test suite
+        run: python -m pytest -c packages/sdk-python/pyproject.toml packages/sdk-python/tests -q
+      - name: Prove new regressions reject exact parent transport
+        env:
+          BASELINE_SHA: 'ea860cf1392cf9f14e74500e81ef209f3876262b'
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          import xml.etree.ElementTree as ET
+
+          source = Path('packages/sdk-python/src/qwen_code_sdk/transport.py')
+          original = source.read_bytes()
+          baseline = subprocess.check_output(['git', 'show', os.environ['BASELINE_SHA'] + ':' + str(source)])
+          assert baseline != original
+          report = Path(os.environ['RUNNER_TEMP']) / 'stdout-shutdown-parent.xml'
+          try:
+              source.write_bytes(baseline)
+              result = subprocess.run([
+                  sys.executable, '-m', 'pytest', '-c', 'packages/sdk-python/pyproject.toml',
+                  'packages/sdk-python/tests/unit/test_transport_shutdown.py', '-q',
+                  '--junitxml=' + str(report),
+              ], timeout=180)
+              assert result.returncode == 1, 'The unchanged parent must fail assertions, not collection or timeout'
+              cases = list(ET.parse(report).getroot().iter('testcase'))
+              errors = [case.attrib['name'] for case in cases if case.find('error') is not None]
+              failed = {case.attrib['name'] for case in cases if case.find('failure') is not None}
+              passed = [case.attrib['name'] for case in cases if case.find('failure') is None and case.find('error') is None and case.find('skipped') is None]
+              assert not errors, errors
+              required_failures = {'test_query_close_drains_graceful_shutdown_output[130]', 'test_close_drains_paused_stdout_after_process_has_exited'}
+              assert required_failures <= failed, (required_failures, failed)
+              assert passed, 'At least one unchanged behavior control must still pass'
+              print('Exact-parent negative control:', {'failed': sorted(failed), 'passed': passed})
+          finally:
+              source.write_bytes(original)
+          assert source.read_bytes() == original
+          PY
+          git diff --exit-code
+      - name: Build Python distribution wheel
+        run: python -m pip wheel --no-deps ./packages/sdk-python --wheel-dir "$RUNNER_TEMP/python-sdk-wheel"
+  workspace:
+    name: 'Normal workspace build, bundle and typecheck'
     if: github.repository == 'Afloat16/anti-rea-forge'
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        include:
-          - pr: '17578'
-            sha: '0bc93ec91c3f88233822f1884a6c65e7cfb29179'
-            package: 'cli'
     env:
       CI: 'true'
       QWEN_SKIP_PREPARE: '1'
       NODE_OPTIONS: '--max-old-space-size=6144'
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout exact candidate
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           repository: Afloat16/qwen-code
-          ref: '${{ matrix.sha }}'
+          ref: '80d12cd242a153e727096a2d01d63559b351b3e9'
           persist-credentials: false
           fetch-depth: 2
       - name: Verify source identity
         env:
-          EXPECTED_SHA: '${{ matrix.sha }}'
+          EXPECTED_SHA: '80d12cd242a153e727096a2d01d63559b351b3e9'
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Set up Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: '22.x'
           package-manager-cache: false
-      - name: Install pinned dependencies
+      - name: Install frozen workspace dependencies
         run: corepack pnpm install --frozen-lockfile --reporter=append-only
-      - name: Build and bundle normal workspace
+      - name: Normal workspace build, development bundle and typecheck
         run: |
           npm run build
           DEV=true npm run bundle
-      - name: CLI renderer, copy command and continuation tests
-        working-directory: packages/cli
-        run: corepack pnpm exec vitest run src/ui/utils/MarkdownDisplayCopy.test.tsx src/ui/utils/MarkdownDisplay.test.tsx src/ui/commands/copyCommand.test.ts src/ui/components/MainContent.test.tsx --retry=0
-      - name: Web Shell copy command parity tests
-        working-directory: packages/web-shell
-        run: corepack pnpm exec vitest run --config vitest.config.ts client/utils/copyCommand.test.ts --retry=0
-      - name: Prove new tests fail with the exact preceding renderer
-        working-directory: packages/cli
-        env:
-          BASELINE_SHA: 'ed7fb8a54cb9d44d4263e68f94f8f321ea51af91'
-        run: |
-          node --input-type=module <<'NODE'
-          import { readFileSync, writeFileSync } from 'node:fs';
-          import { spawnSync } from 'node:child_process';
-          import assert from 'node:assert/strict';
-
-          const file = 'src/ui/utils/MarkdownDisplay.tsx';
-          const original = readFileSync(file, 'utf8');
-          const parent = spawnSync('git', ['rev-parse', 'HEAD^'], { encoding: 'utf8' });
-          assert.equal(parent.status, 0);
-          assert.equal(parent.stdout.trim(), process.env.BASELINE_SHA);
-          const baseline = spawnSync('git', [
-            'show',
-            process.env.BASELINE_SHA + ':packages/cli/src/ui/utils/MarkdownDisplay.tsx',
-          ], { encoding: 'utf8', maxBuffer: 1024 * 1024 });
-          assert.equal(baseline.status, 0);
-          assert.notEqual(baseline.stdout, original);
-          try {
-            writeFileSync(file, baseline.stdout);
-            const result = spawnSync('corepack', [
-              'pnpm', 'exec', 'vitest', 'run',
-              'src/ui/utils/MarkdownDisplayCopy.test.tsx',
-              'src/ui/components/MainContent.test.tsx',
-              '-t', 'Markdown source copy hints|ignores fence-like content in continuation copy offsets',
-              '--retry=0',
-            ], {
-              encoding: 'utf8',
-              timeout: 240000,
-              maxBuffer: 32 * 1024 * 1024,
-            });
-            const output = (result.stdout ?? '') + (result.stderr ?? '');
-            process.stdout.write(output);
-            assert.ifError(result.error);
-            assert.equal(result.signal, null, 'Baseline test must finish normally');
-            assert.equal(result.status, 1, 'New tests must reject the preceding renderer');
-            const plain = output.replace(/\u001b\[[0-9;]*m/g, '');
-            assert.match(plain, /Tests\s+12 failed/);
-            assert.match(plain, /2 passed/);
-            assert.match(plain, /AssertionError/);
-            console.log('Confirmed exact-parent regression witness: 12 failed, 2 controls passed');
-          } finally {
-            writeFileSync(file, original);
-          }
-          assert.equal(readFileSync(file, 'utf8'), original);
-          NODE
-      - name: Check patch formatting and lint
-        run: |
-          corepack pnpm exec prettier --check packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplayCopy.test.tsx packages/cli/src/ui/components/MainContent.test.tsx
-          corepack pnpm exec eslint packages/cli/src/ui/utils/MarkdownDisplay.tsx packages/cli/src/ui/utils/MarkdownDisplayCopy.test.tsx packages/cli/src/ui/components/MainContent.test.tsx
+          npm run typecheck
           git diff --exit-code
-      - name: Normal CLI typecheck
-        working-directory: packages/cli
-        run: npm run typecheck
