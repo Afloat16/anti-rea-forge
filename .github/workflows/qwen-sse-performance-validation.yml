@@ -1,0 +1,52 @@
+name: Qwen SSE scan-cost regression validation
+
+on:
+  push:
+    branches:
+      - 'validation/qwen-sse-scan-cost-20261118'
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: Native SSE cost regression and workspace gates
+    if: github.repository == 'Afloat16/anti-rea-forge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: 'true'
+      QWEN_SKIP_PREPARE: '1'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+    steps:
+      - name: Checkout validation controller
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          path: validation
+          persist-credentials: false
+      - name: Checkout exact test candidate
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: Afloat16/qwen-code
+          ref: 0bb99e389f2936947c218fb07e5b8fa65c97084b
+          path: candidate
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Install frozen dependencies
+        working-directory: candidate
+        run: corepack pnpm install --frozen-lockfile --reporter=append-only
+      - name: Normal build, development bundle and typecheck
+        working-directory: candidate
+        run: |
+          npm run build
+          DEV=true npm run bundle
+          npm run typecheck
+          git diff --exit-code
+      - name: Native positive, quadratic negative and restored validation
+        working-directory: candidate
+        run: python3 ../validation/.github/scripts/qwen-sse-performance-validation.py
