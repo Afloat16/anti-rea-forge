@@ -30,7 +30,10 @@ from .elf import audit_elf_stream
 from .encoded_asset_keys import scan_pyc_asset_keys
 from .native import _assert_scanned_identity, _component_findings
 from .native_token import NATIVE_TOKEN_HEX_DIGITS, NATIVE_TOKEN_PREFIX
-from .private_inputs import assert_private_inputs_unchanged, snapshot_private_inputs
+from .private_inputs import (
+    PrivateContentBudgetError, PrivateContentScanner, PrivateInputSnapshot,
+    assert_private_inputs_unchanged, snapshot_private_inputs,
+)
 from .pe import audit_pe_stream
 from .macho import MACHO_MAGICS, audit_macho_stream
 from .sealed import assert_asset_keys_unchanged, snapshot_asset_keys
@@ -263,7 +266,7 @@ def _looks_like_v7_tar(prefix: bytes, size: int) -> bool:
 
 class _Scanner:
     def __init__(self, policy: dict[str, Any], asset_keys: tuple[bytes, ...] = (),
-                 private_input_digests: tuple[str, ...] = ()):
+                 private_inputs: tuple[PrivateInputSnapshot, ...] = ()):
         self.policy = policy
         self.total_bytes = 0
         self.archive_entries = 0
@@ -304,8 +307,11 @@ class _Scanner:
             self.overlap = max(self.overlap, max(length for _, _, _, length in self.token_rules) - 1)
         self.digests = {value: index for index, value in enumerate(policy["forbid_file_sha256"])}
         self.private_input_digests: dict[str, list[int]] = {}
-        for index, value in enumerate(private_input_digests):
-            self.private_input_digests.setdefault(value, []).append(index)
+        for index, snapshot in enumerate(private_inputs):
+            self.private_input_digests.setdefault(snapshot.sha256, []).append(index)
+        self.private_content = PrivateContentScanner(private_inputs)
+        self.private_input_scan_completed = True
+        self.private_input_payloads_checked = 0
         self.components = {value.casefold(): index for index, value in enumerate(policy["forbid_path_components"])}
 
     def add(self, code: str, path: str, members: tuple[str, ...] = (), **details: Any) -> None:
@@ -371,8 +377,20 @@ class _Scanner:
         index = self.digests.get(hexdigest)
         if index is not None:
             self.add("forbidden_file_digest", path, members, rule_index=index)
-        for index in self.private_input_digests.get(hexdigest, ()):
+        exact_private_matches = self.private_input_digests.get(hexdigest, ())
+        for index in exact_private_matches:
             self.add("private_input_exposure", path, members, rule_index=index)
+        if self.private_input_digests and self.private_input_scan_completed:
+            self.private_input_payloads_checked += 1
+            try:
+                contained = self.private_content.scan(stream, size, matched_indices=exact_private_matches)
+            except PrivateContentBudgetError as error:
+                self.private_input_scan_completed = False
+                self.add("private_input_unverifiable", path, members, reason=error.reason)
+            else:
+                for index in contained:
+                    self.add("private_input_exposure", path, members, rule_index=index,
+                             representation="contained-bytes")
         if self.policy["check_source_maps"] or self.policy["check_private_keys"] or self.asset_keys:
             self.structured_json(stream, size, path, members,
                                  source_content_marker_seen=any(code == "source_map_marker" and index == 1
@@ -886,7 +904,7 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
         raise GuardError("Cannot inspect an empty release")
     if len(candidates) > policy["max_files"]:
         raise GuardError("Release file count exceeds max_files")
-    scanner = _Scanner(policy, asset_keys, tuple(item.sha256 for item in private_snapshots))
+    scanner = _Scanner(policy, asset_keys, private_snapshots)
     files: list[dict[str, Any]] = []
     identities: list[tuple[Path, tuple[int, ...]]] = []
     for relative, path in sorted(candidates.items()):
@@ -955,12 +973,17 @@ def scan_release(root: Path | str, policy_path: Path | str, *,
             "native_metadata_scan_completed": scanner.native_metadata_scan_completed,
             "asset_keys_checked": len(asset_keys),
             "private_inputs_checked": len(private_snapshots),
+            "private_input_profile": "exact-content/v1" if private_snapshots else None,
+            "private_input_scan_completed": scanner.private_input_scan_completed,
+            "private_input_payloads_checked": scanner.private_input_payloads_checked,
+            "private_input_candidate_checks": scanner.private_content.candidates_checked,
+            "private_input_verification_bytes": scanner.private_content.verification_bytes,
             "release_allowlist_applied": policy["allowed_release_files"] is not None,
         },
         "notes": [
             "Static exposure checks only; passing does not measure REA or cracking resistance.",
-            "Declared private input files are snapshotted outside the public root and checked by exact whole-payload SHA-256 across physical and inspected archive files. Reference paths and separate reference digests are not listed; public inventory digests remain visible. Rewritten, compiled or fragmented copies require other controls.",
-            "Marker checks are heuristics. Bounded JSON inspection also recognizes v3 source maps, decoded and hex/Base64-wrapped PEM, known asset-key representations, and supported private JWK structures. Bounded DER recognition checks supported private-key encodings; arbitrary JS, unknown encodings and custom key wrapping can remain undetected.",
+            "Declared private inputs are snapshotted outside the public root. Exact complete contents are checked in physical and inspected archive payloads, including prefixes, suffixes and concatenated bundles. A 64-byte locating anchor is followed by full-length SHA-256 verification; short references are matched exactly. The shared 4096-candidate / 512 MiB verification budgets fail with private_input_unverifiable and a false private_input_scan_completed flag. Reference paths and separate digests are not listed; public inventory digests remain visible. Rewritten, compiled, encoded or fragmented copies require other controls.",
+            "Marker checks are heuristics. Bounded JSON inspection also recognizes v3 source maps, decoded and hex/Base64-wrapped PEM, known asset-key representations, and supported private JWK structures. Up to two additional JSON-string container decodings share the structured-secret candidate and byte budgets; incomplete inspection is reported separately from positive findings. Bounded DER recognition checks supported private-key encodings; arbitrary JS, unknown encodings and custom key wrapping can remain undetected.",
             "With configured asset keys, recognized stable CPython PYC headers enter a bounded canonical marshal-integer exact-pattern profile. Its completion does not validate the marshal body or make code confidential. Unsupported PYC headers, short integer aliases or budgets fail this separate inspection; computed, split and noncanonical constants remain outside its scope.",
             "JSON-like payloads exceeding 8 MiB or structural limits fail each enabled structured inspection.",
             "ELF/PE/Mach-O and core WebAssembly checks report supported debug metadata and private/static symbols, including inside inspected archives. Recognized embedded LLVM compiler sections are reported separately. WebAssembly inspection validates the section envelope, not all instruction semantics. Standalone MSF7/MSF2, raw CLI metadata and raw/wrapped LLVM bitcode are recognized but unsupported and fail metadata inspection, even when renamed. Public imports/exports, instructions and runtime metadata remain observable; other native formats are not inspected.",

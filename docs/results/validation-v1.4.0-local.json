@@ -1,0 +1,140 @@
+{
+  "schema": "anti-rea-forge.local-validation.v1",
+  "recorded_at": "2026-11-18T08:25:27.838799+00:00",
+  "version": "1.4.0",
+  "candidate_package": {
+    "package_files": 32,
+    "package_inventory_sha256": "defa35dcdf89e498cf8727e72236c8eafd1e3c006e68abdc50be4f36d90dca5e"
+  },
+  "baseline": {
+    "version": "1.3.0",
+    "official_wheel_sha256": "1bb79222ca7aa1224f3815b2cacf235985e9c9f08bf7330ce0a80099df7bc3a6"
+  },
+  "python": {
+    "runner_test_cases": 1066,
+    "passed_test_cases": 1065,
+    "skipped_test_cases": 1,
+    "skipped_setup_classes": 10,
+    "unittest_skip_records": 11,
+    "seconds": 106.174,
+    "log_sha256": "0ede3c3daf7d02a2a9977d52755b799acdb6e7c1dc83f312d746bf3d7e959d5c",
+    "skip_records": [
+      "test_real_javac_class_and_jar_do_not_collide_with_macho_magic (test_macho.RealJavaCompatibilityTests.test_real_javac_class_and_jar_do_not_collide_with_macho_magic) ... skipped 'javac is required for the real Java class/JAR control'",
+      "setUpClass (test_macho_compiled.RealDarwinMetadataTests) ... skipped 'Apple clang/strip/lipo controls require macOS'",
+      "setUpClass (test_native_code_controls.NativeCodeControlsLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN'",
+      "setUpClass (test_native_code_obfuscation.SealedNativeObfuscationLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_native_obfuscation.NativeObfuscationLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN for LLVM 18 builds'",
+      "setUpClass (test_native_obfuscation_cli.NativeObfuscationLLVMCLI) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_OBF_PLUGIN for LLVM 18 CLI builds'",
+      "setUpClass (test_native_virtualization.NativeVirtualizationLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_native_virtualization_cli.NativeVirtualizationRealCLI) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_native_vm_integers.NativeVMIntegerExecution) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN for VM builds'",
+      "setUpClass (test_sealed_code_controls.SealedControlsLLVM) ... skipped 'requires RELEASEGUARD_LLVM_BIN and RELEASEGUARD_AMICE_PLUGIN'",
+      "setUpClass (test_standalone_metadata_compiled.RealMsvcPdbTests) ... skipped 'Real MSVC PDB generation requires Windows'"
+    ],
+    "counting_note": "unittest setup-class skips do not increment testsRun. Count successful test-case records directly; do not subtract all 11 mixed skip records from 1066.",
+    "new_test_methods": 65,
+    "previous_v1_3_same_log_counting": {
+      "runner_test_cases": 1001,
+      "passed_test_cases": 1000,
+      "skipped_test_cases": 1,
+      "skipped_setup_classes": 10
+    }
+  },
+  "javascript": {
+    "unit_tests_passed": 67,
+    "integration_tests_passed": 12,
+    "unit_log_sha256": "e56cb18b23eef89057bba38d2b9e8aee3edacb66a4b4ff1d402d8c02aa839c4f",
+    "integration_log_sha256": "6703bb496ba4d979299a216beb2ff177efdec0cdf12afef3d5fc028bd333b76e",
+    "strict_typescript_declarations_passed": true
+  },
+  "paired_reports": {
+    "private-content-controls-v1.4.0-rea-6.9.0.json": {
+      "sha256": "5c232c7f2d309087bcdb8c649517864281d7845c144c102dfe270033ab1d3a8f",
+      "candidate_package_inventory_sha256": "defa35dcdf89e498cf8727e72236c8eafd1e3c006e68abdc50be4f36d90dca5e"
+    },
+    "private-content-controls-v1.4.0-rea-source.json": {
+      "sha256": "6dc969863955c95da25330c97aaf87fb48dc5f15de6f1d764fc8f86f7ec04f6f",
+      "candidate_package_inventory_sha256": "defa35dcdf89e498cf8727e72236c8eafd1e3c006e68abdc50be4f36d90dca5e"
+    },
+    "stringified-key-recovery-v1.4.0-local.json": {
+      "sha256": "4253319ecc0c7045359d9caaec3cb565109f588d98fef9aeaa532f5cde763333",
+      "candidate_package_inventory_sha256": "defa35dcdf89e498cf8727e72236c8eafd1e3c006e68abdc50be4f36d90dca5e"
+    },
+    "usability-controls-v1.4.0-local.json": {
+      "sha256": "216539deb6034a4c353ff750c169c1d411dcd936f03f1e203893668c8d3911ac",
+      "candidate_package_inventory_sha256": "defa35dcdf89e498cf8727e72236c8eafd1e3c006e68abdc50be4f36d90dca5e"
+    }
+  },
+  "local_packaging": {
+    "fresh_wheel_sdist_sdk_passed": true,
+    "wheel_package_bytes_equal_candidate": true,
+    "installation_report_sha256": "f9e82f4f05b409d11fe0ea51a65f02caae57574f8a20fdf3c9ecfda0bb3fc5e1",
+    "python_installations": [
+      {
+        "artifact": "open_release_guard-1.4.0-py3-none-any.whl",
+        "version": "1.4.0",
+        "isolated_import": true,
+        "clean_release_accepted": true,
+        "renamed_source_map_blocked": true,
+        "native_resources_present": 5,
+        "asset_roundtrip_bytes": 4096,
+        "leaked_key_blocked": true,
+        "structured_key_blocked": true,
+        "wasm_split_verified": true,
+        "consumer_key_encodings_blocked": true,
+        "incomplete_source_map_blocked": true,
+        "relocatable_wasm_blocked": true,
+        "private_input_clean_accepted": true,
+        "private_input_copy_blocked": true,
+        "pyc_integer_key_blocked": true,
+        "encoded_pem_blocked": true,
+        "standalone_llvm_unverifiable": true,
+        "private_input_containment_blocked": true,
+        "stringified_key_blocked": true,
+        "initialized_references_verified": true,
+        "text_report_verified": true
+      },
+      {
+        "artifact": "open_release_guard-1.4.0.tar.gz",
+        "version": "1.4.0",
+        "isolated_import": true,
+        "clean_release_accepted": true,
+        "renamed_source_map_blocked": true,
+        "native_resources_present": 5,
+        "asset_roundtrip_bytes": 4096,
+        "leaked_key_blocked": true,
+        "structured_key_blocked": true,
+        "wasm_split_verified": true,
+        "consumer_key_encodings_blocked": true,
+        "incomplete_source_map_blocked": true,
+        "relocatable_wasm_blocked": true,
+        "private_input_clean_accepted": true,
+        "private_input_copy_blocked": true,
+        "pyc_integer_key_blocked": true,
+        "encoded_pem_blocked": true,
+        "standalone_llvm_unverifiable": true,
+        "private_input_containment_blocked": true,
+        "stringified_key_blocked": true,
+        "initialized_references_verified": true,
+        "text_report_verified": true
+      }
+    ],
+    "javascript_installation": {
+      "installed_sdk": true,
+      "clean_release_accepted": true,
+      "source_map_blocked": true,
+      "private_input_clean_accepted": true,
+      "private_input_copy_blocked": true,
+      "private_input_containment_blocked": true,
+      "initialized_references_verified": true
+    },
+    "source_dirty": true
+  },
+  "release_readiness": {
+    "required_ci_jobs": 13,
+    "exact_head_ci_required": true,
+    "local_run_authorizes_publication": false,
+    "final_commit_and_assets": "See the exact-commit CI and release-evidence.json attached to the public v1.4.0 release."
+  },
+  "scope": "Owned fixtures; positive recovery, positive detection, incomplete inspection, normal controls and explicit remaining boundaries are recorded separately. Local platform skips are not successes."
+}

@@ -1,0 +1,1032 @@
+{
+  "schema": "releaseguard-private-content-controls/v1",
+  "candidate": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.4.0",
+    "package_files": 32,
+    "package_inventory_sha256": "defa35dcdf89e498cf8727e72236c8eafd1e3c006e68abdc50be4f36d90dca5e",
+    "python_version": "3.12.14",
+    "version": "1.4.0"
+  },
+  "recorded_at": "2026-11-18T08:17:16.429Z",
+  "benchmark_files_sha256": {
+    "driver": "a533ad790ff4bb702cc87f0990768610a9e0289fe5afcd470df8d61dfc35d199",
+    "helper": "357b00daa42dba051df1fa7f9fc20168d58a4111188bbe411bebf11817c05ce1",
+    "runtime": "b59453cdd0c5f1c6fa460f0899ee99a384cf4d469c87568b40a70fce25be638c"
+  },
+  "baseline": {
+    "cryptography_version": "50.0.2",
+    "implementation": "CPython",
+    "installed_distribution_version": "1.3.0",
+    "package_files": 31,
+    "package_inventory_sha256": "c7dabae9d565a0065850dc9e7d1e53673fb434b7694f4fc7780a7a874f3f7d44",
+    "python_version": "3.12.14",
+    "version": "1.3.0",
+    "official_wheel_sha256": "1bb79222ca7aa1224f3815b2cacf235985e9c9f08bf7330ce0a80099df7bc3a6"
+  },
+  "rea": {
+    "distribution": "npm",
+    "version": "6.9.0",
+    "npm_integrity": "sha512-KqDn1UR5BMqHoQ3MGAnPuWiSKwgdFaz1L/uUNgrKt+1W8kPtgYP8AWEOXIF1lDIOBVyPuYIIst2iamo1Wf3r8g==",
+    "recorded_registry_provenance": {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/rea-agents@6.9.0",
+      "recorded_date": "2026-11-18",
+      "declared_source_commit": "d74549e495c58eb4a560279fd9f05508401ea0a0",
+      "subject_sha512": "2aa0e7d5447904ca87a10dcc1809cfb968922b081d15acf52ffb94360acab7ed56f243ed8183fc01610e5c817594320e055c8fb98208b2dda26a6a3559fdebf2",
+      "signature_chain_independently_verified": false
+    }
+  },
+  "node_version": "v24.22.1",
+  "private_reference_bytes": 117,
+  "private_reference_sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f",
+  "scope": "One exact-content profile. Prefix, suffix, concatenation and chunk crossings are input variants; the six container layouts are deployment checks, not independent vulnerabilities or extra REA recoveries.",
+  "boundary": "Edited, encoded, compiled or split contents are not covered. The changed-comment case remains REA-recoverable and passes this exact-content profile. Protection requires keeping private implementation outside the public release.",
+  "javascript_cases": [
+    {
+      "name": "exact_whole_file",
+      "source_bytes": 117,
+      "source_sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f",
+      "contains_complete_reference": true,
+      "inventory": [
+        {
+          "path": "app.mjs",
+          "bytes": 117,
+          "sha256": "634e7f55b629eb4ab2e1ee9528c5acdaf8342c5b8dc4ae9f0dc1918b3fbd4c3f"
+        },
+        {
+          "path": "package.json",
+          "bytes": 99,
+          "sha256": "9c4600bee58342ea75022bb485cac5a0bf366d158903b5371387b7bdf9abc554"
+        }
+      ],
+      "baseline": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.mjs",
+            "rule_index": 0
+          }
+        ],
+        "evidence_sha256": "f45988caf6342ffad9ccfc1b2ffbd3fadda2dcb55560450b6a4d7612670bc3db",
+        "evidence_bytes": 4801
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.mjs",
+            "rule_index": 0
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 0,
+        "private_input_verification_bytes": 0,
+        "evidence_sha256": "927d0568400de3c0351bc2705e768efc399d5cf476165ae67da412d8278a3408",
+        "evidence_bytes": 5491
+      },
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_d354804c68ba8700e12fb03e794cf9f5723a7ceff59896d37bf75a5f34a83cb2",
+        "evidence_sha256": "85128913cd93f70f21e9804055321b7c519e4a33fb7525f5ce1e547053d90ea5",
+        "evidence_bytes": 51754,
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_function_nodes": 1,
+        "private_function_literals": [
+          37,
+          19
+        ]
+      },
+      "recovery": {
+        "method": "REA digest-bound source range copied from the owned published JavaScript",
+        "function_sha256": "d26da9f8e8d83555840522a04fa9140687a4891f42d8e377a709ca3b0fb3c12e",
+        "normalized_ast_sha256": "1202cf5d4dce98e2e633e0f60e63a22fe61539f330275bf3a46070396ca8545a",
+        "input_values": [
+          -2,
+          0,
+          1,
+          11
+        ],
+        "original_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "published_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "recovered_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ]
+      }
+    },
+    {
+      "name": "prefixed",
+      "source_bytes": 128,
+      "source_sha256": "aab150ec28bdfe239743771c9d5719f37ad069be5025f0ebdc02050e77c38835",
+      "contains_complete_reference": true,
+      "inventory": [
+        {
+          "path": "app.mjs",
+          "bytes": 128,
+          "sha256": "aab150ec28bdfe239743771c9d5719f37ad069be5025f0ebdc02050e77c38835"
+        },
+        {
+          "path": "package.json",
+          "bytes": 99,
+          "sha256": "9c4600bee58342ea75022bb485cac5a0bf366d158903b5371387b7bdf9abc554"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "758cc65a9f942a01b41e63ae1949a07952aea958ff0086360c602e559a45f740",
+        "evidence_bytes": 4690
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.mjs",
+            "rule_index": 0,
+            "representation": "contained-bytes"
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "ae8f37366f104c41b901478ad6f75da89e06a193fcedbcea403d592775309597",
+        "evidence_bytes": 5528
+      },
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_58fc41bb2703f36d20c4b791376c50fb0010b1ec2409d3f7af30cf67ccea5ed3",
+        "evidence_sha256": "fd454ce0545befc65f14aec2acf6c1b5d7fb9f6f337654f0ffffeca1d512a60c",
+        "evidence_bytes": 51722,
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_function_nodes": 1,
+        "private_function_literals": [
+          19,
+          37
+        ]
+      },
+      "recovery": {
+        "method": "REA digest-bound source range copied from the owned published JavaScript",
+        "function_sha256": "d26da9f8e8d83555840522a04fa9140687a4891f42d8e377a709ca3b0fb3c12e",
+        "normalized_ast_sha256": "1202cf5d4dce98e2e633e0f60e63a22fe61539f330275bf3a46070396ca8545a",
+        "input_values": [
+          -2,
+          0,
+          1,
+          11
+        ],
+        "original_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "published_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "recovered_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ]
+      }
+    },
+    {
+      "name": "suffixed",
+      "source_bytes": 129,
+      "source_sha256": "e051aec22225058b956a61fe2b077de4625372fa925d0f7151248e40788b182c",
+      "contains_complete_reference": true,
+      "inventory": [
+        {
+          "path": "app.mjs",
+          "bytes": 129,
+          "sha256": "e051aec22225058b956a61fe2b077de4625372fa925d0f7151248e40788b182c"
+        },
+        {
+          "path": "package.json",
+          "bytes": 99,
+          "sha256": "9c4600bee58342ea75022bb485cac5a0bf366d158903b5371387b7bdf9abc554"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "ede2575e82ba6d016d601370f4082350ddd719b871e914765f1635c88911785a",
+        "evidence_bytes": 4690
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.mjs",
+            "rule_index": 0,
+            "representation": "contained-bytes"
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "bc190872af3fb8131039ee128d80bbbd58648848bb18598b006556f3f9a14e4f",
+        "evidence_bytes": 5528
+      },
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_a638df12268c09a5a1f4339e8a97c7cf2d6455a66b54b663f96a122a92443f60",
+        "evidence_sha256": "e75c3bb92388a1a0976c987072bd3b3da974e6b7764ca00f224cc987416ffdfa",
+        "evidence_bytes": 51722,
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_function_nodes": 1,
+        "private_function_literals": [
+          37,
+          19
+        ]
+      },
+      "recovery": {
+        "method": "REA digest-bound source range copied from the owned published JavaScript",
+        "function_sha256": "d26da9f8e8d83555840522a04fa9140687a4891f42d8e377a709ca3b0fb3c12e",
+        "normalized_ast_sha256": "1202cf5d4dce98e2e633e0f60e63a22fe61539f330275bf3a46070396ca8545a",
+        "input_values": [
+          -2,
+          0,
+          1,
+          11
+        ],
+        "original_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "published_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "recovered_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ]
+      }
+    },
+    {
+      "name": "concatenated_bundle",
+      "source_bytes": 200,
+      "source_sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2",
+      "contains_complete_reference": true,
+      "inventory": [
+        {
+          "path": "app.mjs",
+          "bytes": 200,
+          "sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2"
+        },
+        {
+          "path": "package.json",
+          "bytes": 99,
+          "sha256": "9c4600bee58342ea75022bb485cac5a0bf366d158903b5371387b7bdf9abc554"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "abfcef85ae50ca705e189b973d3a703ec65311ecf3eae80fdc02f7de65b90b10",
+        "evidence_bytes": 4701
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.mjs",
+            "rule_index": 0,
+            "representation": "contained-bytes"
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "3d0b887fa76e5a9b47bb0246e783fa01bb33ad9af15bb9de38e2dbb83cce9136",
+        "evidence_bytes": 5539
+      },
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_cf61e29630687493d1cd415d5446382265cbc7713885467dbb92cb19d3ebb5fa",
+        "evidence_sha256": "de9f5b19dfdde1df9c9f39a35d72c215063b84b4baa9d895ecd27ab6f7060fdb",
+        "evidence_bytes": 72615,
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_function_nodes": 1,
+        "private_function_literals": [
+          19,
+          37
+        ]
+      },
+      "recovery": {
+        "method": "REA digest-bound source range copied from the owned published JavaScript",
+        "function_sha256": "d26da9f8e8d83555840522a04fa9140687a4891f42d8e377a709ca3b0fb3c12e",
+        "normalized_ast_sha256": "1202cf5d4dce98e2e633e0f60e63a22fe61539f330275bf3a46070396ca8545a",
+        "input_values": [
+          -2,
+          0,
+          1,
+          11
+        ],
+        "original_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "published_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "recovered_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ]
+      }
+    },
+    {
+      "name": "anchor_crosses_chunk",
+      "source_bytes": 131158,
+      "source_sha256": "a35a5cd8faa22cf4aa8adf0f84cdad2b809fdd94ebcad04e659b0d3fb8b1cc38",
+      "contains_complete_reference": true,
+      "inventory": [
+        {
+          "path": "app.mjs",
+          "bytes": 131158,
+          "sha256": "a35a5cd8faa22cf4aa8adf0f84cdad2b809fdd94ebcad04e659b0d3fb8b1cc38"
+        },
+        {
+          "path": "package.json",
+          "bytes": 99,
+          "sha256": "9c4600bee58342ea75022bb485cac5a0bf366d158903b5371387b7bdf9abc554"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "c8662b441ebec48d2efa2c87ac3dd539553ee4708b20d438e93a161061cdd589",
+        "evidence_bytes": 4708
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.mjs",
+            "rule_index": 0,
+            "representation": "contained-bytes"
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "f3dd287f89462346df04a1de1f7e86749cafff89463388092ba51d9ffa224945",
+        "evidence_bytes": 5546
+      },
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_9af97db73ced8d3ae1a8f1e90958cdb1514e3149ac1b8d2d8eccee4e3843b022",
+        "evidence_sha256": "7bf8d8a67382672db44e2c364d69f18ae0fb29d49de084d7afe69e30d4e9abef",
+        "evidence_bytes": 51817,
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_function_nodes": 1,
+        "private_function_literals": [
+          37,
+          19
+        ]
+      },
+      "recovery": {
+        "method": "REA digest-bound source range copied from the owned published JavaScript",
+        "function_sha256": "d26da9f8e8d83555840522a04fa9140687a4891f42d8e377a709ca3b0fb3c12e",
+        "normalized_ast_sha256": "1202cf5d4dce98e2e633e0f60e63a22fe61539f330275bf3a46070396ca8545a",
+        "input_values": [
+          -2,
+          0,
+          1,
+          11
+        ],
+        "original_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "published_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "recovered_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ]
+      }
+    },
+    {
+      "name": "changed_comment_boundary",
+      "source_bytes": 117,
+      "source_sha256": "b7b7ff10c1ef0f082652c5cecc49827e3cc686bcea00ad81afb83db53191c371",
+      "contains_complete_reference": false,
+      "inventory": [
+        {
+          "path": "app.mjs",
+          "bytes": 117,
+          "sha256": "b7b7ff10c1ef0f082652c5cecc49827e3cc686bcea00ad81afb83db53191c371"
+        },
+        {
+          "path": "package.json",
+          "bytes": 99,
+          "sha256": "9c4600bee58342ea75022bb485cac5a0bf366d158903b5371387b7bdf9abc554"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "35c36995a8a38caf3be3727a0e98ea7975d7690ff9eaaf1149252e10a2f8a95b",
+        "evidence_bytes": 4706
+      },
+      "candidate": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 0,
+        "private_input_verification_bytes": 0,
+        "evidence_sha256": "88eb8c5149cad20cbb070a3964c3e7952ab781cf83feb214e493d2c7c4d72640",
+        "evidence_bytes": 5396
+      },
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_4bb8a17f3627cd6877489c0988f0bfc9f01d1ea68874bb7788ea83c2994ff30a",
+        "evidence_sha256": "cf25d95664130632e28e6aa4be48822d4958f09c8cf8009b6fe3b9b7ed96aa73",
+        "evidence_bytes": 51786,
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_function_nodes": 1,
+        "private_function_literals": [
+          19,
+          37
+        ]
+      },
+      "recovery": {
+        "method": "REA digest-bound source range copied from the owned published JavaScript",
+        "function_sha256": "d26da9f8e8d83555840522a04fa9140687a4891f42d8e377a709ca3b0fb3c12e",
+        "normalized_ast_sha256": "1202cf5d4dce98e2e633e0f60e63a22fe61539f330275bf3a46070396ca8545a",
+        "input_values": [
+          -2,
+          0,
+          1,
+          11
+        ],
+        "original_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "published_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ],
+        "recovered_outputs": [
+          -55,
+          19,
+          56,
+          426
+        ]
+      }
+    },
+    {
+      "name": "public_only",
+      "source_bytes": 32,
+      "source_sha256": "40a213b467b8db43594673db80a99e70f2b136fd4611664bf8d4b51cb86c2681",
+      "contains_complete_reference": false,
+      "inventory": [
+        {
+          "path": "app.mjs",
+          "bytes": 32,
+          "sha256": "40a213b467b8db43594673db80a99e70f2b136fd4611664bf8d4b51cb86c2681"
+        },
+        {
+          "path": "package.json",
+          "bytes": 99,
+          "sha256": "9c4600bee58342ea75022bb485cac5a0bf366d158903b5371387b7bdf9abc554"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "624dd04c70004f9a4ea13d058667ae83163f272057e9d394308c30b431bf33ec",
+        "evidence_bytes": 4692
+      },
+      "candidate": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 0,
+        "private_input_verification_bytes": 0,
+        "evidence_sha256": "cddc0597a5a793f8a73a0bc841f9a79089502a87ec9f93aa46b497df0281fc28",
+        "evidence_bytes": 5382
+      },
+      "rea": {
+        "operation": "analyze_javascript_application",
+        "provider": "rea-javascript-application",
+        "evidence_id": "ev_379a7a7a95530b39ef6203eab845d88a16e49cb17338882d91a4dc96f3e7db9f",
+        "evidence_sha256": "564dbd8cab3ce9c7c5129ae58745f6d2bbf9fa802e3a9933c2c3e319af462cdb",
+        "evidence_bytes": 35693,
+        "complete": true,
+        "truncated": false,
+        "parsed_javascript_files": 1,
+        "private_function_nodes": 0,
+        "private_function_literals": []
+      },
+      "recovery": null
+    }
+  ],
+  "container_variants": [
+    {
+      "name": "deflated_zip",
+      "shared_contained_payload_sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2",
+      "inventory": [
+        {
+          "path": "app.zip",
+          "bytes": 260,
+          "sha256": "9fa7de478bb4a776c482189eb3f9f9141f82e6cf657b78ab932a97e95bae8fe0"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "b8fad4b5b1d236e90762696ea1aaf007f3d4adfe0436d02de9db539b9a3b5109",
+        "evidence_bytes": 4550
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.zip",
+            "rule_index": 0,
+            "representation": "contained-bytes",
+            "archive_members": [
+              "app.mjs"
+            ]
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "4295d3a1f6fa3ea95d84e92a51eb5831c53cbdba05024e6be5aa2bf8f4700db8",
+        "evidence_bytes": 5442
+      }
+    },
+    {
+      "name": "nested_zip",
+      "shared_contained_payload_sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2",
+      "inventory": [
+        {
+          "path": "app.zip",
+          "bytes": 333,
+          "sha256": "9d0c27b4c9c567c3480532a2da49c59adf2deb2e51a3cf24f777d672669b8e9c"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "cddd387f949f5ed97de2b2c2457679efb30b143f55d2ce938c431489782ce12f",
+        "evidence_bytes": 4548
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.zip",
+            "rule_index": 0,
+            "representation": "contained-bytes",
+            "archive_members": [
+              "inner.zip",
+              "app.mjs"
+            ]
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 3,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "9b1f1a9f78ab76f67d319a179c856046444a63389eb424b010fa882f3cdb01cb",
+        "evidence_bytes": 5461
+      }
+    },
+    {
+      "name": "packed_asar",
+      "shared_contained_payload_sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2",
+      "inventory": [
+        {
+          "path": "app.asar",
+          "bytes": 264,
+          "sha256": "4eb2f54aa6a925fe6f5ea832901e053aca9e649a3e4f8d7f554f1939ca3afa50"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "5bebbf16d49a26c9fcc08a1ecf80e132f10f444fedf3c628ab24c2a12e590405",
+        "evidence_bytes": 4550
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.asar",
+            "rule_index": 0,
+            "representation": "contained-bytes"
+          },
+          {
+            "code": "private_input_exposure",
+            "path": "app.asar",
+            "rule_index": 0,
+            "representation": "contained-bytes",
+            "archive_members": [
+              "app.mjs"
+            ]
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 2,
+        "private_input_verification_bytes": 234,
+        "evidence_sha256": "5a77f47857d10591ea57aa6fc8faefca8141f308a68e8796ef6ab65a6c374890",
+        "evidence_bytes": 5587
+      }
+    },
+    {
+      "name": "zip_packed_asar",
+      "shared_contained_payload_sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2",
+      "inventory": [
+        {
+          "path": "app.zip",
+          "bytes": 312,
+          "sha256": "4c3e1b71d47093586f601cbebe0a3ed9b92b69c27703f1b55125f1fce131cda6"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "a7046a11cd177132fea67976f46dec6b853c567bacdd2a643c5e01a6b931135a",
+        "evidence_bytes": 4553
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.zip",
+            "rule_index": 0,
+            "representation": "contained-bytes",
+            "archive_members": [
+              "app.asar"
+            ]
+          },
+          {
+            "code": "private_input_exposure",
+            "path": "app.zip",
+            "rule_index": 0,
+            "representation": "contained-bytes",
+            "archive_members": [
+              "app.asar",
+              "app.mjs"
+            ]
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 3,
+        "private_input_candidate_checks": 2,
+        "private_input_verification_bytes": 234,
+        "evidence_sha256": "7fa5a07948c45ef669acef76a260603a13a53e7dbae5c4683369eb91cf02dd15",
+        "evidence_bytes": 5663
+      }
+    },
+    {
+      "name": "unpacked_asar",
+      "shared_contained_payload_sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2",
+      "inventory": [
+        {
+          "path": "app.asar",
+          "bytes": 68,
+          "sha256": "a9de47df76e4453181c3986c1cac0ae607af5b45a60e0dcfca169874a8c969a0"
+        },
+        {
+          "path": "app.asar.unpacked/app.mjs",
+          "bytes": 200,
+          "sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "1141452731242f608a62bb4165db44780ab9668e2cfdecff82bd9e9c5ec7741b",
+        "evidence_bytes": 4709
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.asar.unpacked/app.mjs",
+            "rule_index": 0,
+            "representation": "contained-bytes"
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "f82e10ba7f8d250613119a25f87860b1256fb957c83b6aeadbdbce24808c08fd",
+        "evidence_bytes": 5565
+      }
+    },
+    {
+      "name": "zip_unpacked_asar",
+      "shared_contained_payload_sha256": "4d25120572f3279147b3ddea0712f94cce766c2f46a86b4d99c99d5a935293e2",
+      "inventory": [
+        {
+          "path": "app.zip",
+          "bytes": 450,
+          "sha256": "1fad08ed67ad03143d047d2e79da39faddb5621bb1c81242050abd3759b6ffd0"
+        }
+      ],
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "27dd0f683cdfc28216aab3ee89b12cce67a022bbb2c5625041f61819224ee80a",
+        "evidence_bytes": 4555
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.zip",
+            "rule_index": 0,
+            "representation": "contained-bytes",
+            "archive_members": [
+              "app.asar.unpacked/app.mjs"
+            ]
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 3,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "42cb73421d017648bbab2dddf4a6ef6a801979c72d12ed2316d6eded4eab7f15",
+        "evidence_bytes": 5465
+      }
+    }
+  ],
+  "saved_configuration_controls": [
+    {
+      "name": "concatenated_bundle",
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "abfcef85ae50ca705e189b973d3a703ec65311ecf3eae80fdc02f7de65b90b10",
+        "evidence_bytes": 4701
+      },
+      "candidate": {
+        "exit_code": 3,
+        "ok": false,
+        "findings": [
+          {
+            "code": "private_input_exposure",
+            "path": "app.mjs",
+            "rule_index": 0,
+            "representation": "contained-bytes"
+          }
+        ],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 1,
+        "private_input_verification_bytes": 117,
+        "evidence_sha256": "3d0b887fa76e5a9b47bb0246e783fa01bb33ad9af15bb9de38e2dbb83cce9136",
+        "evidence_bytes": 5539
+      }
+    },
+    {
+      "name": "public_only",
+      "baseline": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "evidence_sha256": "624dd04c70004f9a4ea13d058667ae83163f272057e9d394308c30b431bf33ec",
+        "evidence_bytes": 4692
+      },
+      "candidate": {
+        "exit_code": 0,
+        "ok": true,
+        "findings": [],
+        "private_input_profile": "exact-content/v1",
+        "private_input_scan_completed": true,
+        "private_input_payloads_checked": 2,
+        "private_input_candidate_checks": 0,
+        "private_input_verification_bytes": 0,
+        "evidence_sha256": "cddc0597a5a793f8a73a0bc841f9a79089502a87ec9f93aa46b497df0281fc28",
+        "evidence_bytes": 5382
+      }
+    }
+  ],
+  "resource_probe": {
+    "memory_scope": "Python matcher allocations only; excludes preallocated fixtures, interpreter, scanner metadata and container buffers.",
+    "method": "Inputs allocated before tracemalloc; one run per case including tracing overhead; not a general throughput claim.",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "python_version": "3.12.14",
+    "results": [
+      {
+        "candidates_checked": 0,
+        "incomplete_reason": null,
+        "matches": [],
+        "name": "64_references_256MiB_public_control",
+        "public_bytes": 268435456,
+        "reference_count": 64,
+        "retained_anchor_bytes": 4096,
+        "seconds": 6.614606,
+        "traced_matcher_peak_bytes": 415385,
+        "verification_bytes": 0
+      },
+      {
+        "candidates_checked": 0,
+        "incomplete_reason": null,
+        "matches": [],
+        "name": "single_reference_64MiB_public_control",
+        "public_bytes": 67108864,
+        "reference_count": 1,
+        "retained_anchor_bytes": 64,
+        "seconds": 0.043929,
+        "traced_matcher_peak_bytes": 395065,
+        "verification_bytes": 0
+      },
+      {
+        "candidates_checked": 1,
+        "incomplete_reason": null,
+        "matches": [
+          0
+        ],
+        "name": "anchor_crosses_128KiB_chunk",
+        "public_bytes": 131164,
+        "reference_count": 1,
+        "retained_anchor_bytes": 64,
+        "seconds": 0.000391,
+        "traced_matcher_peak_bytes": 133365,
+        "verification_bytes": 117
+      },
+      {
+        "candidates_checked": 1,
+        "incomplete_reason": null,
+        "matches": [
+          0
+        ],
+        "name": "short_reference_1B",
+        "public_bytes": 12,
+        "reference_count": 1,
+        "retained_anchor_bytes": 1,
+        "seconds": 0.000087,
+        "traced_matcher_peak_bytes": 2304,
+        "verification_bytes": 0
+      },
+      {
+        "candidates_checked": 4096,
+        "incomplete_reason": "private_content_candidate_limit",
+        "matches": [],
+        "name": "4096_candidates_fail_closed",
+        "public_bytes": 5000,
+        "reference_count": 1,
+        "retained_anchor_bytes": 64,
+        "seconds": 0.197061,
+        "traced_matcher_peak_bytes": 3088,
+        "verification_bytes": 266240
+      },
+      {
+        "candidates_checked": 65,
+        "incomplete_reason": "private_content_verification_limit",
+        "matches": [],
+        "name": "512MiB_verification_fail_closed",
+        "public_bytes": 8388736,
+        "reference_count": 1,
+        "retained_anchor_bytes": 64,
+        "seconds": 0.61758,
+        "traced_matcher_peak_bytes": 394995,
+        "verification_bytes": 536870912
+      }
+    ]
+  },
+  "summary": {
+    "exact_reference_controls": 1,
+    "newly_blocked_wrapping_profiles": 3,
+    "chunk_boundary_controls": 1,
+    "rea_recovered_published_inputs_with_complete_reference": 5,
+    "deployment_variants": 6,
+    "unchanged_public_controls": 1,
+    "recoverable_edited_reference_boundaries": 1,
+    "whole_scan_candidate_limit": 4096,
+    "whole_scan_verification_byte_limit": 536870912
+  }
+}

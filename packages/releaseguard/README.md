@@ -8,13 +8,13 @@ release checks and verification code used by the Python tools. There is no
 JavaScript build step and no second cryptographic implementation to maintain.
 
 **Node.js 22+ and Python 3.10+ are required.** Install this repository's Python
-package into the interpreter you select. Use the matching **1.3.0 SDK and Python core**.
+package into the interpreter you select. Use the matching **1.4.0 SDK and Python core**.
 The SDK is distributed as an installable **GitHub Release archive** and as a local
 workspace package. It remains marked private to prevent accidental npm publication;
 no npm registry release is claimed.
 
 ```sh
-npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.3.0/anti-rea-forge-releaseguard-1.3.0.tgz
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.4.0/anti-rea-forge-releaseguard-1.4.0.tgz
 ```
 
 ## Install and run
@@ -214,7 +214,7 @@ const report = await guard.scanRelease({
 TypeScript consumers receive declarations from [index.d.ts](index.d.ts), including
 the report fields and error codes.
 
-### Private implementation references in 1.3
+### Private implementation references in 1.4
 
 `privateInputFiles` accepts at most **64 external, nonempty regular files**, limited
 to **8 MiB each and 64 MiB total**. Python rejects directories, globs, linked files
@@ -251,22 +251,49 @@ bytes and rechecks their identity and hash before completion. Missing, replaced 
 modified references fail the operation. `checks.private_inputs_checked` records the
 count, and a public copy yields `private_input_exposure` with its `rule_index`.
 
-The rule matches **exact whole-file SHA-256 copies**, including renamed physical
-files and inspected ZIP/ASAR members and verified unpacked siblings. It does not detect
-rewritten, compiled, concatenated or fragmented versions; even an appended newline
-changes the digest. Reference paths and separate reference digests are omitted from
+The rule matches **complete unchanged private contents**, including renamed physical
+files, prefixed/suffixed bundles, inspected ZIP/ASAR members and verified unpacked
+siblings. It does not detect rewritten, compiled, encoded or fragmented versions.
+Reference paths, locating anchors and separate reference digests are omitted from
 reports, while public file/member names and public inventory hashes remain visible.
 The [private-service example](../../examples/private_service/README.md) and real REA
 [npm](../../docs/results/private-input-controls-v1.3.0-rea-6.9.0.json) /
 [source](../../docs/results/private-input-controls-v1.3.0-rea-source.json) controls show
 the intended separation and deliberately republished-copy test.
 
-The equivalent CLI option works on `scan-release`, `check` and `prepare`; the Python
+The equivalent CLI option works on `project-init`, `scan-release`, `check` and `prepare`; the Python
 keyword is `private_input_files`. `prepare` retains reference snapshots across signing
 and output creation, rechecks them after writing sidecars, and removes a new output
 bundle on final verification failure. Signing remains a Python CLI/API workflow, not
 an SDK method. Keep references, release files and their ancestors under trusted build
 control throughout the operation; these checks are not an atomic filesystem snapshot.
+
+Initialize references directly to avoid hand-editing configuration-relative paths:
+
+```sh
+python -m releaseguard project-init --root dist --product Demo --out .releaseguard \
+  --private-input-file service/private_quote.py --asset-key-file issuer/asset.key
+python -m releaseguard check --config .releaseguard/project.json --format text
+```
+
+The initializer validates inputs before writing and saves relative paths. `checkProject`
+then needs only `config`. Text reports are a CLI option with status and next actions;
+the SDK keeps JSON. Its exit-0/3 decisions and exception behavior remain unchanged.
+
+| Content-check field | Meaning |
+| --- | --- |
+| `private_input_profile` | `exact-content/v1`, or `null` without references |
+| `private_input_scan_completed` | Whether configured content matching completed |
+| `private_input_payloads_checked` | Payloads entering content inspection |
+| `private_input_candidate_checks` | Candidate checks charged across the complete scan |
+| `private_input_verification_bytes` | Candidate span bytes charged |
+
+Complete-content matching shares 4,096 candidate checks and 512 MiB verification
+reads across all files and expanded members. Exhaustion yields
+`private_input_unverifiable` and false completion, not a positive content match.
+Short references are matched in full, including one-byte inputs; common values may
+match ordinary public files. See [profile and limits](../../docs/private-input-content.md)
+and the [v1.4 paired controls](../../docs/rea-defense-v1.4.0.zh-CN.md).
 
 ### New scan profiles and completion fields
 
@@ -304,6 +331,18 @@ Confirmed private headers produce `private_key_marker` with `json-hex-pem` or
 `structured_secret_unverifiable` and a false structured completion flag. This does
 not recursively decode arbitrary wrappers or prove that every marked key is valid.
 Public-key PEM and certificates are allowed by this private-key rule.
+
+Version 1.4 also parses up to **two additional JSON-string container layers per
+nested path**. Supported private JWK material and configured key arrays inside those
+containers use the same production rules. Each container is limited to 64 KiB UTF-8
+text; all branches and DER/PEM decodes share the 64-candidate / 256 KiB budget and
+the existing 100,000-node / 64-depth limits. Findings add a fixed
+`json-stringified-...` representation and `stringified_layers`, without values or field
+names. Duplicate fields, nonfinite numbers, recognizable overdeep or oversized
+containers produce incomplete inspection. Ordinary text and supported public-key
+controls remain allowed. This does not evaluate JavaScript or arbitrary encodings.
+Empty object/array/string envelopes need no parse and consume no decode budget;
+nonempty public containers still count toward the same finite budget.
 
 Native scans separately report exact embedded LLVM sections as
 `native_compiler_metadata`. The PE/ELF `gate` policy defaults

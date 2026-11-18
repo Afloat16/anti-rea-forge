@@ -7,7 +7,7 @@ JavaScript ESM，提供 TypeScript 类型声明；不需要 JavaScript 编译步
 一套密码学实现。Web、Node.js 和 Electron 项目可以把同一套发布检查接入自己的构建流程。
 
 需要 **Node.js 22+、Python 3.10+**，并把本仓库的 Python 包安装到所选解释器。
-请使用匹配的 **1.3.0 SDK 与 Python 核心**。SDK 可从 GitHub Release 压缩包或本地目录安装；
+请使用匹配的 **1.4.0 SDK 与 Python 核心**。SDK 可从 GitHub Release 压缩包或本地目录安装；
 package.json 保持 `private`，尚不声称已发布到 npm 注册表。
 
 ## 安装和运行
@@ -186,7 +186,7 @@ const report = await guard.scanRelease({
 });
 ```
 
-### v1.3 私有实现文件引用
+### v1.4 私有实现文件引用
 
 `privateInputFiles` 接受发布目录之外的非空普通文件：**最多 64 个，每个最多 8 MiB，
 合计最多 64 MiB**。Python 拒绝目录、通配符、文件或祖先目录符号链接，以及 Windows
@@ -219,18 +219,42 @@ if (!report.ok) process.exitCode = report.exitCode;
 读取引用文件当前的字节和身份，并在返回前重读、复核。文件缺失、替换或更改会让操作失败。
 `checks.private_inputs_checked` 报告引用数量；命中输出 `private_input_exposure` 和 `rule_index`。
 
-这条规则匹配**完整文件的 SHA-256 相同副本**，覆盖改名普通文件、已检查的 ZIP/ASAR
-成员和已验证的 unpacked 旁文件。它不识别改写、编译、拼接或分片后的实现；追加一个换行
-也会改变摘要。报告不列出私有引用路径、内容或单独的引用摘要，公开文件/成员路径及公开
+这条规则匹配**完整且未改动的私有内容**，覆盖改名普通文件、添加头尾或串接的 bundle、
+已检查的 ZIP/ASAR 成员和已验证的 unpacked 旁文件。它不识别改写、编译、编码或分片后的实现。
+报告不列出私有引用路径、内容、定位锚点或单独的引用摘要，公开文件/成员路径及公开
 清单中的哈希仍然可见。[私有服务示例](../../examples/private_service/README.md) 及真实 REA
 [npm](../../docs/results/private-input-controls-v1.3.0-rea-6.9.0.json) /
 [源码](../../docs/results/private-input-controls-v1.3.0-rea-source.json) 对照保留了正常分离与
 故意重新发布私有文件的验证。
 
-等价 CLI 选项适用于 `scan-release`、`check`、`prepare`；Python 参数为
+等价 CLI 选项适用于 `project-init`、`scan-release`、`check`、`prepare`；Python 参数为
 `private_input_files`。`prepare` 将快照保留到签名和旁文件生成之后，再次复核引用与发布
 清单；最终验证失败会移除本轮新建输出目录。签名仍使用 Python CLI/API，SDK 不增加签发接口。
 操作期间应由可信构建流程保持引用文件、发布目录及其祖先目录稳定；这不是原子文件系统快照。
+
+可以在初始化时直接登记引用，避免手工换算相对配置路径：
+
+```sh
+python -m releaseguard project-init --root dist --product Demo --out .releaseguard \
+  --private-input-file service/private_quote.py --asset-key-file issuer/asset.key
+python -m releaseguard check --config .releaseguard/project.json --format text
+```
+
+初始化先验证真实输入，再保存相对 `project.json` 的路径。之后 `checkProject` 只需要
+`config`。文本报告面向 CLI，显示状态与修复动作；SDK 继续使用 JSON，0/3 判定及异常协议保持。
+
+| 内容检查字段 | 含义 |
+| --- | --- |
+| `private_input_profile` | `exact-content/v1`；未配置引用时为 `null` |
+| `private_input_scan_completed` | 配置的完整内容检查是否完成 |
+| `private_input_payloads_checked` | 进入内容检查的 payload 数量 |
+| `private_input_candidate_checks` | 整轮扫描已计费的候选检查数 |
+| `private_input_verification_bytes` | 已计费的候选完整片段字节数 |
+
+整轮扫描的所有文件和展开成员共享 **4,096 候选、512 MiB 验证读取**预算；耗尽时输出
+`private_input_unverifiable` 并标记未完成，不计作正向命中。短引用也按完整字节匹配，
+包括一字节输入，因此常见短值可能出现在普通公开文件中。见
+[完整范围](../../docs/private-input-content.md) 与 [v1.4 对照](../../docs/rea-defense-v1.4.0.zh-CN.md)。
 
 ### 新扫描范围与完成状态
 
@@ -261,6 +285,14 @@ if (!report.ok) process.exitCode = report.exitCode;
 `private_key_marker` 和 `json-hex-pem` / `json-base64-pem`；已识别但无效或超限的候选
 输出 `structured_secret_unverifiable`，并将结构检查完成状态设为 false。它不递归解任意
 包装，也不证明每个带标记的密钥都有效；公钥 PEM 与证书不会因此作为私钥被拒绝。
+
+v1.4 还支持沿每条嵌套路径额外解析最多 **两层 JSON 字符串容器**，再按既有规则检查
+其中的私有 JWK 与已知密钥数组。每个容器最多 64 KiB UTF-8 文本，所有分支与 DER/PEM
+共享 64 候选 / 256 KiB 预算，并继续使用 100,000 节点 / 64 深度限制。命中仅增加固定
+`json-stringified-...` 表示及 `stringified_layers` 数字，不输出字段名或值。重复字段、
+非有限数值、可识别的超深或超大容器明确标记检查不完整；普通文本和支持的公钥对照仍通过。
+这一过程不执行 JavaScript 或任意编码求值。
+确定为空的对象、数组、字符串外壳无需解析、不消耗解码预算；非空公开容器仍受同一预算限制。
 
 原生扫描将精确识别的 LLVM 嵌入资料单列为 `native_compiler_metadata`。PE/ELF `gate`
 新增 `require_no_compiler_metadata`，**默认 true**；有意发布编译器资料时必须在原生策略
@@ -339,14 +371,14 @@ if (!report.ok) process.exitCode = report.exitCode;
 `test/types-smoke.ts` 用于检查类型声明。
 新增功能应继续共用 Python 实现，并保留“检查完成且不通过”与“检查未完成”的区别。
 
-## 自 1.0 起的归档分发与 1.3 安装
+## 自 1.0 起的归档分发与 1.4 安装
 
-SDK 与 Python 核心当前版本统一为 1.3.0。自 1.0 起，GitHub Release 提供可直接安装的 SDK 压缩包；
+SDK 与 Python 核心当前版本统一为 1.4.0。自 1.0 起，GitHub Release 提供可直接安装的 SDK 压缩包；
 package.json 保持 private 以防误发 npm，未声称 npm registry 发布。已有本地目录安装仍然支持。
 
 ```sh
-npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.3.0/anti-rea-forge-releaseguard-1.3.0.tgz
+npm install https://github.com/Afloat16/anti-rea-forge/releases/download/v1.4.0/anti-rea-forge-releaseguard-1.4.0.tgz
 ```
 
-配套 Python 解释器必须已安装 1.3 核心，并通过绝对路径配置。Linux、Windows、macOS
+配套 Python 解释器必须已安装 1.4 核心，并通过绝对路径配置。Linux、Windows、macOS
 均执行归档安装和真实 CLI 正反对照；具体归档哈希与结果在 Release 附件中。

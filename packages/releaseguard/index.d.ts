@@ -58,7 +58,16 @@ export interface ScanReleaseReport extends JsonObject {
     readonly sha256: string;
   })[];
   readonly findings: readonly Finding[];
-  readonly checks: ScanChecks & { readonly files_scanned: number };
+  readonly checks: ScanChecks & {
+    readonly files_scanned: number;
+    readonly private_inputs_checked: number;
+    /** Exact complete content matching; null means no private references were configured. */
+    readonly private_input_profile: "exact-content/v1" | null;
+    readonly private_input_scan_completed: boolean;
+    readonly private_input_payloads_checked: number;
+    readonly private_input_candidate_checks: number;
+    readonly private_input_verification_bytes: number;
+  };
   readonly notes: readonly string[];
 }
 
@@ -228,7 +237,7 @@ export interface ReleaseGuard {
       root: string;
       policy: string;
       /** External raw 32-byte key paths; at most 16. */ readonly assetKeyFiles?: readonly string[];
-      /** External private files to forbid as exact whole-file copies; at most 64. */ readonly privateInputFiles?: readonly string[];
+      /** External private files whose complete bytes must not appear in release payloads; at most 64. */ readonly privateInputFiles?: readonly string[];
     },
     controls?: RunOptions,
   ): Promise<ScanReleaseReport>;

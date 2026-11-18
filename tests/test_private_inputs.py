@@ -112,13 +112,15 @@ class PrivateInputTests(unittest.TestCase):
         self.assertTrue(any(item["code"] == "private_input_exposure" and item.get("archive_members") ==
                             ["app.asar.unpacked/renamed.dat"] for item in report["findings"]))
 
-    def test_same_filename_with_public_bytes_passes_and_edited_copy_is_an_explicit_limit(self):
+    def test_public_names_pass_padded_copies_fail_and_rewritten_content_remains_a_limit(self):
         target = self.root / self.private.name
         target.write_bytes(b"export const publicVersion = 1;\n")
         self.assertTrue(self.scan()["ok"])
         target.write_bytes(self.data + b"\n")
-        # This reference rule covers exact whole-file copies, not transformed
-        # or embedded logic. Keep this negative control to prevent overclaims.
+        self.assertFalse(self.scan()["ok"])
+        target.write_bytes(self.data.replace(b"x * 37 + 19", b"37 * x + 19"))
+        # Complete unchanged content is now detected inside larger payloads.
+        # Equivalent rewritten logic still lies outside this byte profile.
         self.assertTrue(self.scan()["ok"])
 
     def test_references_must_be_nonempty_regular_files_outside_release(self):
